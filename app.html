@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<base href="/">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dulcia</title>
+<meta name="theme-color" content="#F2F5EF">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dulcia">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+#auth{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+#auth .box{width:min(430px,100%);background:var(--surface);border:0;border-radius:46px 38px 50px 38px;padding:48px 28px 30px;position:relative;box-shadow:0 1px 0 var(--line),0 40px 80px -40px rgba(42,30,46,.5)}
+#auth .box::before{content:"";position:absolute;left:0;right:0;top:0;height:24px;border-radius:46px 38px 0 0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 24' preserveAspectRatio='none'%3E%3Cpath d='M0 0H240V6H214Q206 6 206 12V11.0A8.0 8.0 0 0 1 190 11.0V12Q190 6 182 6H160Q152 6 152 12V7.0A6.0 6.0 0 0 1 140 7.0V12Q140 6 132 6H106Q98 6 98 12V13.0A9.0 9.0 0 0 1 80 13.0V12Q80 6 72 6H46Q38 6 38 12V10.0A7.0 7.0 0 0 1 24 10.0V12Q24 6 16 6H0V0Z' fill='%23B3224F'/%3E%3C/svg%3E") repeat-x left top/240px 24px}
+#auth::before{content:"";position:fixed;left:50%;top:50%;width:min(720px,120vw);height:min(640px,100vh);transform:translate(-50%,-50%) rotate(-6deg);background:var(--accent-soft);opacity:.6;border-radius:58% 42% 55% 45% / 50% 58% 42% 50%;z-index:-1}
+#auth::after{content:"";position:fixed;right:6%;bottom:8%;width:210px;height:190px;background:var(--butter);opacity:.7;border-radius:46% 54% 42% 58% / 56% 44% 56% 44%;z-index:-1}
+#auth h1{font-size:2rem;margin-bottom:4px}
+#auth .dmark{width:170px;height:auto;display:block;margin:0 0 6px}
+#auth .tag{font-family:var(--display);font-style:italic;font-weight:500;font-size:1.3rem;color:var(--accent);margin:0 0 16px}
+#auth p{color:var(--soft);margin:0 0 16px}
+#auth form{display:flex;flex-direction:column;gap:12px}
+#auth label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);font-weight:500}
+#auth input{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:.65em .9em;width:100%}
+#auth .tabs{display:flex;gap:6px;margin-bottom:16px}
+#auth .tabs button{flex:1;border:1px solid var(--line);background:transparent;border-radius:99px;padding:.45em;font-weight:600;color:var(--soft)}
+#auth .tabs button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+#auth .msg{font-size:.9rem;border-radius:10px;padding:.6em .8em;background:var(--accent-soft);color:var(--accent)}
+#auth .msg.ok,#auth .okbox{background:var(--ok-bg);color:var(--ok)}
+#auth .okbox{font-size:.9rem;border-radius:10px;padding:.6em .8em}
+#auth .pay{background:var(--accent-soft);border-radius:12px;padding:.8em 1em;font-size:.9rem;line-height:1.5;text-align:left;overflow-wrap:anywhere}
+#auth .lnk{background:none;border:0;color:var(--accent);text-decoration:underline;padding:0;font-size:.9rem;align-self:flex-start}
+.boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:var(--soft)}
+</style>
+</head>
+<body>
+<div id="boot" class="boot">Cargando…</div>
+<div class="app" id="appwrap" hidden>
+  <nav class="side" aria-label="Secciones" id="side"></nav>
+  <main id="main"></main>
+</div>
+<dialog id="dlg"></dialog>
+<dialog id="dlg2"></dialog>
+<div id="toast" hidden role="status"></div>
+<div id="auth" hidden></div>
+<script src="config.js"></script>
+<script src="brand.js"></script>
+<script src="supabase.js"></script>
+<script src="jspdf.umd.min.js"></script>
+<script src="app.js"></script>
+<script src="data.js"></script>
+</body>
+</html>
