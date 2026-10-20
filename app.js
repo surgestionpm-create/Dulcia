@@ -30,6 +30,11 @@ function logoSrc(){
   return "data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#F8DCE5"/><text x="50" y="66" font-size="48" font-family="Georgia,serif" font-weight="700" text-anchor="middle" fill="#B3224F">'+ch.replace(/[<>&]/g,"")+'</text></svg>');
 }
 function $(s){return document.querySelector(s)}
+function igUser(s){s=String(s||"").trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i,"").replace(/[?#].*$/,"").replace(/\/.*$/,"").replace(/^@+/,"");return s.replace(/[^A-Za-z0-9._]/g,"").slice(0,30)}
+function waNum(s){var d=String(s||"").replace(/\D/g,"");if(d.length===9&&d.charAt(0)==="9")d="56"+d;else if(d.length===8)d="569"+d;return d}
+function waFmt(d){d=d||"";return /^569\d{8}$/.test(d)?"+56 9 "+d.slice(3,7)+" "+d.slice(7):(d?"+"+d:"")}
+function igUrl(u){return u?"https://instagram.com/"+encodeURIComponent(u):""}
+function waUrl(d){return d?"https://wa.me/"+d:""}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 var fm=new Intl.NumberFormat("es-CL",{style:"currency",currency:"CLP",maximumFractionDigits:0});
 function $$(n){n=Math.round(n);return (n<0?"-":"")+fm.format(Math.abs(n))}
@@ -479,6 +484,9 @@ function openOrder(id){
   d.innerHTML='<div class="dlg"><header><div><h2 style="font-size:1.62rem">'+esc(x.cliente)+'</h2><div class="note" style="margin:2px 0 0">'+fechaLarga(x.fecha)+' · '+x.hora+'</div></div><button class="ib" data-close aria-label="Cerrar">✕</button></header>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="'+gcalUrl(x)+'">Agregar a Google Calendar</a><button class="btn ghost sm" data-ics="'+x.id+'">Descargar para otro calendario</button></div>'+
   '<dl class="kv"><dt>Categoría</dt><dd>'+esc(x.cat)+'</dd><dt>Canal</dt><dd>'+esc(x.canal)+'</dd><dt>Total</dt><dd>'+$$(x.total)+'</dd><dt>Pagado</dt><dd>'+$$(x.pagado)+' '+chipS(x)+'</dd><dt>Saldo</dt><dd>'+$$(x.total-x.pagado)+'</dd></dl>'+
+  '<div class="contact"><b>Contacto</b>'+
+  '<label>Instagram<span class="crow2"><input type="text" data-ig="'+x.id+'" value="'+esc(x.ig?"@"+x.ig:"")+'" placeholder="@usuario" autocapitalize="none" autocomplete="off"><a class="btn ghost sm" id="a_ig" target="_blank" rel="noopener" href="'+igUrl(x.ig)+'"'+(x.ig?'':' hidden')+'>Ver perfil</a></span></label>'+
+  '<label>WhatsApp<span class="crow2"><input type="tel" inputmode="tel" data-wa="'+x.id+'" value="'+esc(waFmt(x.wa))+'" placeholder="+56 9 1234 5678" autocomplete="off"><a class="btn ghost sm" id="a_wa" target="_blank" rel="noopener" href="'+waUrl(x.wa)+'"'+(x.wa?'':' hidden')+'>Abrir chat</a></span></label></div>'+
   (x.cot?'<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-pdf="'+x.id+'">Descargar PDF</button><button class="btn ghost" data-confirm="'+x.id+'">Confirmar pedido</button></div>':(x.total>x.pagado?'<div><button class="btn sm" data-pay="'+x.id+'">Marcar saldo como pagado</button></div>':''))+
   '<label style="font-size:.85rem;color:var(--soft);font-weight:500;display:flex;flex-direction:column;gap:4px">Descripción<textarea id="odesc" rows="4" data-d="'+x.id+'">'+esc(x.desc)+'</textarea></label>'+
   '<div class="qbox"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>'+(x.num?'Cotización '+qn(x):'Cotización')+'</b>'+(x.cot?'':'<button class="btn ghost sm" data-pdf="'+x.id+'">Descargar cotización PDF</button>')+'</div>'+
@@ -495,6 +503,7 @@ function openNew(){
   var d=$("#dlg");
   d.innerHTML='<form class="dlg" id="nf"><header><h2 style="font-size:1.62rem">Nuevo pedido</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
   '<div class="f"><label class="w">Cliente<input type="text" id="n_c" required placeholder="Nombre del cliente"></label>'+
+  '<label>Instagram<input type="text" id="n_ig" placeholder="@usuario" autocapitalize="none" autocomplete="off"></label><label>WhatsApp<input type="tel" id="n_wa" placeholder="+56 9 1234 5678" inputmode="tel" autocomplete="off"></label>'+
   '<label>Fecha de entrega<input type="date" id="n_f" required value="'+cur.y+'-'+String(cur.m+1).padStart(2,"0")+'-15"></label><label>Hora<input type="time" id="n_h" value="12:00"></label>'+
   '<label>Categoría<select id="n_k">'+pcats.map(function(c){return '<option>'+esc(c.n)+'</option>'}).join("")+'<option value="__new">+ Crear categoría nueva</option></select></label>'+
   '<label>Canal<select id="n_a">'+CANALES.map(function(c){return '<option>'+c+'</option>'}).join("")+'</select></label>'+
@@ -571,6 +580,8 @@ document.addEventListener("input",function(e){
   else if(t.id==="mg"){rp.margen=+t.value;var f=t.selectionStart;rsum();$("#mg").focus()}
   else if(t.id==="pa"){rp.precio=parseFloat(t.value)||0;var a=rsum;a();var el=$("#pa");el.focus();try{el.setSelectionRange(el.value.length,el.value.length)}catch(e){}}
   else if(t.dataset&&t.dataset.d){orders.find(function(q){return q.id===+t.dataset.d}).desc=t.value}
+  else if(t.dataset&&t.dataset.ig){var qi=orders.find(function(q){return q.id===+t.dataset.ig});qi.ig=igUser(t.value);var ai=$("#a_ig");ai.href=igUrl(qi.ig);ai.hidden=!qi.ig}
+  else if(t.dataset&&t.dataset.wa){var qw=orders.find(function(q){return q.id===+t.dataset.wa});qw.wa=waNum(t.value);var aw=$("#a_wa");aw.href=waUrl(qw.wa);aw.hidden=!qw.wa}
 });
 document.addEventListener("submit",function(e){
   if(e.target.id==="gf"||e.target.id==="grpf"||e.target.id==="catf"||e.target.id==="newrf"){e.preventDefault();extraSubmit(e.target);return}
@@ -581,7 +592,7 @@ document.addEventListener("submit",function(e){
   var isq=!!window._cot; window._cot=false;
   if(!isq&&!window._skipW&&dayWarn(f,0,function(){window._skipW=true;$("#nf").requestSubmit()},function(){var fi=$("#n_f");if(fi)fi.focus()}))return;
   window._skipW=false;
-  var n={id:nextId++,cot:isq,num:isq?nextQ():0,cond:cfg.cond,vig:cfg.vig,items:its,cliente:$("#n_c").value.trim(),fecha:f,hora:$("#n_h").value||"12:00",cat:kc,canal:$("#n_a").value,desc:$("#n_d").value.trim()||"Sin descripción.",total:tot,pagado:pg,fotos:pend.slice(),listo:false};
+  var n={id:nextId++,cot:isq,num:isq?nextQ():0,cond:cfg.cond,vig:cfg.vig,items:its,cliente:$("#n_c").value.trim(),ig:igUser($("#n_ig").value),wa:waNum($("#n_wa").value),fecha:f,hora:$("#n_h").value||"12:00",cat:kc,canal:$("#n_a").value,desc:$("#n_d").value.trim()||"Sin descripción.",total:tot,pagado:pg,fotos:pend.slice(),listo:false};
   orders.push(n);pend=[];cur={y:p.getFullYear(),m:p.getMonth()};view=isq?"ped":"cal";$("#dlg").close();render();
   if(isq){openOrder(n.id);toast("Cotización "+qn(n)+" guardada")}
 });

@@ -50,7 +50,7 @@
     recipes.forEach(function (rr) { var x = receta(rr); m["r:" + x.row.id] = { t: "r", row: x.row, grupos: x.grupos, items: x.items }; });
     orders.forEach(function (o) {
       var id = ensure(o);
-      m["p:" + id] = { t: "p", row: { id: id, negocio_id: NEG, es_cotizacion: !!o.cot, numero_cotizacion: o.num || null, cliente: o.cliente, fecha: o.fecha, hora: t5(o.hora), categoria: o.cat, canal: o.canal, descripcion: o.desc || "", total: +o.total || 0, pagado: +o.pagado || 0, listo: !!o.listo, condiciones: o.cond == null ? null : o.cond, validez_dias: o.vig == null ? null : o.vig, origen: o.origen || "app" } };
+      m["p:" + id] = { t: "p", row: { id: id, negocio_id: NEG, es_cotizacion: !!o.cot, numero_cotizacion: o.num || null, cliente: o.cliente, instagram: o.ig || "", whatsapp: o.wa || "", fecha: o.fecha, hora: t5(o.hora), categoria: o.cat, canal: o.canal, descripcion: o.desc || "", total: +o.total || 0, pagado: +o.pagado || 0, listo: !!o.listo, condiciones: o.cond == null ? null : o.cond, validez_dias: o.vig == null ? null : o.vig, origen: o.origen || "app" } };
       var its = [];
       (o.items || []).forEach(function (l) { var r = recipes.find(function (q) { return q.id === l.rid; }); if (r) its.push({ negocio_id: NEG, pedido_id: id, receta_id: r.uid, cantidad: +l.q || 0 }); });
       m["pr:" + id] = { t: "pr", pid: id, rows: its };
@@ -190,7 +190,7 @@
     fotoPath = {}; R[8].data.forEach(function (f) { if (urls[f.path]) fotoPath[urls[f.path]] = f.path; });
     orders.length = 0;
     R[6].data.forEach(function (p) {
-      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, items: [], fotos: [] };
+      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, items: [], fotos: [] };
       if (o.cond == null) delete o.cond; if (o.vig == null) delete o.vig;
       R[7].data.filter(function (x) { return x.pedido_id === p.id; }).forEach(function (x) { if (rmap[x.receta_id]) o.items.push({ rid: rmap[x.receta_id], q: +x.cantidad }); });
       R[8].data.filter(function (x) { return x.pedido_id === p.id && urls[x.path]; }).forEach(function (x) { o.fotos.push(urls[x.path]); });

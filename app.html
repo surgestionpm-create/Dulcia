@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <base href="/">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>
+/* Celulares: achica un poco toda la app (≈12%) para que se vea completa sin hacer zoom con los dedos. */
+(function(){try{var w=Math.min(screen.width,screen.height);if(w>0&&w<=600){var m=document.querySelector('meta[name=viewport]');m.setAttribute('content','width='+Math.round(w/0.88)+',viewport-fit=cover');}}catch(e){}})();
+</script>
+
 <title>Dulcia</title>
 <meta name="theme-color" content="#F2F5EF">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">

@@ -94,7 +94,7 @@ td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
 .ord .rt{text-align:right}
 .ord .rt b{display:block;font-variant-numeric:tabular-nums;margin-bottom:4px}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-select,input[type=text],input[type=number],input[type=date],input[type=time],textarea{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.5em .7em;width:100%}
+select,input[type=text],input[type=tel],input[type=number],input[type=date],input[type=time],textarea{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.5em .7em;width:100%}
 .filters select{width:auto}
 /* dialog */
 dialog{border:0;border-radius:20px;padding:0;background:var(--surface);color:var(--ink);width:min(620px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
@@ -227,7 +227,7 @@ td,th{border-bottom:1px dashed var(--line)}
 .tot td{border-top:2px solid var(--ink)}
 .chip{padding:.15em .8em}
 /* entradas */
-select,input[type=text],input[type=number],input[type=date],input[type=time],textarea,input[type=email],input[type=password]{border:1.5px solid var(--line);border-radius:14px;padding:.55em .8em}
+select,input[type=text],input[type=tel],input[type=number],input[type=date],input[type=time],textarea,input[type=email],input[type=password]{border:1.5px solid var(--line);border-radius:14px;padding:.55em .8em}
 select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 /* calendario */
 .cal{gap:6px;background:none;border:0;border-radius:0;overflow:visible}
@@ -304,4 +304,6 @@ dialog::backdrop{background:rgba(42,30,46,.5);backdrop-filter:blur(2px)}
 .cal .d.today{box-shadow:inset 0 0 0 2px var(--accent)}
 .ev{box-shadow:0 0 0 1.5px rgba(255,255,255,.75)}
 @media(prefers-reduced-motion:reduce){.app .kpis>.card,.app .ord,.app .prod{transform:none!important}}
+
+.contact{display:flex;flex-direction:column;gap:8px;background:var(--bg);border-radius:12px;padding:10px 12px}.contact label{font-size:.85rem;color:var(--soft);font-weight:500;display:flex;flex-direction:column;gap:4px}.crow2{display:flex;gap:8px;align-items:center}.crow2 input{flex:1;min-width:0}.crow2 a{white-space:nowrap;text-decoration:none}.crow2 a[hidden]{display:none}
 
