@@ -314,3 +314,41 @@ select,button,a,label[for],.btn,[data-o],[data-v],nav *,summary{cursor:pointer}
 .brand,.mtop,.bn,#side,nav,h1,h2,h3,button,.btn,.card>h2,.chip,.kpis .card,.head,summary{-webkit-user-select:none;user-select:none}
 input,textarea{-webkit-user-select:text;user-select:text}
 
+
+/* Celular: el contenido nunca ensancha la página (la lista de recetas se desplaza dentro de su franja) */
+#main{min-width:0}
+@media(max-width:820px){.app{grid-template-columns:minmax(0,1fr)}}
+/* Celular: la tabla de costeo como lista de tarjetas (nombre arriba, números abajo) */
+@media(max-width:560px){
+  .cost table,.cost tbody{display:block;width:100%}
+  .cost thead{display:none}
+  .cost tbody tr{display:block}
+  .cost tbody tr.grp td{display:flex;justify-content:space-between;align-items:center;width:100%}
+  .cost tbody tr.grp td[colspan]{border-bottom:2px solid var(--ink)}
+  .cost tbody tr.grp td:not([colspan]){display:none}
+  .cost tbody tr.grp{display:flex;align-items:center;border-bottom:2px solid var(--ink);margin-top:10px}
+  .cost tbody tr.grp td[colspan]{border:0;flex:1}
+  .cost tbody tr.grp td:not([colspan]){display:block;border:0;width:auto!important}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot){display:grid;grid-template-columns:minmax(0,1fr) 46px minmax(0,1.25fr) minmax(0,1.1fr) 26px;grid-template-areas:"n n n n x" "q u c s s";gap:2px 6px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td{border:0;padding:0;width:auto!important}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(1){grid-area:n}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(2){grid-area:q}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(3){grid-area:u}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(4){grid-area:c}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(5){grid-area:s;align-self:end;padding-bottom:8px;text-align:right}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(6){grid-area:x;text-align:right}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(2)::before{content:"Cantidad"}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(3)::before{content:"Unidad"}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(4)::before{content:"Costo unidad"}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(5)::before{content:"Subtotal";display:block;text-align:right}
+  .cost tbody td::before{display:block;font-size:.68rem;color:var(--soft);margin-bottom:2px}
+  .cost input.t:not(.u){min-width:0;width:100%}
+  .cost input.u{width:100%}
+  .cost input{min-width:0;width:100%}
+  .cost .scroll{overflow-x:visible}
+  .cost .chk{white-space:nowrap}
+  .cost tbody tr.tot{display:flex;justify-content:space-between;border-top:2px solid var(--ink);margin-top:6px}
+  .cost tbody tr.tot td{border:0}
+  .cost tbody tr.tot td:empty{display:none}
+  .cost tbody tr:has(> td[colspan="6"]) td{display:block;border:0;padding:6px 0}
+}
