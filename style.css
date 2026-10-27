@@ -363,3 +363,15 @@ input,textarea{-webkit-user-select:text;user-select:text}
 .photos.big{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .photos.big .ph:first-child{grid-column:1/-1}
 .photos.big .ph:first-child img{aspect-ratio:4/3}
+
+/* Ingredientes: lista única de precios */
+.ingrow{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:6px 14px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
+.ingrow:last-child{border-bottom:0}
+.ingn{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ingn b{font-weight:500}
+.ingn span{font-size:.78rem;color:var(--soft);overflow-wrap:anywhere}
+.ingn .ingw{color:var(--warn)}
+.ingp{display:flex;flex-direction:column;gap:3px;font-size:.72rem;color:var(--soft)}
+.ingp input{text-align:right}
+@media(max-width:560px){.ingrow{grid-template-columns:minmax(0,1fr) 116px}}
+input[type=search]{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:.55em .8em;width:100%;font:inherit;color:inherit}
