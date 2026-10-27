@@ -541,7 +541,7 @@ function vIng(){
   gs.sort(function(a,b){return (a==="Ingredientes"?0:/mano de obra/i.test(a)?2:1)-(b==="Ingredientes"?0:/mano de obra/i.test(b)?2:1)});
   var html=gs.map(function(g){
     var rows=L.map(function(e,i){if(e.g!==g)return "";
-      return '<div class="ingrow" data-ingn="'+esc(xNorm(e.n))+'"><div class="ingn"><b>'+esc(e.n)+'</b><span>Usado en '+e.uses.length+' receta'+(e.uses.length===1?'':'s')+': '+esc(e.uses.join(", "))+'</span>'+
+      return '<div class="ingrow" data-ingn="'+esc(xNorm(e.n))+'"><div class="ingn"><b>'+esc(e.n)+'</b>'+
         (e.distinct?'<span class="ingw" id="ingw'+i+'">Tenía precios distintos ('+e.distinct.map(function(p){return mfmt(p)}).join(" · ")+'). Al cambiarlo, quedan todos iguales.</span>':'')+'</div>'+
         '<label class="ingp">Precio por '+esc(e.u||"unidad")+'<input type="text" class="money" inputmode="decimal" data-ing="'+i+'" value="'+mfmt(e.price)+'" aria-label="Precio de '+esc(e.n)+' por '+esc(e.u||"unidad")+'"></label></div>'}).join("");
     return '<section class="card ingcard"><h2 style="font-size:1.3rem;margin-bottom:6px">'+esc(g)+'</h2>'+rows+'</section>'}).join("");
