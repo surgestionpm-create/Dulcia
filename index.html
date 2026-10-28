@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Dulcia: costeo, pedidos y producción para pastelerías. Pago único de $19.990.">
+<meta name="description" content="Dulcia: costeo, pedidos y producción para pastelerías. Prueba 7 días gratis, sin tarjeta. Planes desde $4.583 al mes.">
 <meta name="theme-color" content="#B3224F">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -287,6 +287,27 @@ details{border-top:1px dashed var(--line)}details:last-child{border-bottom:1px d
 .band .bc{position:absolute;width:74px;height:74px;opacity:.95}
 .band .btn{box-shadow:0 14px 28px -14px rgba(0,0,0,.45)}
 footer{position:relative}
+
+/* planes */
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:stretch}
+.plan{background:var(--card);border-radius:40px 32px 44px 32px;padding:34px 28px 28px;position:relative;display:flex;flex-direction:column;box-shadow:0 1px 0 var(--line),0 26px 60px -40px rgba(42,30,46,.45);min-width:0}
+.plan:nth-child(2){border-radius:32px 44px 32px 40px}
+.plan .pn{font:500 15px var(--body);color:var(--accent);letter-spacing:.02em}
+.plan .amt{font-family:var(--display);font-weight:600;font-size:clamp(52px,6vw,68px);line-height:1;margin-top:10px;font-variant-numeric:lining-nums}
+.plan .per{font-size:16px;color:var(--soft);font-weight:300;margin-top:4px}
+.plan .pd{font-size:15.5px;font-weight:300;color:var(--soft);margin:18px 0 22px;line-height:1.5;flex:1}
+.plan .pd b{color:var(--ink);font-weight:500}
+.plan .btn{width:100%}
+.plan.best{background:var(--pink);box-shadow:0 0 0 2px var(--accent),0 26px 60px -36px rgba(42,30,46,.5)}
+.plan.best .amt{color:var(--accent)}
+.plan .stamp{position:absolute;right:-10px;top:-24px;background:var(--accent);color:#FBF6EE;border-radius:50%;width:88px;height:88px;display:grid;place-content:center;text-align:center;font-size:12.5px;line-height:1.15;transform:rotate(12deg);box-shadow:0 12px 24px -14px rgba(42,30,46,.6)}
+.plan .stamp b{font-family:var(--display);font-size:22px;font-weight:600;display:block}
+.incl{margin-top:30px;background:var(--card);border-radius:28px;padding:24px 28px}
+.incl b{font-family:var(--display);font-size:24px;font-weight:600}
+.incl ul{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 24px}
+.incl li{display:flex;gap:10px;align-items:flex-start;font-size:16px}
+.incl li .cherry{margin-top:4px;font-size:15px}
+@media(max-width:900px){.plans{grid-template-columns:1fr;max-width:460px;margin:0 auto}.plan.best{order:-1}.incl ul{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -299,7 +320,7 @@ footer{position:relative}
 <header class="top"><div class="wrap">
   <a href="#inicio" aria-label="Dulcia, inicio"><svg class="logo" role="img" aria-label="Dulcia" xmlns="http://www.w3.org/2000/svg" viewBox="-60 -890 2530 970"><g style="fill:var(--ink)"><path d="M241 4Q217 4 181.5 1.0Q146 -2 116 -2Q85 -2 59.0 -1.0Q33 0 12 0Q9 0 9.0 -6.0Q9 -12 12 -12Q42 -12 57.5 -17.0Q73 -22 81.0 -37.0Q89 -52 94 -81L176 -544Q184 -587 173.0 -600.0Q162 -613 119 -613Q117 -613 117.0 -619.0Q117 -625 119 -625Q140 -625 167.5 -623.5Q195 -622 225 -622Q253 -622 283.5 -624.5Q314 -627 339 -627Q433 -627 497.0 -587.5Q561 -548 588.5 -479.5Q616 -411 601 -323Q588 -248 552.5 -187.5Q517 -127 467.0 -84.5Q417 -42 358.5 -19.0Q300 4 241 4ZM235 -12Q303 -12 360.5 -45.5Q418 -79 458.5 -143.5Q499 -208 516 -301Q526 -361 521.0 -416.5Q516 -472 495.0 -516.0Q474 -560 435.0 -585.5Q396 -611 338 -611Q293 -611 273.5 -597.0Q254 -583 246 -542L167 -92Q159 -51 172.0 -31.5Q185 -12 235 -12Z"/><path d="M750 13Q708 13 692.0 -18.5Q676 -50 690 -119L726 -297Q731 -327 726.5 -339.5Q722 -352 710 -352Q700 -352 684.0 -340.0Q668 -328 649 -309Q645 -305 641.0 -309.0Q637 -313 641 -317Q674 -355 700.5 -375.0Q727 -395 754 -395Q780 -395 789.0 -373.0Q798 -351 787 -297L755 -138Q743 -83 752.5 -57.0Q762 -31 789 -31Q820 -31 853.5 -71.5Q887 -112 917.0 -189.0Q947 -266 967 -377L981 -376Q962 -259 926.5 -171.5Q891 -84 846.0 -35.5Q801 13 750 13ZM949 9Q922 9 914.5 -13.0Q907 -35 916 -84L967 -377Q970 -394 1007 -394Q1023 -394 1028.0 -392.0Q1033 -390 1033 -387Q1033 -384 1028.0 -361.0Q1023 -338 1018 -312L977 -89Q968 -33 993 -33Q1004 -33 1021.0 -44.5Q1038 -56 1059 -77Q1062 -81 1066.0 -76.5Q1070 -72 1067 -69Q1032 -29 1004.0 -10.0Q976 9 949 9Z"/><path d="M1180 9Q1151 9 1144.0 -14.0Q1137 -37 1146 -89L1243 -610Q1250 -649 1236.5 -658.5Q1223 -668 1179 -646Q1175 -645 1172.5 -651.0Q1170 -657 1174 -658L1311 -725Q1316 -727 1320.0 -723.0Q1324 -719 1323 -717L1208 -89Q1202 -59 1207.0 -46.5Q1212 -34 1223 -34Q1234 -34 1249.5 -46.0Q1265 -58 1285 -77Q1289 -81 1293.0 -77.0Q1297 -73 1293 -69Q1261 -32 1234.0 -11.5Q1207 9 1180 9Z"/><path d="M1478 13Q1434 13 1406.5 -6.5Q1379 -26 1364.5 -57.5Q1350 -89 1347.5 -127.0Q1345 -165 1353 -202Q1365 -264 1400.0 -308.0Q1435 -352 1480.5 -375.5Q1526 -399 1570 -399Q1594 -399 1615.0 -392.0Q1636 -385 1648.5 -371.0Q1661 -357 1659 -337Q1658 -322 1648.0 -311.5Q1638 -301 1620 -301Q1602 -301 1593.0 -312.0Q1584 -323 1580 -337Q1576 -350 1566.0 -362.5Q1556 -375 1532 -375Q1504 -375 1482.0 -356.5Q1460 -338 1446.0 -306.0Q1432 -274 1424 -234Q1415 -179 1421.5 -131.5Q1428 -84 1453.5 -55.0Q1479 -26 1526 -26Q1555 -26 1581.0 -39.0Q1607 -52 1626 -67Q1629 -69 1633.0 -65.0Q1637 -61 1634 -58Q1595 -21 1555.0 -4.0Q1515 13 1478 13Z"/><path d="M1774 9Q1747 9 1738.5 -13.5Q1730 -36 1741 -89L1782 -297Q1793 -353 1765 -353Q1754 -353 1737.0 -341.5Q1720 -330 1700 -309Q1697 -305 1692.5 -309.5Q1688 -314 1692 -317Q1727 -357 1755.0 -376.0Q1783 -395 1809 -395Q1837 -395 1845.0 -373.0Q1853 -351 1843 -302L1802 -89Q1796 -59 1801.0 -46.5Q1806 -34 1817 -34Q1828 -34 1844.5 -45.5Q1861 -57 1880 -76Q1884 -80 1888.0 -75.5Q1892 -71 1888 -68Q1856 -30 1828.5 -10.5Q1801 9 1774 9Z"/><path d="M1994 13Q1961 13 1943.5 -11.0Q1926 -35 1933 -91Q1941 -144 1968.0 -198.0Q1995 -252 2033.5 -298.0Q2072 -344 2116.0 -371.5Q2160 -399 2200 -399Q2219 -399 2238.0 -392.0Q2257 -385 2270.5 -369.5Q2284 -354 2286 -328L2238 -357Q2252 -359 2269.0 -373.5Q2286 -388 2294 -407Q2296 -410 2301.5 -408.5Q2307 -407 2306 -405L2248 -89Q2238 -34 2261 -34Q2272 -34 2288.5 -46.0Q2305 -58 2324 -77Q2327 -80 2331.0 -76.0Q2335 -72 2332 -69Q2300 -32 2273.0 -11.5Q2246 9 2220 9Q2193 9 2185.0 -13.5Q2177 -36 2186 -89L2210 -229L2228 -246Q2201 -168 2161.5 -109.5Q2122 -51 2078.5 -19.0Q2035 13 1994 13ZM2039 -44Q2066 -44 2094.0 -64.5Q2122 -85 2147.5 -119.0Q2173 -153 2191.5 -193.0Q2210 -233 2217 -269Q2225 -309 2210.5 -334.5Q2196 -360 2161 -359Q2128 -359 2095.0 -331.0Q2062 -303 2036.0 -255.5Q2010 -208 2001 -147Q1993 -93 2003.0 -68.5Q2013 -44 2039 -44Z"/></g><g transform="translate(1834.0 -551.0)"><path d="M3.8 -63.9 C15.0 -127.8 52.6 -165.4 112.8 -191.8" fill="none" stroke="#6F8F5E" stroke-width="12.0" stroke-linecap="round"/><path d="M109.0 -188.0 C127.8 -236.9 180.5 -240.6 214.3 -221.8 C195.5 -173.0 146.6 -157.9 109.0 -188.0Z" fill="#6F8F5E"/><circle r="75.2" fill="#B3224F"/></g></svg></a>
   <nav aria-label="Principal"><a href="#incluye">Qué incluye</a><a href="#demo">Pruébala</a><a href="#precio">Precio</a><a href="#preguntas">Preguntas</a></nav>
-  <div class="acts"><a class="btn sm dark" href="app/">Entrar</a><a class="btn sm" href="#pago">Comprar<span class="lg"> Dulcia</span></a></div>
+  <div class="acts"><a class="btn sm dark" href="app/">Entrar</a><a class="btn sm" href="app/?crear=1">Prueba gratis</a></div>
 </div></header>
 
 <main id="inicio">
@@ -307,8 +328,8 @@ footer{position:relative}
   <div>
     <h1>Tu pastelería, <em>en orden.<svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 12C30 2 50 18 80 10S130 4 160 12s60 6 90-2 40 0 47 2"/></svg></em></h1>
     <p class="lead">Dulcia calcula cuánto cobrar por cada torta, organiza tus pedidos con anticipo y saldo, y te dice cuánto ganaste. Hecha para pasteleras y pasteleros de Chile.</p>
-    <div class="cta"><a class="btn" href="#pago">Comprar Dulcia</a><a class="btn ghost" href="#demo">Probar el demo</a></div>
-    <p class="fine">¿Ya tienes cuenta? <a href="app/" style="color:var(--accent);font-weight:600">Entrar a la app</a>. Pago único de $19.990. Funciona en el computador y en el celular, sin instalar nada.</p>
+    <div class="cta"><a class="btn" href="app/?crear=1">Prueba 7 días gratis</a><a class="btn ghost" href="#demo">Ver cómo funciona</a></div>
+    <p class="fine">¿Ya tienes cuenta? <a href="app/" style="color:var(--accent);font-weight:600">Entrar a la app</a>. 7 días gratis, sin tarjeta. Después, planes desde $4.583 al mes. Funciona en el computador y en el celular, sin instalar nada.</p>
   </div>
   <div class="stage">
     <div class="blob" aria-hidden="true"></div><div class="blob2" aria-hidden="true"></div>
@@ -333,7 +354,7 @@ footer{position:relative}
     <svg class="fc" style="left:4%;top:8%;transform:rotate(-18deg)" aria-hidden="true"><use href="#ch"/></svg>
     <svg class="fc" style="left:88%;top:58%;width:9%;transform:rotate(22deg)" aria-hidden="true"><use href="#ch"/></svg>
     <svg class="fc" style="left:62%;top:90%;width:8%;transform:rotate(-8deg)" aria-hidden="true"><use href="#ch"/></svg>
-    <div class="badge" aria-label="Precio: 19.990 pesos, pago único"><b>$19.990</b><small>pago único</small></div>
+    <div class="badge" aria-label="7 días gratis"><b>7 días</b><small>gratis</small></div>
     <div class="paper" aria-label="Ejemplo de costeo">
       <h3>Torta tres leches</h3><div class="sub">20 cm, 12 porciones</div>
       <div class="cost-rows" id="heroRows"></div>
@@ -439,37 +460,54 @@ footer{position:relative}
   </div>
 </div><svg class="drip a" viewBox="0 0 1440 56" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 H1440 V8 H1428 Q1418 8 1418 18 V20 A15.0 15.0 0 0 1 1388 20 V18 Q1388 8 1378 8 H1338 Q1328 8 1328 18 V20 A22.0 22.0 0 0 1 1284 20 V18 Q1284 8 1274 8 H1253 Q1243 8 1243 18 V36 A11.0 11.0 0 0 1 1221 36 V18 Q1221 8 1211 8 H1193 Q1183 8 1183 18 V28 A13.0 13.0 0 0 1 1157 28 V18 Q1157 8 1147 8 H1119 Q1109 8 1109 18 V36 A11.0 11.0 0 0 1 1087 36 V18 Q1087 8 1077 8 H1056 Q1046 8 1046 18 V46 A13.0 13.0 0 0 1 1020 46 V18 Q1020 8 1010 8 H997 Q987 8 987 18 V28 A13.0 13.0 0 0 1 961 28 V18 Q961 8 951 8 H929 Q919 8 919 18 V36 A13.0 13.0 0 0 1 893 36 V18 Q893 8 883 8 H871 Q861 8 861 18 V28 A13.0 13.0 0 0 1 835 28 V18 Q835 8 825 8 H823 Q813 8 813 18 V20 A13.0 13.0 0 0 1 787 20 V18 Q787 8 777 8 H767 Q757 8 757 18 V46 A22.0 22.0 0 0 1 713 46 V18 Q713 8 703 8 H662 Q652 8 652 18 V28 A11.0 11.0 0 0 1 630 28 V18 Q630 8 620 8 H608 Q598 8 598 18 V46 A13.0 13.0 0 0 1 572 46 V18 Q572 8 562 8 H543 Q533 8 533 18 V46 A13.0 13.0 0 0 1 507 46 V18 Q507 8 497 8 H495 Q485 8 485 18 V28 A11.0 11.0 0 0 1 463 28 V18 Q463 8 453 8 H417 Q407 8 407 18 V46 A13.0 13.0 0 0 1 381 46 V18 Q381 8 371 8 H339 Q329 8 329 18 V36 A11.0 11.0 0 0 1 307 36 V18 Q307 8 297 8 H285 Q275 8 275 18 V20 A13.0 13.0 0 0 1 249 20 V18 Q249 8 239 8 H208 Q198 8 198 18 V20 A22.0 22.0 0 0 1 154 20 V18 Q154 8 144 8 H101 Q91 8 91 18 V36 A15.0 15.0 0 0 1 61 36 V18 Q61 8 51 8 H0 V0Z"/></svg></section>
 
-<section class="alt" id="precio"><div class="wrap price">
-  <div class="copy"><svg class="cl" style="left:-6px;top:-54px;transform:rotate(-14deg)" aria-hidden="true"><use href="#ch"/></svg><h2>Un solo pago, sin mensualidades</h2><p>Todo lo que ves en esta página está incluido. Sin módulos extra y sin cobros por cantidad de pedidos.</p></div>
-  <div class="price-card"><div class="stamp"><div><b>Una vez</b>y listo</div></div>
-    <div style="font-size:16px;color:var(--soft)">Dulcia completo</div>
-    <div class="amt" id="amt">$19.990</div>
-    <div class="per">pago único, sin mensualidades</div>
+<section class="alt" id="precio"><div class="wrap">
+  <div class="sec-h"><h2>Prueba 7 días gratis. Después, elige tu plan.</h2><p>Todos los planes incluyen Dulcia completo, sin módulos extra ni cobros por cantidad de pedidos. Para la prueba no pedimos tarjeta.</p></div>
+  <div class="plans">
+    <div class="plan">
+      <div class="pn">Mensual</div>
+      <div class="amt">$5.990</div><div class="per">al mes</div>
+      <p class="pd">Se cobra automáticamente cada mes con Mercado Pago. Lo cancelas cuando quieras.</p>
+      <a class="btn ghost" href="app/?crear=1">Probar 7 días gratis</a>
+    </div>
+    <div class="plan">
+      <div class="pn">Semestral</div>
+      <div class="amt">$29.990</div><div class="per">cada 6 meses</div>
+      <p class="pd">Equivale a <b>$4.998 al mes</b>: ahorras $5.950. Un pago por adelantado; al terminar, eliges si renuevas.</p>
+      <a class="btn ghost" href="app/?crear=1">Probar 7 días gratis</a>
+    </div>
+    <div class="plan best"><div class="stamp"><div><b>Más</b>conveniente</div></div>
+      <div class="pn">Anual</div>
+      <div class="amt">$54.990</div><div class="per">al año</div>
+      <p class="pd">Equivale a <b>$4.583 al mes</b>: ahorras $16.890. Un pago por adelantado; al terminar, eliges si renuevas.</p>
+      <a class="btn" href="app/?crear=1">Probar 7 días gratis</a>
+    </div>
+  </div>
+  <div class="incl"><b>Todos incluyen</b>
     <ul>
       <li><svg class="cherry"><use href="#ch"/></svg>Costeo y recetas sin límite</li>
       <li><svg class="cherry"><use href="#ch"/></svg>Pedidos, calendario y producción</li>
       <li><svg class="cherry"><use href="#ch"/></svg>Compras, gastos y panel de ganancias</li>
       <li><svg class="cherry"><use href="#ch"/></svg>Cotizaciones en PDF con tu logo</li>
-      <li><svg class="cherry"><use href="#ch"/></svg>Aviso de días muy cargados, que tú configuras</li>
+      <li><svg class="cherry"><use href="#ch"/></svg>Carga masiva desde Excel</li>
+      <li><svg class="cherry"><use href="#ch"/></svg>Aviso de días muy cargados</li>
     </ul>
-    <a class="btn" href="#pago" style="width:100%">Comprar Dulcia</a>
   </div>
 </div><svg class="drip b" viewBox="0 0 1440 56" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 H1440 V8 H1404 Q1394 8 1394 18 V36 A18.0 18.0 0 0 1 1358 36 V18 Q1358 8 1348 8 H1308 Q1298 8 1298 18 V28 A15.0 15.0 0 0 1 1268 28 V18 Q1268 8 1258 8 H1216 Q1206 8 1206 18 V20 A22.0 22.0 0 0 1 1162 20 V18 Q1162 8 1152 8 H1138 Q1128 8 1128 18 V46 A15.0 15.0 0 0 1 1098 46 V18 Q1098 8 1088 8 H1045 Q1035 8 1035 18 V28 A22.0 22.0 0 0 1 991 28 V18 Q991 8 981 8 H977 Q967 8 967 18 V20 A15.0 15.0 0 0 1 937 20 V18 Q937 8 927 8 H885 Q875 8 875 18 V28 A11.0 11.0 0 0 1 853 28 V18 Q853 8 843 8 H813 Q803 8 803 18 V36 A18.0 18.0 0 0 1 767 36 V18 Q767 8 757 8 H732 Q722 8 722 18 V20 A15.0 15.0 0 0 1 692 20 V18 Q692 8 682 8 H653 Q643 8 643 18 V20 A22.0 22.0 0 0 1 599 20 V18 Q599 8 589 8 H545 Q535 8 535 18 V36 A22.0 22.0 0 0 1 491 36 V18 Q491 8 481 8 H467 Q457 8 457 18 V20 A22.0 22.0 0 0 1 413 20 V18 Q413 8 403 8 H375 Q365 8 365 18 V28 A18.0 18.0 0 0 1 329 28 V18 Q329 8 319 8 H300 Q290 8 290 18 V20 A15.0 15.0 0 0 1 260 20 V18 Q260 8 250 8 H225 Q215 8 215 18 V46 A22.0 22.0 0 0 1 171 46 V18 Q171 8 161 8 H150 Q140 8 140 18 V20 A11.0 11.0 0 0 1 118 20 V18 Q118 8 108 8 H90 Q80 8 80 18 V46 A11.0 11.0 0 0 1 58 46 V18 Q58 8 48 8 H0 V0Z"/></svg></section>
 
 <section id="pago"><div class="wrap">
-  <div class="sec-h"><h2>Cómo activar tu cuenta</h2><p>Pagas online y tu cuenta se activa sola, en segundos. Nadie revisa nada a mano.</p></div>
+  <div class="sec-h"><h2>Cómo empezar</h2><p>Partes gratis, sin tarjeta. Pagas solo si Dulcia te sirve.</p></div>
   <div class="steps">
-    <div><h3>Crea tu cuenta</h3><p>Entra a la app y regístrate con tu correo y una clave.</p></div>
-    <div><h3>Paga $19.990 con Mercado Pago</h3><p>Un botón te lleva al sitio seguro de Mercado Pago. Pagas con tarjeta o con tu saldo, una sola vez.</p></div>
-    <div><h3>Listo, entras</h3><p>Cuando Mercado Pago confirma el pago, tu cuenta se activa automáticamente y vuelves directo a Dulcia.</p></div>
+    <div><h3>Crea tu cuenta</h3><p>Regístrate con tu correo y una clave. Tienes 7 días con todo incluido, sin dejar tarjeta.</p></div>
+    <div><h3>Elige tu plan</h3><p>Cuando quieras, dentro de la prueba o al terminarla, eliges mensual, semestral o anual y pagas con Mercado Pago.</p></div>
+    <div><h3>Sigues donde quedaste</h3><p>Todo lo que registraste en la prueba queda guardado. Al pagar, tu cuenta sigue activa sin perder nada.</p></div>
   </div>
   <div class="pay">
     <div class="paper">
-      <h3>Pago único, sin mensualidades</h3>
-      <p style="margin:8px 0 0;font-size:16px">$19.990 una sola vez. Pagas en el sitio de Mercado Pago: nosotros nunca vemos ni guardamos los datos de tu tarjeta.</p>
+      <h3>Pagas en el sitio seguro de Mercado Pago</h3>
+      <p style="margin:8px 0 0;font-size:16px">Con tarjeta o con tu saldo. Nosotros nunca vemos ni guardamos los datos de tu tarjeta. El plan mensual se renueva solo cada mes y lo cancelas cuando quieras; el semestral y el anual se pagan una vez por período.</p>
     </div>
     <div class="payact">
-      <a class="btn" href="app/">Crear mi cuenta y pagar</a>
+      <a class="btn" href="app/?crear=1">Empezar mis 7 días gratis</a>
       <a class="btn ghost" href="app/">Ya tengo cuenta, entrar</a>
       <p>Si tienes dudas con el pago, escribe a <b id="payMail"></b>.</p>
     </div>
@@ -485,14 +523,14 @@ footer{position:relative}
     <details><summary>¿Puedo poner mi logo en las cotizaciones?</summary><p>Sí. Subes tu logo en Ajustes y sale en el PDF. Funciona mejor con un archivo PNG de fondo transparente.</p></details>
     <details><summary>¿Se conecta con Google Calendar?</summary><p>Hoy puedes agregar cada pedido a Google Calendar con un botón, o bajarlo para otro calendario. La sincronización automática viene más adelante.</p></details>
     <details><summary>¿Qué pasa con mis datos?</summary><p>Tus recetas, pedidos y gastos viven en tu cuenta y solo se muestran cuando inicias sesión. Puedes leer el detalle en nuestra <a href="privacidad.html">política de privacidad</a>.</p></details>
-    <details><summary>¿Cuánto cuesta?</summary><p>$19.990, en un solo pago. Incluye todo lo que ves en esta página y no tiene mensualidad.</p></details>
+    <details><summary>¿Cuánto cuesta?</summary><p>Los primeros 7 días son gratis y no pedimos tarjeta. Después eliges: mensual a $5.990, semestral a $29.990 (equivale a $4.998 al mes) o anual a $54.990 (equivale a $4.583 al mes). Todos incluyen Dulcia completo.</p></details><details><summary>¿Qué pasa cuando terminan los 7 días?</summary><p>Te pedimos elegir un plan para seguir usando Dulcia. Tus recetas, pedidos y gastos quedan guardados: apenas pagas, sigues donde quedaste.</p></details><details><summary>¿Puedo cancelar?</summary><p>Sí. El plan mensual lo cancelas cuando quieras y no se vuelve a cobrar. El semestral y el anual no se renuevan solos: al terminar el período eliges si continúas.</p></details>
   </div>
 </div><svg class="drip b" viewBox="0 0 1440 56" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 H1440 V8 H1384 Q1374 8 1374 18 V46 A11.0 11.0 0 0 1 1352 46 V18 Q1352 8 1342 8 H1306 Q1296 8 1296 18 V20 A13.0 13.0 0 0 1 1270 20 V18 Q1270 8 1260 8 H1221 Q1211 8 1211 18 V28 A22.0 22.0 0 0 1 1167 28 V18 Q1167 8 1157 8 H1114 Q1104 8 1104 18 V46 A11.0 11.0 0 0 1 1082 46 V18 Q1082 8 1072 8 H1055 Q1045 8 1045 18 V36 A11.0 11.0 0 0 1 1023 36 V18 Q1023 8 1013 8 H969 Q959 8 959 18 V20 A18.0 18.0 0 0 1 923 20 V18 Q923 8 913 8 H872 Q862 8 862 18 V46 A11.0 11.0 0 0 1 840 46 V18 Q840 8 830 8 H822 Q812 8 812 18 V36 A11.0 11.0 0 0 1 790 36 V18 Q790 8 780 8 H754 Q744 8 744 18 V46 A18.0 18.0 0 0 1 708 46 V18 Q708 8 698 8 H663 Q653 8 653 18 V36 A11.0 11.0 0 0 1 631 36 V18 Q631 8 621 8 H605 Q595 8 595 18 V46 A11.0 11.0 0 0 1 573 46 V18 Q573 8 563 8 H536 Q526 8 526 18 V28 A22.0 22.0 0 0 1 482 28 V18 Q482 8 472 8 H439 Q429 8 429 18 V46 A18.0 18.0 0 0 1 393 46 V18 Q393 8 383 8 H350 Q340 8 340 18 V46 A11.0 11.0 0 0 1 318 46 V18 Q318 8 308 8 H265 Q255 8 255 18 V46 A13.0 13.0 0 0 1 229 46 V18 Q229 8 219 8 H185 Q175 8 175 18 V28 A13.0 13.0 0 0 1 149 28 V18 Q149 8 139 8 H132 Q122 8 122 18 V20 A13.0 13.0 0 0 1 96 20 V18 Q96 8 86 8 H76 Q66 8 66 18 V46 A15.0 15.0 0 0 1 36 46 V18 Q36 8 26 8 H0 V0Z"/></svg></section>
 
 <div class="band"><svg class="bc" style="left:8%;top:34%;transform:rotate(-16deg)" aria-hidden="true"><use href="#chc"/></svg><svg class="bc" style="right:9%;bottom:18%;width:58px;height:58px;transform:rotate(20deg)" aria-hidden="true"><use href="#chc"/></svg><div class="wrap">
   <h2>Hornea tranquila.<br>Del resto nos encargamos.</h2>
-  <p>Paga una vez y registra tu primera receta hoy.</p>
-  <a class="btn" href="#pago">Comprar Dulcia</a>
+  <p>Prueba 7 días gratis y registra tu primera receta hoy.</p>
+  <a class="btn" href="app/?crear=1">Empezar gratis</a>
 </div></div>
 </main>
 

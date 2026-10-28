@@ -145,7 +145,7 @@ function vPed(){
   return head("Pedidos",monthBar()+'<button class="btn ghost" data-cats="ped">Categorías</button><button class="btn ghost" data-pxlsx>Excel</button><button class="btn" data-new>Nuevo pedido</button>')+
    '<div class="filters"><select id="fcat" aria-label="Categoría">'+opts+'</select><select id="fest" aria-label="Estado de pago">'+es+'</select></div>'+
    '<div class="grid">'+(l.length?l.map(function(x){
-     return '<button class="ord" data-o="'+x.id+'">'+(x.fotos[0]?'<img class="thumb" src="'+x.fotos[0]+'" alt="">':'<div class="thumb">sin foto</div>')+
+     return '<button class="ord" data-o="'+x.id+'">'+(x.fotos[0]?'<img class="thumb" loading="lazy" decoding="async" src="'+th(x.fotos[0])+'" alt="">':'<div class="thumb">sin foto</div>')+
      '<div style="min-width:0"><h3>'+esc(x.cliente)+'</h3><p>'+fechaLarga(x.fecha)+' · '+x.hora+' · '+esc(x.cat)+'</p><p>'+esc(x.desc)+'</p></div>'+
      '<div class="rt"><b>'+$$(x.total)+'</b>'+chipS(x)+'</div></button>'}).join(""):'<div class="card empty">No hay pedidos con estos filtros. Crea uno con “Nuevo pedido”.</div>')+'</div>';
 }
@@ -158,7 +158,7 @@ function vProd(){
     var ev=real().filter(function(x){return x.fecha===iso}).sort(function(a,b){return a.hora<b.hora?-1:1});
     total+=ev.length;
     return '<div class="day"><h3>'+fechaLarga(iso)+(iso===TODAY?' (hoy)':'')+'</h3>'+(ev.length?ev.map(function(x){
-      return '<label class="prod'+(x.listo?' done':'')+'"><input type="checkbox" data-l="'+x.id+'"'+(x.listo?' checked':'')+'><div style="flex:1;min-width:0"><b>'+x.hora+' · '+esc(x.cliente)+'</b><div class="note" style="margin:0">'+esc(x.cat)+' · '+esc(x.desc)+'</div></div>'+(x.fotos[0]?'<img class="thumb" style="width:48px;height:48px" src="'+x.fotos[0]+'" alt="">':'')+'</label>'}).join(""):'<div class="note">Sin pedidos.</div>')+'</div>'}).join("");
+      return '<label class="prod'+(x.listo?' done':'')+'"><input type="checkbox" data-l="'+x.id+'"'+(x.listo?' checked':'')+'><div style="flex:1;min-width:0"><b>'+x.hora+' · '+esc(x.cliente)+'</b><div class="note" style="margin:0">'+esc(x.cat)+' · '+esc(x.desc)+'</div></div>'+(x.fotos[0]?'<img class="thumb" loading="lazy" decoding="async" style="width:48px;height:48px" src="'+th(x.fotos[0])+'" alt="">':'')+'</label>'}).join(""):'<div class="note">Sin pedidos.</div>')+'</div>'}).join("");
   return head("Producción",'<span class="note" style="margin:0">Próximos 7 días · '+total+' pedidos</span>')+html;
 }
 
@@ -699,7 +699,8 @@ function vCfg(){
   '<section class="card"><h2 style="font-size:1.38rem">Cotizaciones</h2><p class="note" style="margin-top:2px">Estos datos y condiciones salen en el PDF. Cada cotización parte con estas condiciones y puedes cambiarlas en esa cotización.</p>'+
   '<div class="f" style="margin-top:10px"><label>Teléfono o WhatsApp<input type="text" id="ct" value="'+esc(cfg.tel)+'"></label><label>Correo<input type="text" id="cm" value="'+esc(cfg.mail)+'" placeholder="contacto@tupasteleria.cl"></label><label>Validez (días)<input type="number" id="cv" min="1" value="'+cfg.vig+'"></label><label>Abono para reservar (%)<input type="number" id="ca" min="0" max="100" value="'+cfg.abono+'"></label></div>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:12px">Condiciones (una por línea)<textarea id="cc" rows="8">'+esc(cfg.cond)+'</textarea></label></section>'+
-  '<section class="card"><h2 style="font-size:1.38rem">Tu cuenta</h2><p class="note" style="margin-top:2px">Sesión iniciada como <b>'+esc(window.USER_EMAIL||"")+'</b>.</p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn ghost sm" data-logout>Cerrar sesión</button>'+(window.IS_ADMIN?'<button class="btn sm" data-admin>Activaciones pendientes</button>':'')+'</div></section>'+
+  '<section class="card"><h2 style="font-size:1.38rem">Tu plan</h2>'+(window.planBox?window.planBox():"")+'</section>'+
+  '<section class="card"><h2 style="font-size:1.38rem">Tu cuenta</h2><p class="note" style="margin-top:2px">Sesión iniciada como <b>'+esc(window.USER_EMAIL||"")+'</b>.</p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn ghost sm" data-logout>Cerrar sesión</button>'+(window.IS_ADMIN?'<button class="btn sm" data-admin>Cuentas sin activar</button>':'')+'</div></section>'+
 '<section class="card"><h2 style="font-size:1.38rem">Instala Dulcia en tu celular</h2><p class="note" style="margin-top:2px">Así la abres con un toque, como cualquier app, sin buscar el link.</p><p style="margin:10px 0 4px"><b>iPhone (Safari)</b></p><ol class="note" style="margin:0;padding-left:1.2em"><li>Abre Dulcia en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li><li>Elige <b>Agregar a pantalla de inicio</b> y toca <b>Agregar</b>.</li></ol><p style="margin:10px 0 4px"><b>Android (Chrome)</b></p><ol class="note" style="margin:0;padding-left:1.2em"><li>Abre Dulcia en <b>Chrome</b>.</li><li>Toca los <b>tres puntos</b> de arriba a la derecha.</li><li>Elige <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</li></ol></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Próximamente</h2><p class="note" style="margin-top:2px">Sincronización automática con Google Calendar (por ahora agregas cada pedido con un botón desde su detalle), conexión con la tienda web de tu pastelería, ayudantes con acceso propio e inventario.</p></section>'+
   '</div>';
@@ -823,7 +824,7 @@ function openOrder(id){
   '<div><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Recetas del pedido</div>'+(ln||'<div class="note" style="margin:0 0 6px">Sin receta. Asígnala para que Compras sepa qué ingredientes necesitas.</div>')+
   (recipes.length?'<button class="btn ghost sm" data-ladd="'+x.id+'">+ Agregar receta</button>':'<div class="note">Primero crea una receta en la sección Recetas.</div>')+'</div>'+
   '<div><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Fotos</div><div class="photos big">'+x.fotos.map(function(f,i){return '<div class="ph"><img src="'+f+'" alt="Foto del pedido"><button class="px" data-pdel="'+x.id+':'+i+'" aria-label="Quitar foto">✕</button></div>'}).join("")+
-  '<label class="addp" tabindex="0">+ Agregar fotos<input type="file" accept="image/*" multiple hidden data-addph="'+x.id+'"></label></div></div>'+
+  (x.fotos.length<MAXF?'<label class="addp" tabindex="0">+ Agregar foto<small style="display:block;font-size:.72rem">máximo '+MAXF+'</small><input type="file" accept="image/*" multiple hidden data-addph="'+x.id+'"></label>':'')+'</div></div>'+
   '<div class="qbox"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>'+(x.num?'Cotización '+qn(x):'Cotización')+'</b>'+(x.cot?'':'<button class="btn ghost sm" data-pdf="'+x.id+'">Descargar cotización PDF</button>')+'</div>'+
   '<label style="font-size:.85rem;color:var(--soft);font-weight:500;display:flex;flex-direction:column;gap:4px;margin-top:8px">Condiciones de esta cotización<textarea rows="6" data-cond="'+x.id+'">'+esc(x.cond!=null?x.cond:cfg.cond)+'</textarea></label>'+
   '<label style="font-size:.85rem;color:var(--soft);font-weight:500;display:flex;flex-direction:row;gap:8px;align-items:center;margin-top:8px">Validez (días)<input type="number" min="1" style="width:80px" data-vig="'+x.id+'" value="'+(x.vig||cfg.vig)+'"></label></div>'+
@@ -855,7 +856,7 @@ function openNew(fecha){
   '<label>Receta (opcional)<select id="n_r"><option value="">Sin receta</option>'+recOpts(-1)+'</select></label><label>Cantidad de la receta<input type="number" id="n_rq" step="any" min="0" value="1"></label>'+
   '<label>Total con IVA<input type="text" class="money" inputmode="numeric" id="n_t" required value="$ 0"></label><label>Anticipo pagado<input type="text" class="money" inputmode="numeric" id="n_p" value="$ 0"></label>'+
   '<label class="w">Descripción<textarea id="n_d" rows="4" placeholder="Sabores, tamaño, decoración, dirección de entrega…"></textarea></label>'+
-  '<div class="w"><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Fotos</div><div class="photos" id="n_ph"><label class="addp">+ Agregar fotos<input type="file" accept="image/*" multiple hidden id="n_file"></label></div></div></div>'+
+  '<div class="w"><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Fotos</div><div class="photos" id="n_ph"><label class="addp">+ Agregar fotos<small style="display:block;font-size:.72rem">máximo 2</small><input type="file" accept="image/*" multiple hidden id="n_file"></label></div></div></div>'+
   '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn ghost" data-close>Cancelar</button><button type="button" class="btn ghost" data-savecot>Guardar como cotización</button><button class="btn" type="submit">Guardar pedido</button></div></form>';
   if(!d.open)d.showModal();
 }
@@ -878,21 +879,22 @@ function delCat(kind,i){
   openCats(kind,msg);
 }
 var pend=[];
+var MAXF=2; window.THUMB=window.THUMB||{}; function th(f){return window.THUMB[f]||f}
 function readFiles(files,cb,max){
-  max=max||1600;
+  max=max||1200;
   Array.prototype.forEach.call(files,function(f){var r=new FileReader();r.onload=function(){
     var im=new Image();im.onload=function(){
       var sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");
       c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);
       var cx=c.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,c.width,c.height);cx.drawImage(im,0,0,c.width,c.height);
-      cb(c.toDataURL("image/jpeg",.82))};
+      cb(c.toDataURL("image/jpeg",.8))};
     im.onerror=function(){cb(r.result)};im.src=r.result};r.readAsDataURL(f)});
 }
 
 /* ---------- RENDER + EVENTOS ---------- */
 function render(){
   renderNav();
-  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+({panel:vPanel,cal:vCal2,ped:vPed,prod:vProd,cost:vCost,ing:vIng,com:vCom,gas:vGas,cfg:vCfg})[view]();
+  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,prod:vProd,cost:vCost,ing:vIng,com:vCom,gas:vGas,cfg:vCfg})[view]();
   if(view==="cost"&&recipes.length)rsum();
 }
 document.addEventListener("input",function(e){var t=e.target;if(!t.classList||!t.classList.contains("money"))return;
@@ -920,9 +922,11 @@ document.addEventListener("change",function(e){
   else if(t.id==="fest"){filtro.est=t.value;render()}
   else if(t.dataset&&t.dataset.l){var x=orders.find(function(q){return q.id===+t.dataset.l});x.listo=t.checked;render()}
   else if(t.dataset&&t.dataset.addph){var x2=orders.find(function(q){return q.id===+t.dataset.addph});
-    readFiles(t.files,function(u){x2.fotos.push(u);openOrder(x2.id);render()})}
-  else if(t.id==="n_file"){readFiles(t.files,function(u){pend.push(u);
-    var im=document.createElement("img");im.src=u;im.alt="Foto nueva";$("#n_ph").insertBefore(im,$("#n_ph").lastElementChild)})}
+    var lib=MAXF-x2.fotos.length;if(lib<=0){toast("Máximo "+MAXF+" fotos por pedido");return}if(t.files.length>lib)toast("Solo se agregan "+lib+" foto"+(lib===1?"":"s")+": el máximo es "+MAXF+" por pedido");
+    readFiles([].slice.call(t.files,0,lib),function(u){if(x2.fotos.length>=MAXF)return;x2.fotos.push(u);openOrder(x2.id);render()})}
+  else if(t.id==="n_file"){var lib2=MAXF-pend.length;if(lib2<=0){toast("Máximo "+MAXF+" fotos por pedido");return}if(t.files.length>lib2)toast("Solo se agregan "+lib2+" foto"+(lib2===1?"":"s")+": el máximo es "+MAXF+" por pedido");
+    readFiles([].slice.call(t.files,0,lib2),function(u){if(pend.length>=MAXF)return;pend.push(u);
+    var im=document.createElement("img");im.src=u;im.alt="Foto nueva";$("#n_ph").insertBefore(im,$("#n_ph").lastElementChild);if(pend.length>=MAXF){var ad=$("#n_ph .addp");if(ad)ad.hidden=true}})}
 });
 document.addEventListener("input",function(e){
   var t=e.target;
