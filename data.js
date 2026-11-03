@@ -44,13 +44,13 @@
   function current() {
     var m = {};
     m["neg"] = { t: "neg", row: { nombre: cfg.nombre, telefono: cfg.tel, correo: cfg.mail, web: cfg.url, cond_cotizacion: cfg.cond, validez_dias: cfg.vig, abono_pct: cfg.abono, cap_diaria: cfg.cap, sueldo_mensual: hora.sueldo, horas_mes: hora.horas, siguiente_cotizacion: qnum, logo_path: cfg.logoPath || null } };
-    pcats.forEach(function (c) { m["pc:" + ensure(c)] = { t: "pc", row: { id: c.uid, negocio_id: NEG, nombre: c.n, margen: c.m } }; });
+    pcats.forEach(function (c) { m["pc:" + ensure(c)] = { t: "pc", row: { id: c.uid, negocio_id: NEG, nombre: c.n, margen: c.m, color: c.col || null } }; });
     gcats.forEach(function (n) { m["gc:" + n] = { t: "gc", row: { negocio_id: NEG, nombre: n } }; });
     gastos.forEach(function (g) { m["g:" + ensure(g)] = { t: "g", row: { id: g.uid, negocio_id: NEG, fecha: g.fecha, nombre: g.nombre, categoria: g.cat, monto: +g.monto || 0, iva_modo: g.iva } }; });
     recipes.forEach(function (rr) { var x = receta(rr); m["r:" + x.row.id] = { t: "r", row: x.row, grupos: x.grupos, items: x.items }; });
     orders.forEach(function (o) {
       var id = ensure(o);
-      m["p:" + id] = { t: "p", row: { id: id, negocio_id: NEG, es_cotizacion: !!o.cot, numero_cotizacion: o.num || null, cliente: o.cliente, instagram: o.ig || "", whatsapp: o.wa || "", fecha: o.fecha, hora: t5(o.hora), categoria: o.cat, canal: o.canal, descripcion: o.desc || "", total: +o.total || 0, pagado: +o.pagado || 0, listo: !!o.listo, condiciones: o.cond == null ? null : o.cond, validez_dias: o.vig == null ? null : o.vig, origen: o.origen || "app" } };
+      m["p:" + id] = { t: "p", row: { id: id, negocio_id: NEG, es_cotizacion: !!o.cot, numero_cotizacion: o.num || null, cliente: o.cliente, instagram: o.ig || "", whatsapp: o.wa || "", fecha: o.fecha, hora: t5(o.hora), categoria: o.cat, canal: o.canal, descripcion: o.desc || "", personas: o.personas || null, total: +o.total || 0, pagado: +o.pagado || 0, listo: !!o.listo, condiciones: o.cond == null ? null : o.cond, validez_dias: o.vig == null ? null : o.vig, origen: o.origen || "app" } };
       var its = [];
       (o.items || []).forEach(function (l) { var r = recipes.find(function (q) { return q.id === l.rid; }); if (r) its.push({ negocio_id: NEG, pedido_id: id, receta_id: r.uid, cantidad: +l.q || 0 }); });
       m["pr:" + id] = { t: "pr", pid: id, rows: its };
@@ -100,9 +100,9 @@
       setStatus("Guardando…");
       var by = function (t) { return chg.filter(function (k) { return cur[k].t === t; }).map(function (k) { return cur[k]; }); };
       // borrar
-      if (del.r.length) chk(await sb.from("recetas").delete().in("id", del.r));
-      if (del.p.length) chk(await sb.from("pedidos").delete().in("id", del.p));
-      if (del.g.length) chk(await sb.from("gastos").delete().in("id", del.g));
+      for (var ci = 0; ci < del.r.length; ci += 100) chk(await sb.from("recetas").delete().in("id", del.r.slice(ci, ci + 100)));
+      for (var ci = 0; ci < del.p.length; ci += 100) chk(await sb.from("pedidos").delete().in("id", del.p.slice(ci, ci + 100)));
+      for (var ci = 0; ci < del.g.length; ci += 100) chk(await sb.from("gastos").delete().in("id", del.g.slice(ci, ci + 100)));
       if (del.pc.length) chk(await sb.from("categorias_pedido").delete().in("id", del.pc));
       if (delGc.length) chk(await sb.from("categorias_gasto").delete().eq("negocio_id", NEG).in("nombre", delGc));
       // guardar
@@ -128,13 +128,13 @@
       var p = by("p"); if (p.length) chk(await sb.from("pedidos").upsert(p.map(function (x) { return x.row; }), { onConflict: "id" }));
       var pr = by("pr");
       if (pr.length) {
-        chk(await sb.from("pedido_recetas").delete().in("pedido_id", pr.map(function (x) { return x.pid; })));
+        var prid = pr.map(function (x) { return x.pid; }); for (var cj = 0; cj < prid.length; cj += 100) chk(await sb.from("pedido_recetas").delete().in("pedido_id", prid.slice(cj, cj + 100)));
         var prr = []; pr.forEach(function (x) { prr = prr.concat(x.rows); });
         if (prr.length) chk(await sb.from("pedido_recetas").insert(prr));
       }
       var pf = by("pf");
       if (pf.length) {
-        chk(await sb.from("pedido_fotos").delete().in("pedido_id", pf.map(function (x) { return x.pid; })));
+        var pfid = pf.map(function (x) { return x.pid; }); for (var cj = 0; cj < pfid.length; cj += 100) chk(await sb.from("pedido_fotos").delete().in("pedido_id", pfid.slice(cj, cj + 100)));
         var pfr = []; pf.forEach(function (x) { pfr = pfr.concat(x.rows); });
         if (pfr.length) chk(await sb.from("pedido_fotos").insert(pfr));
       }
@@ -199,7 +199,7 @@
       var ls = await signed([neg.logo_path]);
       if (ls[neg.logo_path]) { var d = await toData(ls[neg.logo_path]); if (d) { cfg.logo = d; cfg.logoData = d; } }
     }
-    pcats.length = 0; R[1].data.forEach(function (c) { pcats.push({ uid: c.id, n: c.nombre, m: +c.margen }); });
+    pcats.length = 0; R[1].data.forEach(function (c) { pcats.push({ uid: c.id, n: c.nombre, m: +c.margen, col: c.color || null }); });
     gcats.length = 0; R[2].data.forEach(function (c) { gcats.push(c.nombre); });
     recipes.length = 0; var rmap = {}, gmap = {};
     R[4].data.forEach(function (g) { gmap[g.id] = g; gbuy[g.nombre] = g.se_compra; });
@@ -215,7 +215,7 @@
     R[8].data.forEach(function (f) { if (urls[f.path]) { fotoPath[urls[f.path]] = f.path; if (urls[tpath(f.path)]) window.THUMB[urls[f.path]] = urls[tpath(f.path)]; } });
     orders.length = 0;
     R[6].data.forEach(function (p) {
-      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, items: [], fotos: [] };
+      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", personas: p.personas || null, total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, items: [], fotos: [] };
       if (o.cond == null) delete o.cond; if (o.vig == null) delete o.vig;
       R[7].data.filter(function (x) { return x.pedido_id === p.id; }).forEach(function (x) { if (rmap[x.receta_id]) o.items.push({ rid: rmap[x.receta_id], q: +x.cantidad }); });
       R[8].data.filter(function (x) { return x.pedido_id === p.id && urls[x.path]; }).forEach(function (x) { o.fotos.push(urls[x.path]); });
