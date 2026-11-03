@@ -15,7 +15,7 @@ var recipes=[];
 var curR=0, recipe=[], rp={nombre:"",rinde:"",margen:70,precio:0};
 function selR(id){var r=recipes.find(function(q){return q.id===id});if(r){curR=id;recipe=r.items;rp=r}}
 var wk=(function(){var d=pd(TODAY),k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")})(), catsOpen=null;
-var cfg={cap:3,logo:null,logoData:null,logoPath:null,logoDirty:false,tel:"",mail:"",vig:7,abono:50,cond:"",nombre:"",gcal:false,asked:true,url:"",msg:""};
+var cfg={costeo:"real",cap:3,logo:null,logoData:null,logoPath:null,logoDirty:false,tel:"",mail:"",vig:7,abono:50,cond:"",nombre:"",gcal:false,asked:true,url:"",msg:""};
 var hora={sueldo:0,horas:160};
 var gcats=[];
 var gid=1, gastos=[];
@@ -87,7 +87,8 @@ function stats(){
   list.forEach(function(x){v+=x.total;cob+=x.pagado;var n=x.total/IVA;neto+=n;contrib+=n*marg(x.cat)});
   var gs=gMes(),G=0,GI=0;gs.forEach(function(g){G+=gN(g);GI+=gI(g)});
   var mg=neto?contrib/neto:.7;
-  return {list:list,v:v,neto:neto,cob:cob,por:v-cob,contrib:contrib,costos:neto-contrib,mg:mg,G:G,GI:GI,gs:gs,res:contrib-G,pe:G/mg,ivaD:v-neto,mn:neto?(contrib-G)/neto:0};
+  var est=cfg.costeo==="estimado", res=est?contrib-G:neto-G;
+  return {list:list,v:v,neto:neto,cob:cob,por:v-cob,contrib:contrib,costos:neto-contrib,mg:mg,G:G,GI:GI,gs:gs,res:res,est:est,pe:est?G/mg:G,ivaD:v-neto,mn:neto?res/neto:0};
 }
 function vPanel(){
   var s=stats(), pct=s.G?Math.min(100,s.neto/s.pe*100):100;
@@ -105,15 +106,17 @@ function vPanel(){
   return head("Panel",monthBar())+
   '<div class="grid kpis">'+
    kpi("Ventas del mes",$$(s.v),s.list.length+" pedidos · cobrado "+$$(s.cob))+
-   kpi("Costos de producción",$$(s.costos),"Estimado según el margen de cada categoría")+
-   kpi("Gastos del mes",$$(s.G),s.gs.length+" gastos, sin IVA")+
+   (s.est?kpi("Costos de producción",$$(s.costos),"Estimado según el margen de cada categoría"):kpi("Por cobrar",$$(s.por),"Saldos pendientes de los pedidos del mes"))+
+   kpi("Gastos del mes",$$(s.G),s.gs.length+" gastos, sin IVA"+(s.est?"":" · incluye ingredientes y materiales"))+
    kpi("Resultado final",'<span class="'+(s.res>=0?'pos':'neg')+'">'+$$(s.res)+'</span>',"Margen neto: "+(s.mn*100).toFixed(1)+"%")+
   '</div>'+post+'<div class="grid two" style="margin-top:14px"><div class="grid" style="align-content:start">'+
    '<section class="card"><h2 style="font-size:1.38rem">Del ingreso al resultado</h2><table><tbody>'+
-    row("Ventas netas (sin IVA)",s.neto)+row("Costos de producción",-s.costos)+row("Utilidad bruta",s.contrib,1)+row("Gastos del mes",-s.G)+row("Resultado final",s.res,1,1)+'</tbody></table>'+
+    (s.est?row("Ventas netas (sin IVA)",s.neto)+row("Costos de producción (estimado)",-s.costos)+row("Utilidad bruta",s.contrib,1)+row("Gastos del mes",-s.G)+row("Resultado final",s.res,1,1)
+          :row("Ventas netas (sin IVA)",s.neto)+row("Gastos del mes",-s.G)+row("Resultado final",s.res,1,1))+'</tbody></table>'+
+    '<p class="note" style="margin-top:8px">'+(s.est?'Los costos de producción se estiman con el margen de cada categoría, porque tus gastos son solo fijos.':'Tus gastos reales ya incluyen ingredientes y materiales, por eso no se resta un costo estimado.')+' <button class="lnk" data-v="cfg">Cambiar en Ajustes</button></p>'+
     '<dl class="kv" style="margin-top:14px"><dt>IVA de tus ventas</dt><dd>'+$$(s.ivaD)+'</dd><dt>IVA de tus gastos</dt><dd>-'+$$(s.GI)+'</dd><dt>IVA por pagar (estimado)</dt><dd><b>'+$$(ivaPag)+'</b></dd></dl><p class="note">El IVA es una estimación. Confírmalo con tu contador.</p></section>'+
    '<section class="card"><h2 style="font-size:1.38rem">Punto de equilibrio</h2>'+
-   (s.G?'<p class="note" style="margin-top:4px">Ventas netas que necesitas para cubrir tus gastos de '+$$(s.G)+'.</p><div class="bar"><span style="width:'+pct+'%"></span></div>'+
+   (s.G?'<p class="note" style="margin-top:4px">Ventas netas que necesitas para cubrir tus gastos de '+$$(s.G)+(s.est?' y tus costos de producción':'')+'.</p><div class="bar"><span style="width:'+pct+'%"></span></div>'+
    '<div style="display:flex;justify-content:space-between;font-size:.9rem"><span>Llevas '+$$(s.neto)+'</span><span>Meta '+$$(s.pe)+'</span></div>'+
    '<p style="margin:14px 0 0;font-weight:600">'+(falta>0?'Te faltan '+$$(falta)+' de ventas netas para no perder.':'Ya superaste el punto de equilibrio por '+$$(-falta)+'.')+'</p>':'<p class="note">Registra tus gastos del mes en la sección Gastos para calcular tu punto de equilibrio.</p>')+'</section></div>'+
    '<div class="grid" style="align-content:start"><section class="card"><h2 style="font-size:1.38rem">Margen por categoría</h2><div class="scroll"><table class="mc"><thead><tr><th>Categoría</th><th class="r">Venta bruta</th><th class="r">Venta neta</th><th class="r">Margen</th><th class="r">Aporte</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="empty">Sin pedidos este mes.</td></tr>')+'</tbody></table></div></section>'+
@@ -783,6 +786,9 @@ function vCfg(){
   return head("Ajustes")+'<div class="grid" style="max-width:720px">'+
   '<section class="card"><h2 style="font-size:1.38rem">Tu pastelería</h2><div class="logoedit" style="margin-top:12px"><img src="'+logoSrc()+'" alt="Logo"><label class="btn ghost sm" style="cursor:pointer">Cambiar logo<input type="file" accept="image/*" hidden id="cl"></label></div>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:14px">Nombre<input type="text" id="cn" value="'+esc(cfg.nombre)+'"></label><p class="note">El logo y el nombre aparecen en el menú y, más adelante, en tus cotizaciones en PDF.</p></section>'+
+  '<section class="card"><h2 style="font-size:1.38rem">Cómo calcular tu resultado</h2><p class="note" style="margin-top:2px">Así el Panel no cuenta dos veces lo que gastas en ingredientes.</p>'+
+  '<div class="rad" role="radiogroup" aria-label="Cómo calcular tu resultado" style="margin-top:10px"><label><input type="radio" name="costeo" value="real"'+(cfg.costeo!=="estimado"?' checked':'')+'><span><b>Anoto todas mis compras en Gastos</b><br><span style="color:var(--soft)">Ingredientes, materiales y gastos fijos. Resultado = ventas netas − gastos.</span></span></label>'+
+  '<label><input type="radio" name="costeo" value="estimado"'+(cfg.costeo==="estimado"?' checked':'')+'><span><b>En Gastos anoto solo gastos fijos</b><br><span style="color:var(--soft)">Arriendo, luz, sueldos. Los ingredientes se estiman con el margen de cada categoría.</span></span></label></div></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Capacidad diaria</h2><p class="note" style="margin-top:2px">Te avisamos cuando un día ya llegó a este número de pedidos y vas a agregar otro. Pon 0 para no recibir avisos.</p>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:10px;max-width:220px">Pedidos por día antes de avisar<input type="number" id="cp" min="0" value="'+cfg.cap+'"></label></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Cotizaciones</h2><p class="note" style="margin-top:2px">Estos datos y condiciones salen en el PDF. Cada cotización parte con estas condiciones y puedes cambiarlas en esa cotización.</p>'+
@@ -870,6 +876,7 @@ function extraChange(t){
 function extraInput(t){
   if(t.id==="cn"){cfg.nombre=t.value;Array.prototype.forEach.call(document.querySelectorAll(".bn"),function(b){b.textContent=t.value});return true}
   if(t.id==="cu"){cfg.url=t.value;return true}
+  if(t.name==="costeo"){cfg.costeo=t.value==="estimado"?"estimado":"real";return true}
   if(t.id==="cp"){cfg.cap=Math.max(0,parseInt(t.value)||0);return true}
   if(t.id==="ct"){cfg.tel=t.value;return true}
   if(t.id==="cm"){cfg.mail=t.value;return true}

@@ -43,7 +43,7 @@
   }
   function current() {
     var m = {};
-    m["neg"] = { t: "neg", row: { nombre: cfg.nombre, telefono: cfg.tel, correo: cfg.mail, web: cfg.url, cond_cotizacion: cfg.cond, validez_dias: cfg.vig, abono_pct: cfg.abono, cap_diaria: cfg.cap, sueldo_mensual: hora.sueldo, horas_mes: hora.horas, siguiente_cotizacion: qnum, logo_path: cfg.logoPath || null } };
+    m["neg"] = { t: "neg", row: { nombre: cfg.nombre, telefono: cfg.tel, correo: cfg.mail, web: cfg.url, cond_cotizacion: cfg.cond, validez_dias: cfg.vig, abono_pct: cfg.abono, cap_diaria: cfg.cap, costeo: cfg.costeo === "estimado" ? "estimado" : "real", sueldo_mensual: hora.sueldo, horas_mes: hora.horas, siguiente_cotizacion: qnum, logo_path: cfg.logoPath || null } };
     pcats.forEach(function (c) { m["pc:" + ensure(c)] = { t: "pc", row: { id: c.uid, negocio_id: NEG, nombre: c.n, margen: c.m, color: c.col || null } }; });
     gcats.forEach(function (n) { m["gc:" + n] = { t: "gc", row: { negocio_id: NEG, nombre: n } }; });
     gastos.forEach(function (g) { m["g:" + ensure(g)] = { t: "g", row: { id: g.uid, negocio_id: NEG, fecha: g.fecha, nombre: g.nombre, categoria: g.cat, monto: +g.monto || 0, iva_modo: g.iva } }; });
@@ -193,7 +193,7 @@
     R.forEach(function (r) { chk(r); });
     var neg = R[0].data;
     cfg.nombre = neg.nombre; cfg.tel = neg.telefono || ""; cfg.mail = neg.correo || ""; cfg.url = neg.web || ""; cfg.cond = neg.cond_cotizacion;
-    cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; qnum = neg.siguiente_cotizacion;
+    cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; qnum = neg.siguiente_cotizacion;
     cfg.logoPath = neg.logo_path; cfg.logo = null; cfg.logoData = null; cfg.logoDirty = false;
     if (neg.logo_path) {
       var ls = await signed([neg.logo_path]);
