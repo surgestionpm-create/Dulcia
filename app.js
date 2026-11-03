@@ -7,7 +7,7 @@ var orders=[];
 var nextId=1, qnum=1;
 function nextQ(){return qnum++}
 function qn(x){return "N° "+String(x.num).padStart(4,"0")}
-var cur={y:+TODAY.slice(0,4),m:+TODAY.slice(5,7)-1}, view="panel", filtro={cat:"",est:""}, selMode=false, sel={};
+var cur={y:+TODAY.slice(0,4),m:+TODAY.slice(5,7)-1}, view="panel", filtro={cat:"",est:""}, selMode=false, sel={}, gSelMode=false, gSel={};
 var gbuy={"Ingredientes":true,"Empaque y decoración":true,"Mano de obra y gastos":false};
 var rid=1, I="Ingredientes", E="Empaque y decoración", M="Mano de obra y gastos";
 function mk(n,rinde,margen,precio,rows){return {id:rid++,nombre:n,rinde:rinde,margen:margen,precio:precio,items:rows.map(function(r){return {g:r[0],n:r[1],q:r[2],u:r[3],c:r[4]}})}}
@@ -371,6 +371,7 @@ function openGxlsx(){
   '<ol style="margin:0;padding-left:20px;line-height:1.6"><li>Descarga la plantilla y anota un gasto por fila.</li><li>Súbela aquí. Antes de cargar te mostramos lo que vamos a importar.</li></ol>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" data-gtpl>Descargar plantilla</button><label class="btn" style="cursor:pointer">Subir mi Excel<input type="file" id="gimp" accept=".xlsx,.xls,.csv" hidden></label></div>'+
   (gastos.length?'<div style="border-top:1px dashed var(--line);padding-top:12px"><button type="button" class="btn ghost sm" data-gexp>Descargar mis gastos ('+gastos.length+')</button><p class="note" style="margin:6px 0 0">Todos tus gastos, en el mismo formato de la plantilla.</p></div>':'')+
+  (gastos.length?'<div style="border-top:1px dashed var(--line);padding-top:12px"><label class="btn ghost sm danger" style="cursor:pointer">Eliminar gastos con un Excel<input type="file" id="gdelx" accept=".xlsx,.xls,.csv" hidden></label><p class="note" style="margin:6px 0 0">Sube un Excel con los gastos que quieres borrar, por ejemplo el mismo archivo que cargaste por error. Buscamos cada fila por fecha, nombre del gasto y monto, y antes de borrar te mostramos lo que encontramos.</p></div>':'')+
   '<div id="gmsg"></div></div>';
   if(!d.open)d.showModal();
 }
@@ -393,6 +394,39 @@ function xDate(v){
 }
 function gOkDate(iso){if(!iso)return false;var p=iso.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]);return d.getFullYear()===+p[0]&&d.getMonth()===+p[1]-1&&d.getDate()===+p[2]}
 function gIva(v){var k=xNorm(v);if(!k)return "incl";if(k.indexOf("mas")===0||k.indexOf("noincluye")===0||k==="neto"||k==="masiva")return "mas";if(k.indexOf("sin")===0||k==="no"||k.indexOf("exento")===0||k==="noaplica")return "no";return "incl"}
+function gDelParse(buf,X){
+  var wb=X.read(buf,{type:"array",raw:true}), ws=wb.Sheets["Gastos"]||wb.Sheets[wb.SheetNames[0]];
+  var aoa=X.utils.sheet_to_json(ws,{header:1,defval:"",raw:true}), hi=-1, col={};
+  for(var i=0;i<Math.min(aoa.length,15)&&hi<0;i++){var h=aoa[i].map(xNorm);if(h.indexOf("fecha")>=0&&h.indexOf("monto")>=0)hi=i}
+  if(hi<0)throw new Error("No encontramos las columnas Fecha y Monto. Usa la plantilla de gastos de Dulcia o el archivo que descargaste desde aquí.");
+  aoa[hi].forEach(function(h,j){var k=xNorm(h);if(k==="fecha")col.f=j;else if(k==="gasto"||k==="nombre"||k==="detalle"||k==="descripcion")col.n=j;else if(k==="monto"||k==="valor")col.m=j});
+  var pool={}; gastos.forEach(function(g){var k=g.fecha+"|"+String(g.nombre).trim().toLowerCase()+"|"+Math.round(g.monto);(pool[k]=pool[k]||[]).push(g.id)});
+  var ids=[], miss=[];
+  for(var r=hi+1;r<aoa.length;r++){var row=aoa[r]; if(!row.some(function(v){return String(v).trim()!==""}))continue;
+    var f=xDate(col.f==null?"":row[col.f]), n=String(col.n==null?"":row[col.n]).trim(), mv=col.m==null?"":row[col.m], m=String(mv).trim()===""?0:xNum(mv);
+    var k=f+"|"+n.toLowerCase()+"|"+Math.round(m);
+    if(pool[k]&&pool[k].length)ids.push(pool[k].shift()); else miss.push("Fila "+(r+1)+": "+(n||"sin nombre")+(gOkDate(f)?" · "+dmy(f):"")+" · "+$$(m||0));
+  }
+  return {ids:ids,miss:miss};
+}
+function gDelPreview(res){
+  window._gdel=res; var m=$("#gmsg"); if(!m)return;
+  var mis=res.miss.length?'<p class="note" style="margin:8px 0 0">'+res.miss.length+' fila'+(res.miss.length===1?' no coincide':'s no coinciden')+' con ningún gasto y no se borra'+(res.miss.length===1?'':'n')+':</p><ul style="margin:4px 0 0;padding-left:18px;font-size:.85rem">'+res.miss.slice(0,6).map(function(e){return '<li>'+esc(e)+'</li>'}).join("")+(res.miss.length>6?'<li>y '+(res.miss.length-6)+' más</li>':'')+'</ul>':'';
+  if(!res.ids.length){m.innerHTML='<div class="qbox"><b>No encontramos gastos para eliminar.</b>'+mis+'</div>';return}
+  var gs=res.ids.map(function(i){return gastos.find(function(g){return g.id===i})}), tt=gs.reduce(function(a,g){return a+(+g.monto||0)},0);
+  var bym={}; gs.forEach(function(g){var k=g.fecha.slice(0,7);bym[k]=(bym[k]||0)+1});
+  var li=Object.keys(bym).sort().map(function(k){var p=k.split("-");return '<tr><td>'+MESES[+p[1]-1]+' '+p[0]+'</td><td class="r">'+bym[k]+'</td></tr>'}).join("");
+  m.innerHTML='<div class="qbox"><b style="color:var(--bad)">Vamos a eliminar '+res.ids.length+' gasto'+(res.ids.length===1?'':'s')+' · '+$$(tt)+'</b>'+
+    '<div class="scroll" style="margin-top:6px"><table><thead><tr><th>Mes</th><th class="r">Gastos</th></tr></thead><tbody>'+li+'</tbody></table></div>'+mis+
+    '<p class="note" style="margin:8px 0 0">Después de eliminar tendrás unos segundos para tocar “Deshacer”.</p>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button type="button" class="btn ghost" data-close>Cancelar</button><button type="button" class="btn danger-f" data-gdelok>Eliminar '+res.ids.length+'</button></div></div>';
+}
+function gDelIds(ids){
+  var del={}; ids.forEach(function(i){del[i]=1});
+  var keep=[],gone=[]; gastos.forEach(function(g,i){if(del[g.id])gone.push({i:i,g:g});else keep.push(g)});
+  gastos.length=0; keep.forEach(function(g){gastos.push(g)}); gSel={}; gSelMode=false; if($("#dlg").open)$("#dlg").close(); view="gas"; render();
+  toast(gone.length+" gasto"+(gone.length===1?" eliminado":"s eliminados"),function(){gone.forEach(function(z){gastos.splice(Math.min(z.i,gastos.length),0,z.g)})});
+}
 function gParse(buf,X){
   var wb=X.read(buf,{type:"array",raw:true}), ws=wb.Sheets["Gastos"]||wb.Sheets[wb.SheetNames[0]];
   var aoa=X.utils.sheet_to_json(ws,{header:1,defval:"",raw:true}), hi=-1, col={};
@@ -432,7 +466,9 @@ function gImport(){
   toast(res.gs.length+" gasto"+(res.gs.length===1?" cargado":"s cargados"));
 }
 document.addEventListener("click",function(e){var t=e.target.closest("button");if(!t)return;
-  if(t.hasAttribute("data-gxlsx"))openGxlsx();else if(t.hasAttribute("data-gtpl"))gTemplate();else if(t.hasAttribute("data-gexp"))gExport();else if(t.hasAttribute("data-gimport"))gImport();else if(t.hasAttribute("data-xexp"))xExportRecetas()});
+  if(t.hasAttribute("data-gxlsx"))openGxlsx();else if(t.hasAttribute("data-gtpl"))gTemplate();else if(t.hasAttribute("data-gexp"))gExport();else if(t.hasAttribute("data-gimport"))gImport();else if(t.hasAttribute("data-gdelok")){var gr=window._gdel;window._gdel=null;if(gr&&gr.ids.length)gDelIds(gr.ids)}else if(t.hasAttribute("data-xexp"))xExportRecetas()});
+document.addEventListener("change",function(e){var t=e.target;if(t.id!=="gdelx"||!t.files||!t.files[0])return;var f=t.files[0],m=$("#gmsg");if(m)m.innerHTML='<p class="note">Leyendo '+esc(f.name)+'…</p>';
+  Promise.all([xlsxLib(),f.arrayBuffer()]).then(function(a){gDelPreview(gDelParse(a[1],a[0]))}).catch(function(err){if(m)m.innerHTML='<div class="qbox">'+esc(err.message||"No pudimos leer el archivo.")+'</div>'});t.value=""});
 document.addEventListener("change",function(e){var t=e.target;if(t.id!=="gimp"||!t.files||!t.files[0])return;var f=t.files[0],m=$("#gmsg");if(m)m.innerHTML='<p class="note">Leyendo '+esc(f.name)+'…</p>';
   Promise.all([xlsxLib(),f.arrayBuffer()]).then(function(a){gPreview(gParse(a[1],a[0]))}).catch(function(err){if(m)m.innerHTML='<div class="qbox">'+esc(err.message||"No pudimos leer el archivo.")+'</div>'});t.value=""});
 
@@ -706,12 +742,15 @@ function toast(msg,undo){var el=$("#toast");el.innerHTML='<span>'+esc(msg)+'</sp
 /* ---------- GASTOS ---------- */
 function vGas(){
   var gs=gMes().sort(function(a,b){return a.fecha<b.fecha?-1:1}), N=0,I=0,T=0;
+  Object.keys(gSel).forEach(function(k){if(!gastos.some(function(g){return g.id===+k}))delete gSel[k]});
+  window._gvis=gs.map(function(g){return g.id}); var gns=Object.keys(gSel).length, GS=gSelMode;
   var rows=gs.map(function(g){N+=gN(g);I+=gI(g);T+=gN(g)+gI(g);
-    return '<tr><td>'+g.fecha.slice(8)+"/"+g.fecha.slice(5,7)+'</td><td>'+esc(g.cat)+'</td><td>'+esc(g.nombre)+'</td><td class="r">'+$$(g.monto)+'<div class="note" style="margin:0;font-size:.72rem">'+IVAL[g.iva]+'</div></td><td class="r">'+$$(gN(g))+'</td><td class="r">'+$$(gI(g))+'</td><td class="r">'+$$(gN(g)+gI(g))+'</td><td><button class="x" data-gdel="'+g.id+'" aria-label="Eliminar gasto">✕</button></td></tr>'}).join("");
-  return head("Gastos",monthBar()+'<button class="btn ghost" data-cats="gas">Categorías</button><button class="btn ghost" data-gxlsx>Excel</button><button class="btn" data-newg>Nuevo gasto</button>')+
-   '<section class="card"><div class="scroll"><table><thead><tr><th>Día</th><th>Categoría</th><th>Gasto</th><th class="r">Monto</th><th class="r">Neto</th><th class="r">IVA</th><th class="r">Total pagado</th><th></th></tr></thead><tbody>'+
+    return '<tr'+(GS?' class="gselr'+(gSel[g.id]?' on':'')+'" data-gselo="'+g.id+'"':'')+'>'+(GS?'<td style="width:30px"><span class="gck" aria-hidden="true"></span></td>':'')+'<td>'+g.fecha.slice(8)+"/"+g.fecha.slice(5,7)+'</td><td>'+esc(g.cat)+'</td><td>'+esc(g.nombre)+'</td><td class="r">'+$$(g.monto)+'<div class="note" style="margin:0;font-size:.72rem">'+IVAL[g.iva]+'</div></td><td class="r">'+$$(gN(g))+'</td><td class="r">'+$$(gI(g))+'</td><td class="r">'+$$(gN(g)+gI(g))+'</td><td><button class="x" data-gdel="'+g.id+'" aria-label="Eliminar gasto">✕</button></td></tr>'}).join("");
+  var gbar=GS?'<div class="selbar"><b>'+gns+' seleccionado'+(gns===1?'':'s')+'</b><div class="sb"><button class="btn ghost sm" data-gselall>'+(gs.length&&gs.every(function(g){return gSel[g.id]})?'Quitar todos':'Seleccionar todos ('+gs.length+')')+'</button><button class="btn sm danger-f" data-gseldel'+(gns?'':' disabled')+'>Eliminar '+gns+'</button><button class="btn ghost sm" data-gselmode>Listo</button></div></div>':'';
+  return head("Gastos",monthBar()+'<button class="btn ghost" data-cats="gas">Categorías</button><button class="btn ghost" data-gxlsx>Excel</button>'+(GS?'':(gs.length?'<button class="btn ghost" data-gselmode>Seleccionar</button>':''))+'<button class="btn" data-newg>Nuevo gasto</button>')+gbar+
+   '<section class="card"><div class="scroll"><table><thead><tr>'+(GS?'<th></th>':'')+'<th>Día</th><th>Categoría</th><th>Gasto</th><th class="r">Monto</th><th class="r">Neto</th><th class="r">IVA</th><th class="r">Total pagado</th><th></th></tr></thead><tbody>'+
    (rows||'<tr><td colspan="8" class="empty">Aún no registras gastos este mes. Usa “Nuevo gasto” para agregar el primero, o “Excel” para cargar muchos de una vez.</td></tr>')+
-   (rows?'<tr class="tot"><td colspan="4">Total del mes</td><td class="r">'+$$(N)+'</td><td class="r">'+$$(I)+'</td><td class="r">'+$$(T)+'</td><td></td></tr>':'')+'</tbody></table></div>'+
+   (rows?'<tr class="tot"><td colspan="'+(GS?5:4)+'">Total del mes</td><td class="r">'+$$(N)+'</td><td class="r">'+$$(I)+'</td><td class="r">'+$$(T)+'</td><td></td></tr>':'')+'</tbody></table></div>'+
    '<p class="note">El monto neto de estos gastos es el que se descuenta de tus ventas en el Panel. El IVA se usa para estimar el IVA por pagar.</p></section>';
 }
 function openGasto(){
@@ -789,6 +828,13 @@ function extra(t){
     toast("Categoría de costo “"+gp+"” eliminada",function(){rm.forEach(function(z){recipe.splice(z.i,0,z.r)})});render();return true}
   if(t.dataset.w){wk=addDays(wk,+t.dataset.w);render();return true}
   if(t.hasAttribute("data-copyc")){copiarLista();return true}
+  if(t.hasAttribute("data-gselmode")){gSelMode=!gSelMode;gSel={};render();return true}
+  if(t.hasAttribute("data-gselall")){var gv=window._gvis||[],ga=gv.length&&gv.every(function(i){return gSel[i]});gSel={};if(!ga)gv.forEach(function(i){gSel[i]=1});render();return true}
+  if(t.hasAttribute("data-gseldel")){var gids=Object.keys(gSel).map(Number);if(!gids.length)return true;
+    var gt=gids.reduce(function(a,i){var g=gastos.find(function(q){return q.id===i});return a+(g?+g.monto||0:0)},0),d3=$("#dlg");
+    d3.innerHTML='<div class="dlg" style="max-width:440px"><header><h2 style="font-size:1.5rem">¿Eliminar '+gids.length+' gasto'+(gids.length===1?'':'s')+'?</h2><button class="ib" data-close aria-label="Cerrar">✕</button></header><p style="margin:0">Suman '+$$(gt)+'.</p><p class="note" style="margin:0">Después de eliminar tendrás unos segundos para tocar “Deshacer”.</p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" data-close>Cancelar</button><button class="btn danger-f" data-gseldelok>Eliminar '+gids.length+'</button></div></div>';
+    if(!d3.open)d3.showModal();return true}
+  if(t.hasAttribute("data-gseldelok")){gDelIds(Object.keys(gSel).map(Number));return true}
   if(t.hasAttribute("data-selmode")){selMode=!selMode;sel={};render();return true}
   if(t.dataset.selo){var si=+t.dataset.selo;if(sel[si])delete sel[si];else sel[si]=1;render();return true}
   if(t.hasAttribute("data-selall")){var vis=window._pvis||[],all=vis.length&&vis.every(function(i){return sel[i]});sel={};if(!all)vis.forEach(function(i){sel[i]=1});render();return true}
@@ -975,7 +1021,7 @@ document.addEventListener("input",function(e){var t=e.target;if(!t.classList||!t
 document.addEventListener("focusin",function(e){var t=e.target;if(t.classList&&t.classList.contains("money")&&mnum(t.value)===0)t.value=""});
 document.addEventListener("focusout",function(e){var t=e.target;if(t.classList&&t.classList.contains("money")&&!t.value.trim())t.value="$ 0"});
 document.addEventListener("click",function(e){
-  if(!e.target.closest("button,a,input,select,textarea,label")){var dc=e.target.closest(".cal .d[data-nd]");if(dc){if(real().some(function(x){return x.fecha===dc.dataset.nd}))openDay(dc.dataset.nd);else openNew(dc.dataset.nd);return}}
+  if(!e.target.closest("button,a,input,select,textarea,label")){var gr2=e.target.closest("tr[data-gselo]");if(gr2){var gi2=+gr2.dataset.gselo;if(gSel[gi2])delete gSel[gi2];else gSel[gi2]=1;render();return}var dc=e.target.closest(".cal .d[data-nd]");if(dc){if(real().some(function(x){return x.fecha===dc.dataset.nd}))openDay(dc.dataset.nd);else openNew(dc.dataset.nd);return}}
   var t=e.target.closest("button,label.addp"); if(!t)return;
   if(extra(t)){}
   else if(t.dataset.v){view=t.dataset.v;render();scrollTo(0,0)}
