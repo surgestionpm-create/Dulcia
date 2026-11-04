@@ -194,7 +194,7 @@
     var neg = R[0].data;
     cfg.nombre = neg.nombre; cfg.tel = neg.telefono || ""; cfg.mail = neg.correo || ""; cfg.url = neg.web || ""; cfg.cond = neg.cond_cotizacion;
     cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; qnum = neg.siguiente_cotizacion;
-    cfg.logoPath = neg.logo_path; cfg.logo = null; cfg.logoData = null; cfg.logoDirty = false;
+    window.CALT = neg.cal_token || null; cfg.logoPath = neg.logo_path; cfg.logo = null; cfg.logoData = null; cfg.logoDirty = false;
     if (neg.logo_path) {
       var ls = await signed([neg.logo_path]);
       if (ls[neg.logo_path]) { var d = await toData(ls[neg.logo_path]); if (d) { cfg.logo = d; cfg.logoData = d; } }
@@ -352,6 +352,28 @@
       }, 3000);
     }
   }
+  /* Calendario automático (enlace privado para Google Calendar / iPhone) */
+  function calUrl() { var c = window.DULCIA_CONFIG || {}; return c.url + "/functions/v1/calendario?t=" + window.CALT; }
+  window.calBox = function () {
+    if (!window.CALT) return '<p class="note" style="margin-top:2px">Actívalo una vez y todos tus pedidos aparecen solos en tu Google Calendar o en el calendario de tu iPhone: los nuevos, los que cambias y los que eliminas. Las cotizaciones no se incluyen.</p>' +
+      '<div style="margin-top:10px"><button class="btn sm" type="button" data-calon>Activar calendario automático</button></div>';
+    var u = calUrl(), wc = u.replace(/^https:/, "webcal:");
+    return '<p style="margin:2px 0 0"><span class="chip s-pagado">Activado</span></p>' +
+      '<p class="note" style="margin:8px 0 4px">Este es el enlace privado de tus pedidos. No lo compartas.</p>' +
+      '<div class="calurl"><input type="text" readonly id="calu" value="' + esc2(u) + '" aria-label="Enlace del calendario"><button class="btn sm" type="button" data-calcopy>Copiar</button></div>' +
+      '<details class="calsteps" open><summary><b>Agregarlo a Google Calendar</b> (una sola vez)</summary><ol><li>Copia el enlace con el botón <b>Copiar</b>.</li><li>En un computador, abre <b>calendar.google.com</b> con tu cuenta de Gmail.</li><li>A la izquierda, junto a <b>Otros calendarios</b>, toca <b>+</b> y elige <b>Desde URL</b>.</li><li>Pega el enlace y toca <b>Agregar calendario</b>.</li></ol><p class="note" style="margin:4px 0 0">Listo: aparece como “Pedidos · ' + esc2(cfg.nombre || "Dulcia") + '” también en la app de Google Calendar de tu celular. Google revisa los cambios cada algunas horas, así que un pedido nuevo puede tardar en aparecer.</p></details>' +
+      '<details class="calsteps"><summary><b>Agregarlo al calendario del iPhone</b></summary><p style="margin:6px 0 0">Desde tu iPhone, toca <a href="' + esc2(wc) + '">este enlace</a> y luego <b>Suscribirse</b>. El iPhone revisa los cambios más seguido que Google.</p></details>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn ghost sm" type="button" data-calnew>Crear enlace nuevo</button><button class="btn ghost sm danger" type="button" data-caloff>Desactivar</button></div>' +
+      '<p class="note" style="margin:6px 0 0">Si desactivas o creas un enlace nuevo, el anterior deja de funcionar y el calendario agregado se queda sin pedidos.</p>';
+  };
+  async function calSet(on, nuevo) {
+    try {
+      if (on) { var r = await sb.rpc("calendario_activar", { p_nuevo: !!nuevo }); if (r.error) throw r.error; window.CALT = r.data; }
+      else { var r2 = await sb.rpc("calendario_desactivar"); if (r2.error) throw r2.error; window.CALT = null; }
+      if (typeof render === "function") render();
+      if (typeof toast === "function") toast(on ? (nuevo ? "Enlace nuevo creado. Agrégalo otra vez a tu calendario." : "Calendario automático activado") : "Calendario automático desactivado");
+    } catch (err) { if (typeof toast === "function") toast(msg(err)); }
+  }
   /* Aviso arriba en la app y recuadro "Tu plan" en Ajustes */
   window.planBanner = function () {
     var c = window.CUENTA; if (!c) return "";
@@ -422,6 +444,10 @@
     var t = e.target.closest("button"); if (!t) return;
     if (t.hasAttribute("data-admin")) { adminOpen(); }
     else if (t.hasAttribute("data-planes")) { planesOpen(); }
+    else if (t.hasAttribute("data-calon")) { t.disabled = true; calSet(true, false); }
+    else if (t.hasAttribute("data-calnew")) { if (!t.dataset.sure) { t.dataset.sure = "1"; t.textContent = "Toca de nuevo para confirmar"; return; } calSet(true, true); }
+    else if (t.hasAttribute("data-caloff")) { if (!t.dataset.sure) { t.dataset.sure = "1"; t.textContent = "Toca de nuevo para desactivar"; return; } calSet(false); }
+    else if (t.hasAttribute("data-calcopy")) { var ci = document.getElementById("calu"); var done = function () { if (typeof toast === "function") toast("Enlace copiado"); }; if (navigator.clipboard) navigator.clipboard.writeText(ci.value).then(done, function () { ci.select(); document.execCommand("copy"); done(); }); else { ci.select(); document.execCommand("copy"); done(); } }
     else if (t.hasAttribute("data-cancelsub")) { cancelSub(t); }
     else if (t.dataset.act) { t.disabled = true; var r = await sb.rpc("admin_activar", { p_negocio: t.dataset.act }); if (r.error) alert_msg(r.error); adminOpen(); }
   });
