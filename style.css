@@ -447,3 +447,4 @@ tr.gselr.on td{background:var(--accent-soft)}
 .gck{display:block;width:18px;height:18px;border-radius:5px;border:2px solid var(--soft);background:var(--surface)}
 tr.gselr.on .gck{background:var(--accent);border-color:var(--accent);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3.2L15 7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-size:100%}
 .app .lnk{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:2px;font:inherit;cursor:pointer}
+tr.gedr{cursor:pointer}tr.gedr:hover td{background:rgba(42,30,46,.04)}

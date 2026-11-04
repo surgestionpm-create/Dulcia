@@ -748,13 +748,21 @@ function vGas(){
   Object.keys(gSel).forEach(function(k){if(!gastos.some(function(g){return g.id===+k}))delete gSel[k]});
   window._gvis=gs.map(function(g){return g.id}); var gns=Object.keys(gSel).length, GS=gSelMode;
   var rows=gs.map(function(g){N+=gN(g);I+=gI(g);T+=gN(g)+gI(g);
-    return '<tr'+(GS?' class="gselr'+(gSel[g.id]?' on':'')+'" data-gselo="'+g.id+'"':'')+'>'+(GS?'<td style="width:30px"><span class="gck" aria-hidden="true"></span></td>':'')+'<td>'+g.fecha.slice(8)+"/"+g.fecha.slice(5,7)+'</td><td>'+esc(g.cat)+'</td><td>'+esc(g.nombre)+'</td><td class="r">'+$$(g.monto)+'<div class="note" style="margin:0;font-size:.72rem">'+IVAL[g.iva]+'</div></td><td class="r">'+$$(gN(g))+'</td><td class="r">'+$$(gI(g))+'</td><td class="r">'+$$(gN(g)+gI(g))+'</td><td><button class="x" data-gdel="'+g.id+'" aria-label="Eliminar gasto">✕</button></td></tr>'}).join("");
+    return '<tr'+(GS?' class="gselr'+(gSel[g.id]?' on':'')+'" data-gselo="'+g.id+'"':' class="gedr" data-gedr="'+g.id+'" title="Toca para editar"')+'>'+(GS?'<td style="width:30px"><span class="gck" aria-hidden="true"></span></td>':'')+'<td>'+g.fecha.slice(8)+"/"+g.fecha.slice(5,7)+'</td><td>'+esc(g.cat)+'</td><td>'+esc(g.nombre)+'</td><td class="r">'+$$(g.monto)+'<div class="note" style="margin:0;font-size:.72rem">'+IVAL[g.iva]+'</div></td><td class="r">'+$$(gN(g))+'</td><td class="r">'+$$(gI(g))+'</td><td class="r">'+$$(gN(g)+gI(g))+'</td><td style="white-space:nowrap"><button class="x" data-gedit="'+g.id+'" aria-label="Editar gasto" title="Editar gasto"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="x" data-gdel="'+g.id+'" aria-label="Eliminar gasto">✕</button></td></tr>'}).join("");
   var gbar=GS?'<div class="selbar"><b>'+gns+' seleccionado'+(gns===1?'':'s')+'</b><div class="sb"><button class="btn ghost sm" data-gselall>'+(gs.length&&gs.every(function(g){return gSel[g.id]})?'Quitar todos':'Seleccionar todos ('+gs.length+')')+'</button><button class="btn sm danger-f" data-gseldel'+(gns?'':' disabled')+'>Eliminar '+gns+'</button><button class="btn ghost sm" data-gselmode>Listo</button></div></div>':'';
   return head("Gastos",monthBar()+'<button class="btn ghost" data-cats="gas">Categorías</button><button class="btn ghost" data-gxlsx>Excel</button>'+(GS?'':(gs.length?'<button class="btn ghost" data-gselmode>Seleccionar</button>':''))+'<button class="btn" data-newg>Nuevo gasto</button>')+gbar+
-   '<section class="card"><div class="scroll"><table><thead><tr>'+(GS?'<th></th>':'')+'<th>Día</th><th>Categoría</th><th>Gasto</th><th class="r">Monto</th><th class="r">Neto</th><th class="r">IVA</th><th class="r">Total pagado</th><th></th></tr></thead><tbody>'+
+   '<section class="card"><div class="scroll"><table><thead><tr>'+(GS?'<th></th>':'')+'<th>Día</th><th>Categoría</th><th>Gasto</th><th class="r">Monto</th><th class="r">Neto</th><th class="r">IVA</th><th class="r">Total pagado</th><th style="width:70px"></th></tr></thead><tbody>'+
    (rows||'<tr><td colspan="8" class="empty">Aún no registras gastos este mes. Usa “Nuevo gasto” para agregar el primero, o “Excel” para cargar muchos de una vez.</td></tr>')+
    (rows?'<tr class="tot"><td colspan="'+(GS?5:4)+'">Total del mes</td><td class="r">'+$$(N)+'</td><td class="r">'+$$(I)+'</td><td class="r">'+$$(T)+'</td><td></td></tr>':'')+'</tbody></table></div>'+
    '<p class="note">El monto neto de estos gastos es el que se descuenta de tus ventas en el Panel. El IVA se usa para estimar el IVA por pagar.</p></section>';
+}
+function openGastoEdit(id){
+  var g=gastos.find(function(q){return q.id===id}); if(!g)return;
+  openGasto(); var f=$("#gf"); f.dataset.edit=g.id; f.querySelector("h2").textContent="Editar gasto";
+  $("#g_f").value=g.fecha; var k=$("#g_k"); if(![].some.call(k.options,function(o){return o.value===g.cat})){var o=document.createElement("option");o.textContent=g.cat;k.insertBefore(o,k.firstChild)} k.value=g.cat;
+  $("#g_n").value=g.nombre; $("#g_m").value=mfmt(g.monto);
+  var r=document.querySelector('input[name="giva"][value="'+(g.iva||"incl")+'"]'); if(r)r.checked=true;
+  f.querySelector("button[type=submit]").textContent="Guardar cambios"; gprev();
 }
 function openGasto(){
   var d=$("#dlg");
@@ -856,6 +864,7 @@ function extra(t){
   if(t.dataset.ladd){var xo=orders.find(function(q){return q.id===+t.dataset.ladd});xo.items=xo.items||[];xo.items.push({rid:recipes[0].id,q:1});openOrder(xo.id);return true}
   if(t.dataset.ldel){var pl=t.dataset.ldel.split(":"),xl=orders.find(function(q){return q.id===+pl[0]});xl.items.splice(+pl[1],1);openOrder(xl.id);return true}
   if(t.dataset.pdel){var pp=t.dataset.pdel.split(":"),xp=orders.find(function(q){return q.id===+pp[0]});xp.fotos.splice(+pp[1],1);openOrder(xp.id);return true}
+  if(t.dataset.gedit){openGastoEdit(+t.dataset.gedit);return true}
   if(t.dataset.gdel){var gi=gastos.findIndex(function(g){return g.id===+t.dataset.gdel});var g0=gastos.splice(gi,1)[0];toast("Gasto “"+g0.nombre+"” eliminado",function(){gastos.splice(gi,0,g0)});render();return true}
   if(t.dataset.addrow!==undefined){insertRow(groups()[+t.dataset.addrow]);render();return true}
   if(t.dataset.delrow!==undefined){var ri=+t.dataset.delrow,r0=recipe.splice(ri,1)[0];toast("Ítem “"+r0.n+"” eliminado",function(){recipe.splice(ri,0,r0)});render();return true}
@@ -898,7 +907,9 @@ function extraSubmit(f){
   if(f.id==="gf"){
     var k=$("#g_k").value; if(k==="__new"){k=$("#g_nkv").value.trim()||"Otros"; if(gcats.indexOf(k)<0)gcats.push(k)}
     var d=pd($("#g_f").value);
-    gastos.push({id:gid++,fecha:$("#g_f").value,cat:k,nombre:$("#g_n").value.trim(),monto:mnum($("#g_m").value),iva:gmode()});
+    var ge=f.dataset.edit?gastos.find(function(q){return q.id===+f.dataset.edit}):null;
+    if(ge){ge.fecha=$("#g_f").value;ge.cat=k;ge.nombre=$("#g_n").value.trim();ge.monto=mnum($("#g_m").value);ge.iva=gmode();toast("Gasto actualizado")}
+    else gastos.push({id:gid++,fecha:$("#g_f").value,cat:k,nombre:$("#g_n").value.trim(),monto:mnum($("#g_m").value),iva:gmode()});
     cur={y:d.getFullYear(),m:d.getMonth()}; $("#dlg").close();
   } else if(f.id==="grpf"){
     var gn=$("#grp_n").value.trim(); gbuy[gn]=$("#grp_b").checked;
@@ -1028,7 +1039,7 @@ document.addEventListener("input",function(e){var t=e.target;if(!t.classList||!t
 document.addEventListener("focusin",function(e){var t=e.target;if(t.classList&&t.classList.contains("money")&&mnum(t.value)===0)t.value=""});
 document.addEventListener("focusout",function(e){var t=e.target;if(t.classList&&t.classList.contains("money")&&!t.value.trim())t.value="$ 0"});
 document.addEventListener("click",function(e){
-  if(!e.target.closest("button,a,input,select,textarea,label")){var gr2=e.target.closest("tr[data-gselo]");if(gr2){var gi2=+gr2.dataset.gselo;if(gSel[gi2])delete gSel[gi2];else gSel[gi2]=1;render();return}var dc=e.target.closest(".cal .d[data-nd]");if(dc){if(real().some(function(x){return x.fecha===dc.dataset.nd}))openDay(dc.dataset.nd);else openNew(dc.dataset.nd);return}}
+  if(!e.target.closest("button,a,input,select,textarea,label")){var ge2=e.target.closest("tr[data-gedr]");if(ge2){openGastoEdit(+ge2.dataset.gedr);return}var gr2=e.target.closest("tr[data-gselo]");if(gr2){var gi2=+gr2.dataset.gselo;if(gSel[gi2])delete gSel[gi2];else gSel[gi2]=1;render();return}var dc=e.target.closest(".cal .d[data-nd]");if(dc){if(real().some(function(x){return x.fecha===dc.dataset.nd}))openDay(dc.dataset.nd);else openNew(dc.dataset.nd);return}}
   var t=e.target.closest("button,label.addp"); if(!t)return;
   if(extra(t)){}
   else if(t.dataset.v){view=t.dataset.v;render();scrollTo(0,0)}
