@@ -127,7 +127,7 @@ function vPanel(){
 var PERS=[5,10,15,20,25,30,35,40];
 function persTxt(x){return x&&x.personas?x.personas+" personas":""}
 /* ---------- MARKETING: base de clientes ---------- */
-var mktF={q:"",seg:"",ord:"total"};
+var mktF={q:"",seg:"",ord:"total",cat:""};
 function clientes(){
   var by={}, alias={}, list=[];
   function nk(v){return "n:"+xNorm(v)}
@@ -139,7 +139,7 @@ function clientes(){
     if(!key){key=ks[0];by[key]={nombre:nm,ig:"",wa:"",n:0,cot:0,total:0,primera:"",ultima:"",cats:{},canal:{},personas:0};list.push(by[key])}
     ks.forEach(function(k){alias[k]=key});
     var c=by[key]; c.nombre=nm; if(o.ig)c.ig=o.ig; if(o.wa)c.wa=o.wa;
-    if(o.cot){c.cot++;return}
+    if(o.cot){c.cot++;c.cotc=c.cotc||{};c.cotc[o.cat]=1;return}
     c.n++; c.total+=+o.total||0; if(!c.primera)c.primera=o.fecha; if(o.fecha>c.ultima)c.ultima=o.fecha;
     c.cats[o.cat]=(c.cats[o.cat]||0)+1; c.canal[o.canal]=(c.canal[o.canal]||0)+1;
   });
@@ -156,7 +156,7 @@ function clientes(){
 var SEGL={frecuente:"Frecuente",recuperar:"Frecuente sin volver",inactiva:"Inactiva",nueva:"Nueva",ocasional:"Ocasional",proxima:"Con pedido próximo",cotizo:"Solo cotizó"};
 var SEGT={frecuente:"3 o más pedidos y compró en los últimos 90 días.",recuperar:"Compró 3 o más veces, pero hace más de 90 días que no pide.",inactiva:"Hace más de 90 días que no pide.",nueva:"Su primer pedido fue en los últimos 30 días.",ocasional:"1 o 2 pedidos en los últimos 90 días.",proxima:"Tiene un pedido con fecha futura.",cotizo:"Pidió cotización pero aún no compra."};
 function mktList(){
-  var q=xNorm(mktF.q), l=clientes().filter(function(c){return (!mktF.seg||c.seg===mktF.seg)&&(!q||xNorm(c.nombre+" "+c.ig+" "+c.wa).indexOf(q)>=0)});
+  var q=xNorm(mktF.q), l=clientes().filter(function(c){return (!mktF.seg||c.seg===mktF.seg)&&(!mktF.cat||c.cats[mktF.cat]||(c.cotc&&c.cotc[mktF.cat]))&&(!q||xNorm(c.nombre+" "+c.ig+" "+c.wa).indexOf(q)>=0)});
   var o=mktF.ord; l.sort(function(a,b){return o==="nombre"?a.nombre.localeCompare(b.nombre,"es"):o==="ultima"?(b.ultima||"").localeCompare(a.ultima||""):o==="n"?b.n-a.n:b.total-a.total});
   return l;
 }
@@ -175,22 +175,22 @@ function vMkt(){
    '<p class="note" style="margin:-6px 0 14px">Tu base de clientes se arma sola con tus pedidos. Úsala para escribirles por WhatsApp, recuperar a las que no vuelven o crear audiencias en Instagram.</p>'+
    '<div class="grid kpis">'+kpi("Clientes",String(all.length),comp.length+" con compras")+kpi("Vuelven a comprar",(comp.length?Math.round(rec/comp.length*100):0)+"%",rec+" con 2 o más pedidos")+kpi("Ticket promedio",$$(tk),"Por pedido, con IVA")+kpi("Para recuperar",String((cnt.inactiva||0)+(cnt.recuperar||0)),"Más de 90 días sin pedir")+'</div>'+
    '<section class="card" style="margin-top:14px"><div class="segs">'+chips+'</div>'+
-   '<div class="filters" style="margin:12px 0 0"><input type="search" id="mq" placeholder="Buscar por nombre, Instagram o WhatsApp" value="'+esc(mktF.q)+'"><select id="mo" aria-label="Ordenar"><option value="total"'+(mktF.ord==="total"?' selected':'')+'>Más compras ($)</option><option value="n"'+(mktF.ord==="n"?' selected':'')+'>Más pedidos</option><option value="ultima"'+(mktF.ord==="ultima"?' selected':'')+'>Compra más reciente</option><option value="nombre"'+(mktF.ord==="nombre"?' selected':'')+'>Nombre</option></select></div>'+
-   (mktF.seg?'<p class="note" style="margin:8px 0 0">'+SEGT[mktF.seg]+'</p>':'')+
+   '<div class="filters" style="margin:12px 0 0"><input type="search" id="mq" placeholder="Buscar por nombre, Instagram o WhatsApp" value="'+esc(mktF.q)+'"><select id="mcat" aria-label="Categoría de pedido"><option value="">Todas las categorías</option>'+(function(){var cs={};pcats.forEach(function(c){cs[c.n]=1});orders.forEach(function(o){if(o.cat)cs[o.cat]=1});return Object.keys(cs).sort(function(a,b){return a.localeCompare(b,"es")})})().map(function(k){return '<option'+(mktF.cat===k?' selected':'')+'>'+esc(k)+'</option>'}).join("")+'</select><select id="mo" aria-label="Ordenar"><option value="total"'+(mktF.ord==="total"?' selected':'')+'>Más compras ($)</option><option value="n"'+(mktF.ord==="n"?' selected':'')+'>Más pedidos</option><option value="ultima"'+(mktF.ord==="ultima"?' selected':'')+'>Compra más reciente</option><option value="nombre"'+(mktF.ord==="nombre"?' selected':'')+'>Nombre</option></select></div>'+
+   (mktF.seg||mktF.cat?'<p class="note" style="margin:8px 0 0">'+(mktF.seg?SEGT[mktF.seg]+' ':'')+(mktF.cat?'Clientas que han pedido o cotizado “'+esc(mktF.cat)+'”.':'')+'</p>':'')+
    '<div class="scroll" style="margin-top:10px"><table class="mkt"><thead><tr><th>Cliente</th><th>Contacto</th><th class="r">Pedidos</th><th class="r">Total comprado</th><th class="r">Ticket</th><th>Último pedido</th><th>Compra más</th></tr></thead><tbody>'+
    (rows||'<tr><td colspan="7" class="empty">'+(all.length?'Ninguna clienta coincide con este filtro.':'Cuando registres pedidos, tus clientes aparecerán aquí.')+'</td></tr>')+'</tbody></table></div>'+
-   '<p class="note">'+l.length+' cliente'+(l.length===1?'':'s')+' en la lista. El Excel descarga '+(mktF.seg||mktF.q?'solo las de este filtro':'todas')+'. Cuida estos datos: úsalos solo para comunicarte con tus clientas.</p></section>';
+   '<p class="note">'+l.length+' cliente'+(l.length===1?'':'s')+' en la lista. El Excel descarga '+(mktF.seg||mktF.q||mktF.cat?'solo las de este filtro':'todas')+'. Cuida estos datos: úsalos solo para comunicarte con tus clientas.</p></section>';
 }
 function fechaCorta(iso){return iso.slice(8,10)+"-"+iso.slice(5,7)+"-"+iso.slice(0,4)}
 function mktExport(){xlsxLib().then(function(X){
   var l=mktList(), H=["Cliente","WhatsApp","Instagram","Segmento","Pedidos","Cotizaciones","Total comprado","Ticket promedio","Primer pedido","Último pedido","Días sin comprar","Categoría que más compra","Canal","Link WhatsApp"];
   var rows=l.map(function(c){return [c.nombre,c.wa?waFmt(c.wa):"",c.ig?"@"+c.ig:"",SEGL[c.seg],c.n,c.cot,Math.round(c.total),Math.round(c.ticket),c.primera?fechaCorta(c.primera):"",c.ultima?fechaCorta(c.ultima):"",c.dias==null?"":Math.max(0,c.dias),c.cat,c.can,c.wa?waUrl(c.wa):""]});
-  xBook(X,H,rows,[26,18,18,20,9,12,15,15,13,13,14,24,14,32],["Base de clientes de "+(cfg.nombre||"tu pastelería")+" · "+fechaCorta(TODAY),"","Se arma con tus pedidos registrados en Dulcia. Las cotizaciones no cuentan como compra.","","Segmentos:"].concat(Object.keys(SEGL).map(function(k){return "• "+SEGL[k]+": "+SEGT[k]})).concat(["","Cuida estos datos personales: úsalos solo para comunicarte con tus clientas y no los compartas."]),"Clientes","Clientes_"+(xNorm(cfg.nombre)||"Dulcia")+"_"+TODAY+".xlsx");
+  xBook(X,H,rows,[26,18,18,20,9,12,15,15,13,13,14,24,14,32],["Base de clientes de "+(cfg.nombre||"tu pastelería")+" · "+fechaCorta(TODAY),"","Se arma con tus pedidos registrados en Dulcia. Las cotizaciones no cuentan como compra.","","Segmentos:"].concat(Object.keys(SEGL).map(function(k){return "• "+SEGL[k]+": "+SEGT[k]})).concat(["","Cuida estos datos personales: úsalos solo para comunicarte con tus clientas y no los compartas."]),"Clientes","Clientes_"+(xNorm(cfg.nombre)||"Dulcia")+(mktF.cat?"_"+xNorm(mktF.cat):"")+"_"+TODAY+".xlsx");
   toast(l.length+" cliente"+(l.length===1?"":"s")+" descargad"+(l.length===1?"a":"as"));
 }).catch(function(e){toast(e.message)})}
 document.addEventListener("click",function(e){var t=e.target.closest("button");if(!t)return;
   if(t.hasAttribute("data-mktx"))mktExport();else if(t.dataset.seg!==undefined&&t.classList.contains("segc")){mktF.seg=t.dataset.seg;render()}});
-document.addEventListener("input",function(e){var t=e.target;if(t.id==="mq"){mktF.q=t.value;var pos=t.selectionStart;render();var n=$("#mq");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(er){}}}else if(t.id==="mo"){mktF.ord=t.value;render()}});
+document.addEventListener("input",function(e){var t=e.target;if(t.id==="mq"){mktF.q=t.value;var pos=t.selectionStart;render();var n=$("#mq");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(er){}}}else if(t.id==="mo"){mktF.ord=t.value;render()}else if(t.id==="mcat"){mktF.cat=t.value;render()}});
 function kpi(l,v,n){return '<div class="card kpi"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="n">'+n+'</div></div>'}
 
 /* ---------- CALENDARIO ---------- */
