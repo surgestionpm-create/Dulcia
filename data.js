@@ -306,7 +306,7 @@
     function upd() { var v = (root.querySelector("input[name=plan]:checked") || {}).value; mail.hidden = v !== "mensual"; }
     root.querySelectorAll("input[name=plan]").forEach(function (r) { r.onchange = upd; }); upd();
     root.querySelector("#pg").onclick = async function () {
-      var b = this, plan = root.querySelector("input[name=plan]:checked").value; busy(b, true);
+      var b = this, plan = root.querySelector("input[name=plan]:checked").value; busy(b, true); var PV = { mensual: 5990, semestral: 29990, anual: 54990 }; if (window.dulciaEvent) dulciaEvent("begin_checkout", { currency: "CLP", value: PV[plan] || 0, items: [{ item_id: plan, item_name: "Dulcia " + plan, price: PV[plan] || 0, quantity: 1 }] });
       try {
         var cfgd = window.DULCIA_CONFIG || {}, s = await sb.auth.getSession(), tk = s.data.session.access_token;
         var r = await fetch(cfgd.url + "/functions/v1/crear-pago", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: cfgd.key, "Content-Type": "application/json" }, body: JSON.stringify({ plan: plan, email: root.querySelector("#mpmail").value.trim() }) });
@@ -457,7 +457,7 @@
     document.getElementById("lo").onclick = doLogout;
     document.getElementById("af").onsubmit = async function (e) {
       e.preventDefault(); var b = e.target.querySelector(".btn"); busy(b, true);
-      try { var r = await sb.rpc("crear_negocio", { p_nombre: document.getElementById("an").value.trim() }); if (r.error) throw r.error; var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session); }
+      try { var r = await sb.rpc("crear_negocio", { p_nombre: document.getElementById("an").value.trim() }); if (r.error) throw r.error; if (window.dulciaEvent) dulciaEvent("sign_up", { method: "correo" }); var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session); }
       catch (err) { note(msg(err)); busy(b, false); }
     };
   }
