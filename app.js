@@ -68,8 +68,9 @@ var ICON={
 };
 ICON.gas='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.6 5 1.2 5 3.9 0 1.1-1.100 1.800-2.500 1.800-1.100 0-2.100-.5-2.600-1.400M12 6v2M12 16v2"/></svg>';
 ICON.cfg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>';
+ICON.mkt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6L6 10z"/><path d="M16 9a4 4 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11"/></svg>';
 ICON.com='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h10l2-8H6.5"/><circle cx="9" cy="19.500" r="1.200"/><circle cx="17" cy="19.500" r="1.200"/></svg>';
-var NAV=[["panel","Panel","panel"],["cal","Calendario","cal"],["ped","Pedidos","ped"],["prod","Producción","prod"],["cost","Recetas","cost"],["ing","Ingredientes","ing"],["com","Compras","com"],["gas","Gastos","gas"],["cfg","Ajustes","cfg"]];
+var NAV=[["panel","Panel","panel"],["cal","Calendario","cal"],["ped","Pedidos","ped"],["prod","Producción","prod"],["cost","Recetas","cost"],["ing","Ingredientes","ing"],["com","Compras","com"],["gas","Gastos","gas"],["mkt","Marketing","mkt"],["cfg","Ajustes","cfg"]];
 function renderNav(){
   $("#side").innerHTML='<div class="brand"><img class="blogo" src="'+logoSrc()+'" alt=""><div><div class="bn">'+esc(cfg.nombre)+'</div><small>con Dulcia</small></div></div><div style="height:14px"></div>'+NAV.map(function(n){
     return '<button class="nav" data-v="'+n[0]+'"'+(view===n[0]?' aria-current="page"':'')+'>'+ICON[n[2]]+'<span>'+n[1]+'</span></button>'}).join("")+
@@ -125,6 +126,71 @@ function vPanel(){
 }
 var PERS=[5,10,15,20,25,30,35,40];
 function persTxt(x){return x&&x.personas?x.personas+" personas":""}
+/* ---------- MARKETING: base de clientes ---------- */
+var mktF={q:"",seg:"",ord:"total"};
+function clientes(){
+  var by={}, alias={}, list=[];
+  function nk(v){return "n:"+xNorm(v)}
+  orders.slice().sort(function(a,b){return (a.fecha+a.hora)<(b.fecha+b.hora)?-1:1}).forEach(function(o){
+    var nm=String(o.cliente||"").trim(); if(!nm)return;
+    var ks=[o.wa?"w:"+o.wa:null,o.ig?"i:"+o.ig.toLowerCase():null,nk(nm)].filter(Boolean), key=null;
+    ks.forEach(function(k){if(key||!alias[k])return;var c0=by[alias[k]];if(k.charAt(0)==="n"&&o.wa&&c0.wa&&c0.wa!==o.wa)return;key=alias[k]});
+    ks=ks.filter(function(k){return !(k.charAt(0)==="n"&&alias[k]&&alias[k]!==key&&by[alias[k]].wa&&by[alias[k]].wa!==o.wa)});
+    if(!key){key=ks[0];by[key]={nombre:nm,ig:"",wa:"",n:0,cot:0,total:0,primera:"",ultima:"",cats:{},canal:{},personas:0};list.push(by[key])}
+    ks.forEach(function(k){alias[k]=key});
+    var c=by[key]; c.nombre=nm; if(o.ig)c.ig=o.ig; if(o.wa)c.wa=o.wa;
+    if(o.cot){c.cot++;return}
+    c.n++; c.total+=+o.total||0; if(!c.primera)c.primera=o.fecha; if(o.fecha>c.ultima)c.ultima=o.fecha;
+    c.cats[o.cat]=(c.cats[o.cat]||0)+1; c.canal[o.canal]=(c.canal[o.canal]||0)+1;
+  });
+  var t0=pd(TODAY);
+  list.forEach(function(c){
+    var top=function(m){return Object.keys(m).sort(function(a,b){return m[b]-m[a]})[0]||""};
+    c.cat=top(c.cats); c.can=top(c.canal); c.ticket=c.n?c.total/c.n:0;
+    c.dias=c.ultima?Math.round((t0-pd(c.ultima))/864e5):null;
+    c.seg=!c.n?"cotizo":(c.ultima>TODAY?"proxima":(c.n>=3?"frecuente":(c.dias!=null&&c.dias>90?"inactiva":(c.n===1&&c.dias!=null&&c.dias<=30?"nueva":"ocasional"))));
+    if(c.n>=3&&c.dias!=null&&c.dias>90)c.seg="recuperar";
+  });
+  return list;
+}
+var SEGL={frecuente:"Frecuente",recuperar:"Frecuente sin volver",inactiva:"Inactiva",nueva:"Nueva",ocasional:"Ocasional",proxima:"Con pedido próximo",cotizo:"Solo cotizó"};
+var SEGT={frecuente:"3 o más pedidos y compró en los últimos 90 días.",recuperar:"Compró 3 o más veces, pero hace más de 90 días que no pide.",inactiva:"Hace más de 90 días que no pide.",nueva:"Su primer pedido fue en los últimos 30 días.",ocasional:"1 o 2 pedidos en los últimos 90 días.",proxima:"Tiene un pedido con fecha futura.",cotizo:"Pidió cotización pero aún no compra."};
+function mktList(){
+  var q=xNorm(mktF.q), l=clientes().filter(function(c){return (!mktF.seg||c.seg===mktF.seg)&&(!q||xNorm(c.nombre+" "+c.ig+" "+c.wa).indexOf(q)>=0)});
+  var o=mktF.ord; l.sort(function(a,b){return o==="nombre"?a.nombre.localeCompare(b.nombre,"es"):o==="ultima"?(b.ultima||"").localeCompare(a.ultima||""):o==="n"?b.n-a.n:b.total-a.total});
+  return l;
+}
+function vMkt(){
+  var all=clientes(), l=mktList(), comp=all.filter(function(c){return c.n}), rec=comp.filter(function(c){return c.n>=2}).length;
+  var tk=comp.length?comp.reduce(function(a,c){return a+c.total},0)/comp.reduce(function(a,c){return a+c.n},0):0;
+  var cnt={}; all.forEach(function(c){cnt[c.seg]=(cnt[c.seg]||0)+1});
+  var segs=["frecuente","recuperar","inactiva","nueva","ocasional","proxima","cotizo"].filter(function(k){return cnt[k]});
+  var chips='<button class="segc'+(!mktF.seg?' on':'')+'" data-seg="">Todas · '+all.length+'</button>'+segs.map(function(k){return '<button class="segc sg-'+k+(mktF.seg===k?' on':'')+'" data-seg="'+k+'" title="'+SEGT[k]+'">'+SEGL[k]+' · '+cnt[k]+'</button>'}).join("");
+  var rows=l.map(function(c){
+    return '<tr><td><b>'+esc(c.nombre)+'</b><div class="note" style="margin:0"><span class="sgt sg-'+c.seg+'">'+SEGL[c.seg]+'</span></div></td>'+
+      '<td class="ct">'+(c.wa?'<a target="_blank" rel="noopener" href="'+waUrl(c.wa)+'">'+esc(waFmt(c.wa))+'</a>':'')+(c.ig?'<a target="_blank" rel="noopener" href="'+igUrl(c.ig)+'">@'+esc(c.ig)+'</a>':'')+(!c.wa&&!c.ig?'<span class="note" style="margin:0">Sin contacto</span>':'')+'</td>'+
+      '<td class="r">'+c.n+(c.cot?'<div class="note" style="margin:0">+'+c.cot+' cotiz.</div>':'')+'</td><td class="r">'+$$(c.total)+'</td><td class="r">'+(c.n?$$(c.ticket):'')+'</td>'+
+      '<td>'+(c.ultima?fechaCorta(c.ultima)+(c.dias>0?'<div class="note" style="margin:0">hace '+c.dias+' días</div>':''):'<span class="note" style="margin:0">—</span>')+'</td><td>'+esc(c.cat)+'</td></tr>'}).join("");
+  return head("Marketing",'<button class="btn" data-mktx>Descargar clientes en Excel</button>')+
+   '<p class="note" style="margin:-6px 0 14px">Tu base de clientes se arma sola con tus pedidos. Úsala para escribirles por WhatsApp, recuperar a las que no vuelven o crear audiencias en Instagram.</p>'+
+   '<div class="grid kpis">'+kpi("Clientes",String(all.length),comp.length+" con compras")+kpi("Vuelven a comprar",(comp.length?Math.round(rec/comp.length*100):0)+"%",rec+" con 2 o más pedidos")+kpi("Ticket promedio",$$(tk),"Por pedido, con IVA")+kpi("Para recuperar",String((cnt.inactiva||0)+(cnt.recuperar||0)),"Más de 90 días sin pedir")+'</div>'+
+   '<section class="card" style="margin-top:14px"><div class="segs">'+chips+'</div>'+
+   '<div class="filters" style="margin:12px 0 0"><input type="search" id="mq" placeholder="Buscar por nombre, Instagram o WhatsApp" value="'+esc(mktF.q)+'"><select id="mo" aria-label="Ordenar"><option value="total"'+(mktF.ord==="total"?' selected':'')+'>Más compras ($)</option><option value="n"'+(mktF.ord==="n"?' selected':'')+'>Más pedidos</option><option value="ultima"'+(mktF.ord==="ultima"?' selected':'')+'>Compra más reciente</option><option value="nombre"'+(mktF.ord==="nombre"?' selected':'')+'>Nombre</option></select></div>'+
+   (mktF.seg?'<p class="note" style="margin:8px 0 0">'+SEGT[mktF.seg]+'</p>':'')+
+   '<div class="scroll" style="margin-top:10px"><table class="mkt"><thead><tr><th>Cliente</th><th>Contacto</th><th class="r">Pedidos</th><th class="r">Total comprado</th><th class="r">Ticket</th><th>Último pedido</th><th>Compra más</th></tr></thead><tbody>'+
+   (rows||'<tr><td colspan="7" class="empty">'+(all.length?'Ninguna clienta coincide con este filtro.':'Cuando registres pedidos, tus clientes aparecerán aquí.')+'</td></tr>')+'</tbody></table></div>'+
+   '<p class="note">'+l.length+' cliente'+(l.length===1?'':'s')+' en la lista. El Excel descarga '+(mktF.seg||mktF.q?'solo las de este filtro':'todas')+'. Cuida estos datos: úsalos solo para comunicarte con tus clientas.</p></section>';
+}
+function fechaCorta(iso){return iso.slice(8,10)+"-"+iso.slice(5,7)+"-"+iso.slice(0,4)}
+function mktExport(){xlsxLib().then(function(X){
+  var l=mktList(), H=["Cliente","WhatsApp","Instagram","Segmento","Pedidos","Cotizaciones","Total comprado","Ticket promedio","Primer pedido","Último pedido","Días sin comprar","Categoría que más compra","Canal","Link WhatsApp"];
+  var rows=l.map(function(c){return [c.nombre,c.wa?waFmt(c.wa):"",c.ig?"@"+c.ig:"",SEGL[c.seg],c.n,c.cot,Math.round(c.total),Math.round(c.ticket),c.primera?fechaCorta(c.primera):"",c.ultima?fechaCorta(c.ultima):"",c.dias==null?"":Math.max(0,c.dias),c.cat,c.can,c.wa?waUrl(c.wa):""]});
+  xBook(X,H,rows,[26,18,18,20,9,12,15,15,13,13,14,24,14,32],["Base de clientes de "+(cfg.nombre||"tu pastelería")+" · "+fechaCorta(TODAY),"","Se arma con tus pedidos registrados en Dulcia. Las cotizaciones no cuentan como compra.","","Segmentos:"].concat(Object.keys(SEGL).map(function(k){return "• "+SEGL[k]+": "+SEGT[k]})).concat(["","Cuida estos datos personales: úsalos solo para comunicarte con tus clientas y no los compartas."]),"Clientes","Clientes_"+(xNorm(cfg.nombre)||"Dulcia")+"_"+TODAY+".xlsx");
+  toast(l.length+" cliente"+(l.length===1?"":"s")+" descargad"+(l.length===1?"a":"as"));
+}).catch(function(e){toast(e.message)})}
+document.addEventListener("click",function(e){var t=e.target.closest("button");if(!t)return;
+  if(t.hasAttribute("data-mktx"))mktExport();else if(t.dataset.seg!==undefined&&t.classList.contains("segc")){mktF.seg=t.dataset.seg;render()}});
+document.addEventListener("input",function(e){var t=e.target;if(t.id==="mq"){mktF.q=t.value;var pos=t.selectionStart;render();var n=$("#mq");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(er){}}}else if(t.id==="mo"){mktF.ord=t.value;render()}});
 function kpi(l,v,n){return '<div class="card kpi"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="n">'+n+'</div></div>'}
 
 /* ---------- CALENDARIO ---------- */
@@ -1029,7 +1095,7 @@ function readFiles(files,cb,max){
 /* ---------- RENDER + EVENTOS ---------- */
 function render(){
   renderNav();
-  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,prod:vProd,cost:vCost,ing:vIng,com:vCom,gas:vGas,cfg:vCfg})[view]();
+  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,prod:vProd,cost:vCost,ing:vIng,com:vCom,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
   if(view==="cost"&&recipes.length)rsum();
 }
 document.addEventListener("input",function(e){var t=e.target;if(!t.classList||!t.classList.contains("money"))return;

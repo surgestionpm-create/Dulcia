@@ -448,3 +448,27 @@ tr.gselr.on td{background:var(--accent-soft)}
 tr.gselr.on .gck{background:var(--accent);border-color:var(--accent);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3.2L15 7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-size:100%}
 .app .lnk{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:2px;font:inherit;cursor:pointer}
 tr.gedr{cursor:pointer}tr.gedr:hover td{background:rgba(42,30,46,.04)}
+/* marketing */
+.segs{display:flex;flex-wrap:wrap;gap:8px}
+.segc{border:1.5px solid var(--line);background:var(--surface);border-radius:99px;padding:.35em .9em;font-size:.85rem;font-weight:500;cursor:pointer}
+.segc.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.sgt{display:inline-block;border-radius:99px;padding:.05em .6em;font-size:.72rem;font-weight:600;background:var(--line);color:var(--ink)}
+.sgt.sg-frecuente{background:var(--ok-bg);color:var(--ok)}.sgt.sg-recuperar{background:var(--bad-bg);color:var(--bad)}.sgt.sg-inactiva{background:var(--warn-bg);color:var(--warn)}
+.sgt.sg-nueva{background:#D2E8F7;color:#1D4F78}.sgt.sg-proxima{background:#E4D9F5;color:#4F3388}
+table.mkt td{vertical-align:top}
+table.mkt .ct a{display:block;color:var(--accent);text-decoration:none;font-size:.88rem;white-space:nowrap}
+table.mkt .ct a:hover{text-decoration:underline}
+#mq{flex:1;min-width:200px}
+@media(max-width:560px){
+  table.mkt thead{display:none}
+  table.mkt,table.mkt tbody,table.mkt tr,table.mkt td{display:block;width:100%}
+  table.mkt tr{border-bottom:1px dashed var(--line);padding:10px 0;display:grid;grid-template-columns:1fr auto;gap:2px 12px}
+  table.mkt td{border:0!important;padding:0!important;text-align:left!important}
+  table.mkt td:nth-child(1){grid-column:1}table.mkt td:nth-child(2){grid-column:1}
+  table.mkt td:nth-child(3){grid-column:2;grid-row:1;text-align:right!important}
+  table.mkt td:nth-child(3)::after{content:" pedidos";font-size:.78rem;color:var(--soft)}
+  table.mkt td:nth-child(4){grid-column:2;grid-row:2;text-align:right!important;font-weight:600}
+  table.mkt td:nth-child(5){display:none}
+  table.mkt td:nth-child(6),table.mkt td:nth-child(7){grid-column:1/-1;font-size:.82rem;color:var(--soft)}
+  table.mkt td.empty{grid-column:1/-1}
+}
