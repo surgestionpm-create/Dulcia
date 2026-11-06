@@ -21,6 +21,7 @@
   function t5(h) { return String(h || "12:00").slice(0, 5); }
   function msg(e) {
     var m = (e && (e.message || e.error_description)) || String(e || "");
+    if (/Load failed|Failed to fetch|NetworkError|network error/i.test(m)) return "No pudimos conectarnos con el servidor. Revisa tu conexión e intenta de nuevo. Si sigue pasando, escríbenos.";
     if (/Invalid login credentials/i.test(m)) return "El correo o la clave no son correctos.";
     if (/Email not confirmed/i.test(m)) return "Primero confirma tu correo: te enviamos un enlace.";
     if (/already registered|already been registered/i.test(m)) return "Ese correo ya tiene una cuenta. Usa Ingresar.";
