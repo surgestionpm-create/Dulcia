@@ -421,7 +421,7 @@
     b.disabled = true; b.textContent = "Cancelando…";
     try {
       var cfgd = window.DULCIA_CONFIG || {}, s = await sb.auth.getSession(), tk = s.data.session.access_token;
-      var r = await fetch(cfgd.url + "/functions/v1/cancelar-suscripcion", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: cfgd.key, "Content-Type": "application/json" }, body: "{}" });
+      var r = await fetch(cfgd.url + "/functions/v1/crear-pago", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: cfgd.key, "Content-Type": "application/json" }, body: JSON.stringify({ accion: "cancelar" }) });
       var d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.error || "No se pudo cancelar");
       await refreshCuenta();
       if (typeof toast === "function") toast("Suscripción cancelada. Sigues usando Dulcia hasta la fecha pagada.");
