@@ -736,12 +736,13 @@ function vIng(){
   var html=ingCats().map(function(g){
     var l=ings.filter(function(x){return x.g===g}).sort(function(a,b){return a.n.localeCompare(b.n,"es")}); if(!l.length)return "";
     var rows=l.map(function(x){var us=ingUses(x);
-      return '<div class="ingrow" data-ingn="'+esc(xNorm(x.n))+'"><div class="ingn"><input class="t ingname" type="text" value="'+esc(x.n)+'" data-ingname="'+x.id+'" aria-label="Nombre del ingrediente"><span class="note" style="margin:0">'+(us?'Usado en '+us+' receta'+(us===1?'':'s'):'Sin usar en recetas')+'</span></div>'+
-        '<label class="ingu">Unidad<select data-ingunit="'+x.id+'">'+unitOpts(x.u)+'</select></label>'+
-        '<label class="ingp">Precio por '+esc(x.u||"unidad")+'<input type="text" class="money" inputmode="decimal" data-ingc="'+x.id+'" value="'+mfmt(x.c)+'" aria-label="Precio de '+esc(x.n)+'"></label>'+
-        '<label class="ingu">Categoría<select data-ingcat="'+x.id+'">'+ingCats().map(function(c){return '<option'+(c===x.g?' selected':'')+'>'+esc(c)+'</option>'}).join("")+'</select></label>'+
-        '<button class="x" data-ingdel="'+x.id+'" aria-label="Eliminar '+esc(x.n)+'"'+(us?' title="Está en uso: primero quítalo de las recetas"':'')+'>✕</button></div>'}).join("");
-    return '<section class="card ingcard"><h2 style="font-size:1.3rem;margin-bottom:6px">'+esc(g)+' <span class="note" style="font-size:.85rem">'+l.length+'</span></h2>'+rows+'</section>'}).join("");
+      return '<div class="ingrow" data-ingn="'+esc(xNorm(x.n))+'"><div class="ingc ingn"><input class="t ingname" type="text" value="'+esc(x.n)+'" data-ingname="'+x.id+'" aria-label="Nombre del ingrediente"><span class="ingus">'+(us?'Usado en '+us+' receta'+(us===1?'':'s'):'Sin usar en recetas')+'</span></div>'+
+        '<label class="ingc"><span class="ingl">Unidad</span><select data-ingunit="'+x.id+'">'+unitOpts(x.u)+'</select></label>'+
+        '<label class="ingc"><span class="ingl">Precio por '+esc(x.u||"unidad")+'</span><input type="text" class="money" inputmode="decimal" data-ingc="'+x.id+'" value="'+mfmt(x.c)+'" aria-label="Precio de '+esc(x.n)+' por '+esc(x.u||"unidad")+'"></label>'+
+        '<label class="ingc"><span class="ingl">Categoría</span><select data-ingcat="'+x.id+'">'+ingCats().map(function(c){return '<option'+(c===x.g?' selected':'')+'>'+esc(c)+'</option>'}).join("")+'</select></label>'+
+        '<div class="ingc ingx"><button class="x" data-ingdel="'+x.id+'" aria-label="Eliminar '+esc(x.n)+'"'+(us?' title="Está en uso: primero quítalo de las recetas"':'')+'>✕</button></div></div>'}).join("");
+    return '<section class="card ingcard"><h2 style="font-size:1.3rem;margin-bottom:10px">'+esc(g)+' <span class="note" style="font-size:.85rem">'+l.length+'</span></h2>'+
+      '<div class="ingrow inghead" aria-hidden="true"><span>Nombre</span><span>Unidad</span><span>Precio por unidad</span><span>Categoría</span><span></span></div>'+rows+'</section>'}).join("");
   return top+'<div class="card banner" style="margin-bottom:14px"><div>Esta es tu <b>lista oficial</b> de ingredientes, empaques y mano de obra. En las recetas solo se pueden elegir de aquí, así no hay nombres repetidos. Cambia un precio y se actualiza en <b>todas las recetas</b>.</div></div>'+
     '<div class="grid">'+html+'</div><p class="note" id="ingnone" hidden>No encontramos ingredientes con ese nombre.</p>';
 }
