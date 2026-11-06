@@ -248,7 +248,7 @@
       try {
         if (mode === "in") { var r = await sb.auth.signInWithPassword({ email: em, password: pw }); if (r.error) throw r.error; await afterLogin(r.data.session); }
         else {
-          var s = await sb.auth.signUp({ email: em, password: pw }); if (s.error) throw s.error;
+          var s = await sb.auth.signUp({ email: em, password: pw, options: { emailRedirectTo: location.origin + "/app/" } }); if (s.error) throw s.error;
           if (s.data.session) await afterLogin(s.data.session);
           else { note("Te enviamos un correo para confirmar tu cuenta. Abre el enlace y después vuelve a ingresar.", true); }
         }
@@ -258,7 +258,7 @@
     var fg = document.getElementById("forgot");
     if (fg) fg.onclick = async function () {
       var em = f.querySelector("#ae").value.trim(); if (!em) { note("Escribe tu correo arriba y vuelve a pulsar."); return; }
-      var r = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname });
+      var r = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + "/app/" });
       note(r.error ? msg(r.error) : "Si ese correo tiene cuenta, te enviamos un enlace para crear una clave nueva.", !r.error);
     };
   }
@@ -378,6 +378,7 @@
   window.planBanner = function () {
     var c = window.CUENTA; if (!c) return "";
     var n = quedan(c), t = "";
+    if (c.suscripcion_estado === "authorized" || c.suscripcion_estado === "pending") return "";
     if (c.plan === "prueba") t = n <= 0 ? "Tu prueba gratis termina hoy." : "Te " + (n === 1 ? "queda" : "quedan") + " " + dias(n) + " de prueba gratis.";
     else if (n !== null && n <= 7 && c.suscripcion_estado !== "authorized") t = "Tu plan " + PLN[c.plan] + " vence " + (n <= 0 ? "hoy" : "el " + fd(c.vence_en)) + ".";
     if (!t) return "";
@@ -387,10 +388,12 @@
     var c = window.CUENTA; if (!c) return "";
     var t, b = '<button class="btn sm" type="button" data-planes>Elegir plan</button>';
     if (c.plan === "vitalicio" || !c.vence_en) { t = "Tienes Dulcia <b>de por vida</b>. No tienes que pagar nada más."; b = ""; }
-    else if (c.plan === "prueba") t = "Estás en la <b>prueba gratis</b> hasta el " + fd(c.vence_en) + ".";
-    else if (c.suscripcion_estado === "authorized") { t = "Plan <b>mensual</b>: $ 5.990 al mes, se cobra solo con Mercado Pago. Pagado hasta el " + fd(c.vence_en) + "."; b = '<button class="btn ghost sm" type="button" data-cancelsub>Cancelar suscripción</button>'; }
+    else if (c.suscripcion_estado === "authorized" && c.plan === "prueba") { t = "Te suscribiste al plan <b>mensual</b> ($ 5.990 al mes). Mercado Pago hace el primer cobro en las próximas horas y el plan se suma al final de tu prueba, que dura hasta el " + fd(c.vence_en) + "."; b = '<button class="btn ghost sm" type="button" data-cancelsub>Cancelar suscripción</button>'; }
+    else if (c.suscripcion_estado === "pending") { t = "Iniciaste una suscripción <b>mensual</b> en Mercado Pago. Si ya la autorizaste, se confirma en unos minutos. Puedes usar Dulcia hasta el " + fd(c.vence_en) + "."; b = '<button class="btn ghost sm" type="button" data-cancelsub>Cancelar suscripción</button> <button class="btn ghost sm" type="button" data-planes>Elegir otro plan</button>'; }
+    else if (c.plan === "prueba") t = "Estás en la <b>prueba gratis</b> hasta el " + fd(c.vence_en) + ". No dejaste tarjeta, así que no se cobra nada: si no eliges un plan, la cuenta solo se pausa.";
+    else if (c.suscripcion_estado === "authorized") { t = "Plan <b>mensual</b>: $ 5.990 al mes, se cobra solo con Mercado Pago. Pagado hasta el " + fd(c.vence_en) + ". Si cancelas, no se hacen más cobros y sigues usando Dulcia hasta esa fecha."; b = '<button class="btn ghost sm" type="button" data-cancelsub>Cancelar suscripción</button>'; }
     else if (c.plan === "mensual") { t = "Plan <b>mensual</b> sin cobro automático. Puedes usar Dulcia hasta el " + fd(c.vence_en) + "."; }
-    else { t = "Plan <b>" + PLN[c.plan] + "</b> pagado hasta el " + fd(c.vence_en) + "."; b = '<button class="btn sm" type="button" data-planes>Renovar o cambiar plan</button>'; }
+    else { t = "Plan <b>" + PLN[c.plan] + "</b> pagado hasta el " + fd(c.vence_en) + ". Este plan no se renueva solo, así que no tienes que cancelar nada: si no lo renuevas, la cuenta se pausa al vencer y tus datos se guardan."; b = '<button class="btn sm" type="button" data-planes>Renovar o cambiar plan</button>'; }
     return '<div class="planbox"><p style="margin:0">' + t + "</p>" + (b ? '<div style="margin-top:10px">' + b + "</div>" : "") + "</div>";
   };
   function planesOpen() {
