@@ -49,6 +49,7 @@
     gcats.forEach(function (n) { m["gc:" + n] = { t: "gc", row: { negocio_id: NEG, nombre: n } }; });
     gastos.forEach(function (g) { m["g:" + ensure(g)] = { t: "g", row: { id: g.uid, negocio_id: NEG, fecha: g.fecha, nombre: g.nombre, categoria: g.cat, monto: +g.monto || 0, iva_modo: g.iva } }; });
     recipes.forEach(function (rr) { var x = receta(rr); m["r:" + x.row.id] = { t: "r", row: x.row, grupos: x.grupos, items: x.items }; });
+    if (!window.NO_ING) ings.forEach(function (x) { m["i:" + ensure(x)] = { t: "i", row: { id: x.uid, negocio_id: NEG, nombre: x.n, unidad: x.u || "", costo: +x.c || 0, categoria: x.g || "Ingredientes" } }; });
     orders.forEach(function (o) {
       var id = ensure(o);
       m["p:" + id] = { t: "p", row: { id: id, negocio_id: NEG, es_cotizacion: !!o.cot, numero_cotizacion: o.num || null, cliente: o.cliente, instagram: o.ig || "", whatsapp: o.wa || "", fecha: o.fecha, hora: t5(o.hora), categoria: o.cat, canal: o.canal, descripcion: o.desc || "", personas: o.personas || null, total: +o.total || 0, pagado: +o.pagado || 0, listo: !!o.listo, condiciones: o.cond == null ? null : o.cond, validez_dias: o.vig == null ? null : o.vig, origen: o.origen || "app" } };
@@ -90,7 +91,7 @@
     try {
       await uploadPending();
       var cur = current(), keys = Object.keys(cur), old = Object.keys(snap);
-      var del = { pc: [], g: [], r: [], p: [] }, delGc = [];
+      var del = { pc: [], g: [], r: [], p: [], i: [] }, delGc = [];
       old.forEach(function (k) {
         if (k in cur) return;
         var p = k.split(":"), t = p[0], id = k.slice(t.length + 1);
@@ -101,6 +102,7 @@
       setStatus("Guardando…");
       var by = function (t) { return chg.filter(function (k) { return cur[k].t === t; }).map(function (k) { return cur[k]; }); };
       // borrar
+      for (var ci = 0; ci < del.i.length; ci += 100) chk(await sb.from("ingredientes").delete().in("id", del.i.slice(ci, ci + 100)));
       for (var ci = 0; ci < del.r.length; ci += 100) chk(await sb.from("recetas").delete().in("id", del.r.slice(ci, ci + 100)));
       for (var ci = 0; ci < del.p.length; ci += 100) chk(await sb.from("pedidos").delete().in("id", del.p.slice(ci, ci + 100)));
       for (var ci = 0; ci < del.g.length; ci += 100) chk(await sb.from("gastos").delete().in("id", del.g.slice(ci, ci + 100)));
@@ -125,6 +127,7 @@
         if (gRows.length) chk(await sb.from("receta_grupos").insert(gRows));
         if (iRows.length) chk(await sb.from("receta_items").insert(iRows));
       }
+      var ig = by("i"); for (var ck = 0; ck < ig.length; ck += 200) chk(await sb.from("ingredientes").upsert(ig.slice(ck, ck + 200).map(function (x) { return x.row; }), { onConflict: "id" }));
       var g = by("g"); if (g.length) chk(await sb.from("gastos").upsert(g.map(function (x) { return x.row; }), { onConflict: "id" }));
       var p = by("p"); if (p.length) chk(await sb.from("pedidos").upsert(p.map(function (x) { return x.row; }), { onConflict: "id" }));
       var pr = by("pr");
@@ -189,9 +192,9 @@
   async function loadAll() {
     var R = await Promise.all([
       sel("negocios", function (q) { return q.eq("id", NEG).single(); }), sel("categorias_pedido"), sel("categorias_gasto"), sel("recetas"), sel("receta_grupos"), sel("receta_items"),
-      sel("pedidos"), sel("pedido_recetas"), sel("pedido_fotos"), sel("gastos")
+      sel("pedidos"), sel("pedido_recetas"), sel("pedido_fotos"), sel("gastos"), sel("ingredientes")
     ]);
-    R.forEach(function (r) { chk(r); });
+    window.NO_ING = !!R[10].error; R.slice(0, 10).forEach(function (r) { chk(r); });
     var neg = R[0].data;
     cfg.nombre = neg.nombre; cfg.tel = neg.telefono || ""; cfg.mail = neg.correo || ""; cfg.url = neg.web || ""; cfg.cond = neg.cond_cotizacion;
     cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; qnum = neg.siguiente_cotizacion;
@@ -223,9 +226,12 @@
       orders.push(o);
     });
     gastos.length = 0; R[9].data.forEach(function (g) { gastos.push({ id: gid++, uid: g.id, fecha: g.fecha, cat: g.categoria, nombre: g.nombre, monto: +g.monto, iva: g.iva_modo }); });
+    ings.length = 0; if (!window.NO_ING) (R[10].data || []).forEach(function (x) { ings.push({ id: iid++, uid: x.id, n: x.nombre, u: x.unidad || "", c: +x.costo || 0, g: x.categoria || "Ingredientes" }); });
     if (recipes.length) selR(recipes[0].id);
     snap = {}; var c = current(); Object.keys(c).forEach(function (k) { snap[k] = c[k].json; });
     loaded = true; setStatus("Todo guardado");
+    // Primera vez: la lista de ingredientes se arma con lo que ya está en las recetas, y las recetas toman el precio de la lista
+    if (!window.NO_ING && (ingSync() + ingAlign()) > 0) scheduleSave();
   }
 
   /* ---------- pantallas de acceso ---------- */
