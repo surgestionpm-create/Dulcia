@@ -59,6 +59,10 @@
       var R = await Promise.all([rpc("admin_cuentas"), rpc("admin_sin_terminar"), rpc("admin_invitaciones"), rpc("admin_historial")]);
       S.cuentas = R[0] || []; S.sin = R[1] || []; S.inv = R[2] || []; S.hist = R[3] || [];
       render();
+      if (!S.revisado && S.sin.some(function (u) { return u.rescate_estado === "enviado"; })) {
+        S.revisado = 1;
+        avisos("revisar").then(function (d) { if (d.eliminados) { toast(d.eliminados + " registro" + (d.eliminados === 1 ? "" : "s") + " con correo inexistente eliminado" + (d.eliminados === 1 ? "" : "s")); load(); } }).catch(function () {});
+      }
     } catch (e) { root.innerHTML = '<div class="card" id="login"><h1 style="font-size:1.6rem">No pudimos cargar el panel</h1><div class="errmsg">' + esc(errTxt(e)) + '</div><p class="note">Si dice que una función no existe, falta ejecutar el SQL del panel en Supabase.</p><button class="btn" id="rt">Reintentar</button></div>'; $("#rt").onclick = load; }
   }
 
@@ -149,10 +153,11 @@
       '</section></div>';
   }
   function vSin() {
-    return '<section class="card"><p class="note" style="margin:0 0 10px">Personas que crearon usuario pero no confirmaron su correo o no escribieron el nombre de su pastelería. Puedes escribirles para ayudarlas o eliminarlas.</p>' +
-      (S.sin.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Correo</th><th>Registro</th><th>Correo confirmado</th><th></th></tr></thead><tbody>' + S.sin.map(function (u) {
+    return '<section class="card"><p class="note" style="margin:0 0 10px">Personas que crearon usuario pero no confirmaron su correo o no escribieron el nombre de su pastelería. Con <b>“Enviar correo”</b> Dulcia le manda un correo con un botón que activa su cuenta y la deja dentro de la app. Si el correo no existe, el registro se elimina solo.</p>' +
+      (S.sin.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Correo</th><th>Registro</th><th>Correo confirmado</th><th>Correo de Dulcia</th><th></th></tr></thead><tbody>' + S.sin.map(function (u) {
         return '<tr><td><b>' + esc(u.correo) + '</b></td><td>' + fd(u.creado_en, 1) + ' · ' + hace(u.creado_en) + '</td><td>' + (u.correo_confirmado ? '<span class="st pagando">Sí</span>' : '<span class="st vencida">No</span>') + '</td>' +
-          '<td class="r"><a class="btn ghost sm" href="mailto:' + esc(u.correo) + '?subject=' + encodeURIComponent("¿Te ayudamos a empezar con Dulcia?") + '">Escribir</a> <button class="btn ghost sm danger" data-udel="' + u.user_id + '" data-mail="' + esc(u.correo) + '">Eliminar</button></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">No hay registros sin terminar.</p>') + '</section>';
+          '<td>' + (u.rescate_en ? '<span class="st ' + (u.rescate_estado === "enviado" ? "prueba" : "pagando") + '">' + ({ enviado: "Enviado", entregado: "Entregado", abierto: "Lo abrió" }[u.rescate_estado] || "Enviado") + '</span> <span class="note" style="margin:0">' + hace(u.rescate_en) + (u.rescate_veces > 1 ? ' · ' + u.rescate_veces + ' veces' : '') + '</span>' : '<span class="note" style="margin:0">No enviado</span>') + '</td>' +
+          '<td class="r"><button class="btn sm" data-resc="' + u.user_id + '">' + (u.rescate_en ? "Reenviar" : "Enviar correo") + '</button> <button class="btn ghost sm danger" data-udel="' + u.user_id + '" data-mail="' + esc(u.correo) + '">Eliminar</button></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">No hay registros sin terminar.</p>') + '</section>';
   }
   function vHist() {
     return '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem">Correos automáticos</h2><p class="note" style="margin:4px 0 10px">Todos los días a las 10:00 Dulcia envía solo: “quedan 2 días de prueba”, “tu prueba termina hoy”, “tu prueba terminó”, “tu plan vence en 7 días” y “tu plan venció”. Cada correo llega una sola vez por cuenta y queda anotado aquí abajo.</p>' +
@@ -192,9 +197,9 @@
       ga.innerHTML = av && av.length ? '<table class="pg"><tbody>' + av.map(function (a) { return '<tr><td>' + fd(a.enviado_en, 1) + '</td><td>' + esc(AVL[a.tipo] || a.tipo) + '</td><td class="note" style="margin:0">' + esc(a.correo || "") + '</td></tr>'; }).join("") + '</tbody></table>' : 'Todavía no se le ha enviado ningún aviso.';
     } catch (e) { var g3 = $("#gavisos"); if (g3) g3.textContent = "Falta ejecutar el SQL de los avisos."; }
   }
-  async function avisos(accion) {
+  async function avisos(accion, extra) {
     var s = await sb.auth.getSession(), tk = s.data.session.access_token;
-    var r = await fetch(C.url + "/functions/v1/avisos", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: C.key, "Content-Type": "application/json" }, body: JSON.stringify({ accion: accion || "" }) });
+    var r = await fetch(C.url + "/functions/v1/avisos", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: C.key, "Content-Type": "application/json" }, body: JSON.stringify(Object.assign({ accion: accion || "" }, extra || {})) });
     var d = await r.json().catch(function () { return {}; }); if (!r.ok || !d.ok) throw new Error(d.error || "No se pudo enviar");
     return d;
   }
@@ -231,6 +236,12 @@
     if (t.hasAttribute("data-reload")) { t.disabled = true; await load(); toast("Datos actualizados"); return; }
     if (t.hasAttribute("data-out")) { logout(); return; }
     if (t.hasAttribute("data-xls")) { excel(); return; }
+    if (t.hasAttribute("data-resc")) {
+      t.disabled = true; t.textContent = "Enviando…";
+      try { var d0 = await avisos("rescatar", { user_id: t.getAttribute("data-resc") }); toast(d0.eliminado ? "Correo inexistente (" + d0.motivo + "): registro eliminado" : "Correo enviado a " + d0.correo); await load(); }
+      catch (er) { toast(errTxt(er), true); t.disabled = false; t.textContent = "Enviar correo"; }
+      return;
+    }
     if (t.hasAttribute("data-avprueba")) { t.disabled = true; try { var d1 = await avisos("probar"); toast("Listo: revisa " + d1.a + " (5 correos)"); } catch (er) { toast(errTxt(er), true); } t.disabled = false; return; }
     if (t.hasAttribute("data-avahora")) { t.disabled = true; try { var d2 = await avisos(""); toast(d2.enviados ? d2.enviados + " aviso" + (d2.enviados === 1 ? "" : "s") + " enviado" + (d2.enviados === 1 ? "" : "s") : "No había avisos pendientes"); await load(); } catch (er) { toast(errTxt(er), true); t.disabled = false; } return; }
     if (t.dataset.open) { abrir(t.dataset.open); return; }
