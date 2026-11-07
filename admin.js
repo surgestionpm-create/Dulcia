@@ -71,8 +71,8 @@
   function render() {
     var cs = S.cuentas.filter(function (c) { return !c.es_admin; }), cnt = {};
     cs.forEach(function (c) { var e = estado(c); cnt[e] = (cnt[e] || 0) + 1; });
-    var tot = cs.reduce(function (a, c) { return a + (+c.total_pagado || 0); }, 0);
-    var mrr = cs.reduce(function (a, c) { if (estado(c) !== "pagando") return a; return a + (c.plan === "mensual" ? PRECIO.mensual : c.plan === "semestral" ? PRECIO.semestral / 6 : c.plan === "anual" ? PRECIO.anual / 12 : 0); }, 0);
+    var tot = cs.reduce(function (a, c) { return a + (+c.total_pagado || 0); }, 0), devs = cs.reduce(function (a, c) { return a + (+c.total_devuelto || 0); }, 0);
+    var mrr = cs.reduce(function (a, c) { if (estado(c) !== "pagando" || (+c.total_devuelto > 0 && !(+c.total_pagado > 0))) return a; return a + (c.plan === "mensual" ? PRECIO.mensual : c.plan === "semestral" ? PRECIO.semestral / 6 : c.plan === "anual" ? PRECIO.anual / 12 : 0); }, 0);
     var pronto = cs.filter(function (c) { return c.vigente && c.dias_restantes != null && c.dias_restantes <= 3 && c.plan !== "vitalicio"; }).length;
     var nuevas = cs.filter(function (c) { return Date.now() - new Date(c.creado_en) < 7 * 864e5; }).length;
     var pend = S.inv.filter(function (i) { return !i.usado_en; }).length;
@@ -83,7 +83,7 @@
       kpi("Pagando", cnt.pagando || 0, "mensual, semestral o anual") +
       kpi("Regalo", cnt.regalo || 0, "colaboraciones vigentes") +
       kpi("Vencidas o pausadas", (cnt.vencida || 0) + (cnt.pausada || 0), (cnt.vitalicio || 0) + " de por vida") +
-      kpi("Ingresos totales", $$(tot), "pagos aprobados en Mercado Pago") +
+      kpi("Ingresos totales", $$(tot), devs ? "ya descontados " + $$(devs) + " devueltos" : "pagos aprobados en Mercado Pago") +
       kpi("Ingreso mensual", $$(mrr), "estimado de los planes vigentes") +
       kpi("Sin terminar registro", S.sin.length, "crearon usuario sin pastelería") +
       kpi("Invitaciones", pend, "pendientes de usar") +
@@ -189,7 +189,13 @@
     dlg.dataset.id = id; if (!dlg.open) dlg.showModal();
     try {
       var ps = await rpc("admin_pagos", { p_negocio: id }), g = $("#gpagos"); if (!g || dlg.dataset.id !== id) return;
-      g.innerHTML = ps && ps.length ? '<table class="pg"><tbody>' + ps.map(function (p) { return '<tr><td>' + fd(p.creado_en, 1) + '</td><td>' + esc(p.estado === "approved" ? "Aprobado" : p.estado) + '</td><td class="r">' + $$(p.monto) + '</td><td class="note" style="margin:0">N° ' + esc(p.id) + '</td></tr>'; }).join("") + '</tbody></table>' : 'Sin pagos registrados.';
+      S.pagos = ps || [];
+      g.innerHTML = ps && ps.length ? '<table class="pg"><tbody>' + ps.map(function (p) {
+        var dev = +p.devuelto || 0, resto = (+p.monto || 0) - dev, ok = p.estado === "approved" || p.estado === "refunded" || p.estado === "charged_back";
+        var est = p.estado === "charged_back" ? '<span class="st vencida">Contracargo</span>' : dev >= +p.monto ? '<span class="st vencida">Devuelto</span>' : dev > 0 ? '<span class="st prueba">Devuelto en parte</span>' : p.estado === "approved" ? '<span class="st pagando">Aprobado</span>' : esc(p.estado);
+        return '<tr><td>' + fd(p.creado_en, 1) + '</td><td>' + est + '</td><td class="r">' + $$(p.monto) + (dev ? '<div class="note" style="margin:0">−' + $$(dev) + ' devuelto</div>' : '') + '</td><td class="note" style="margin:0">N° ' + esc(p.id) + '</td>' +
+          '<td class="r">' + (ok && p.estado === "approved" && resto > 0 ? '<button class="btn ghost sm danger" data-devform="' + esc(p.id) + '">Devolver</button>' : '') + '</td></tr>' +
+          '<tr class="devrow" data-devrow="' + esc(p.id) + '" hidden><td colspan="5"></td></tr>'; }).join("") + '</tbody></table>' : 'Sin pagos registrados.';
     } catch (e) { var g2 = $("#gpagos"); if (g2) g2.textContent = errTxt(e); }
     try {
       var av = await rpc("admin_avisos", { p_negocio: id }), ga = $("#gavisos"); if (!ga || dlg.dataset.id !== id) return;
@@ -207,6 +213,35 @@
     var id = dlg.dataset.id; b.disabled = true;
     try { var m = await fn(id); toast(m || "Listo"); await load(); if (dlg.open && S.cuentas.some(function (c) { return c.negocio_id === id; })) abrir(id); else if (dlg.open) dlg.close(); }
     catch (e) { toast(errTxt(e), true); b.disabled = false; }
+  }
+  function devForm(id) {
+    var p = (S.pagos || []).find(function (x) { return String(x.id) === String(id); }); if (!p) return;
+    var resto = (+p.monto || 0) - (+p.devuelto || 0), primera = !(+p.devuelto), m = p.meses || 1;
+    document.querySelectorAll("[data-devrow]").forEach(function (r) { r.hidden = true; r.firstChild.innerHTML = ""; });
+    var row = document.querySelector('[data-devrow="' + id + '"]'); row.hidden = false;
+    row.firstChild.innerHTML = '<div class="copybox" style="white-space:normal"><b>Devolver el pago N° ' + esc(id) + '</b>' +
+      '<p class="note" style="margin:4px 0 10px">El dinero sale de tu cuenta de Mercado Pago y vuelve al medio de pago de la clienta. <b>No se puede deshacer.</b></p>' +
+      '<div class="devopt"><label><input type="radio" name="devt" value="todo" checked> Todo (' + $$(resto) + ')</label><label><input type="radio" name="devt" value="parte"> Una parte:</label><input type="number" id="devm" min="1" max="' + resto + '" step="1" placeholder="Monto" disabled></div>' +
+      (primera ? '<div class="devopt" id="devql"><label><input type="checkbox" id="devq" checked> Quitar también ' + (m === 1 ? 'el mes' : 'los ' + m + ' meses') + ' que dio este pago</label></div>' : '') +
+      '<div class="row2"><button class="btn bad sm" data-devok="' + esc(id) + '">Devolver ' + $$(resto) + '</button><button class="btn ghost sm" data-devno>Cancelar</button></div></div>';
+  }
+  function devSync() {
+    var parte = (document.querySelector('input[name=devt]:checked') || {}).value === "parte", mi = $("#devm"), ok = document.querySelector("[data-devok]"); if (!ok) return;
+    var p = (S.pagos || []).find(function (x) { return String(x.id) === ok.getAttribute("data-devok"); }), resto = (+p.monto || 0) - (+p.devuelto || 0);
+    mi.disabled = !parte; var q = $("#devql"); if (q) q.hidden = parte;
+    var v = parte ? Math.round(+mi.value || 0) : resto;
+    ok.textContent = "Devolver " + $$(v); ok.disabled = !(v > 0 && v <= resto);
+  }
+  async function devolver(b) {
+    var id = b.getAttribute("data-devok"), parte = (document.querySelector('input[name=devt]:checked') || {}).value === "parte";
+    var monto = parte ? Math.round(+$("#devm").value || 0) : null, q = $("#devq");
+    b.disabled = true; b.textContent = "Devolviendo…";
+    try {
+      var s = await sb.auth.getSession(), tk = s.data.session.access_token;
+      var r = await fetch(C.url + "/functions/v1/crear-pago", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: C.key, "Content-Type": "application/json" }, body: JSON.stringify({ accion: "admin_devolver", pago: id, monto: monto, quitar_meses: !parte && !!(q && q.checked) }) });
+      var d = await r.json().catch(function () { return {}; }); if (!r.ok || !d.ok) throw new Error(d.error || "Mercado Pago no pudo hacer la devolución");
+      toast(d.detalle || "Devolución hecha"); var nid = dlg.dataset.id; await load(); if (S.cuentas.some(function (c) { return c.negocio_id === nid; })) abrir(nid);
+    } catch (e) { toast(errTxt(e), true); devSync(); }
   }
   async function cancelarSub(id) {
     var s = await sb.auth.getSession(), tk = s.data.session.access_token;
@@ -236,6 +271,9 @@
     if (t.hasAttribute("data-reload")) { t.disabled = true; await load(); toast("Datos actualizados"); return; }
     if (t.hasAttribute("data-out")) { logout(); return; }
     if (t.hasAttribute("data-xls")) { excel(); return; }
+    if (t.hasAttribute("data-devform")) { devForm(t.getAttribute("data-devform")); return; }
+    if (t.hasAttribute("data-devno")) { document.querySelectorAll("[data-devrow]").forEach(function (r) { r.hidden = true; r.firstChild.innerHTML = ""; }); return; }
+    if (t.hasAttribute("data-devok")) { devolver(t); return; }
     if (t.hasAttribute("data-resc")) {
       t.disabled = true; t.textContent = "Enviando…";
       try { var d0 = await avisos("rescatar", { user_id: t.getAttribute("data-resc") }); toast(d0.eliminado ? "Correo inexistente (" + d0.motivo + "): registro eliminado" : "Correo enviado a " + d0.correo); await load(); }
@@ -270,6 +308,8 @@
     if (t.id === "aq") { S.q = t.value; S._focus = true; render(); }
     else if (t.id === "gdel") { var c = S.cuentas.find(function (x) { return x.negocio_id === dlg.dataset.id; }), b = dlg.querySelector("[data-del]"); if (c && b) b.disabled = t.value.trim().toLowerCase() !== String(c.correo || c.nombre).toLowerCase(); }
   });
+  document.addEventListener("change", function (e) { if (e.target.name === "devt") devSync(); });
+  document.addEventListener("input", function (e) { if (e.target.id === "devm") devSync(); });
   document.addEventListener("change", function (e) { if (e.target.id === "ao") { S.ord = e.target.value; render(); } });
   document.addEventListener("submit", async function (e) {
     if (e.target.id !== "invf") return; e.preventDefault();

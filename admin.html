@@ -67,6 +67,11 @@ table.acc tr.row:hover td{background:rgba(42,30,46,.035)}
 dialog .dlg{max-height:calc(100vh - 40px);overflow:auto}
 dialog.wide{width:min(760px,calc(100vw - 24px))}
 .pg td{font-size:.9rem}
+.devopt{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.devopt label{display:inline-flex;align-items:center;gap:7px;font-size:.92rem;cursor:pointer}
+.devopt input[type=radio],.devopt input[type=checkbox]{width:18px;height:18px;min-width:0;flex:0 0 auto;margin:0;accent-color:var(--accent)}
+.devopt input[type=number]{width:140px;flex:0 0 auto}
+.devopt[hidden]{display:none}
 @media(max-width:1100px){.akpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){#invg{grid-template-columns:minmax(0,1fr)!important}}
 @media(max-width:760px){
