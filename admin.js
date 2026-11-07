@@ -155,7 +155,9 @@
           '<td class="r"><a class="btn ghost sm" href="mailto:' + esc(u.correo) + '?subject=' + encodeURIComponent("¿Te ayudamos a empezar con Dulcia?") + '">Escribir</a> <button class="btn ghost sm danger" data-udel="' + u.user_id + '" data-mail="' + esc(u.correo) + '">Eliminar</button></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">No hay registros sin terminar.</p>') + '</section>';
   }
   function vHist() {
-    return '<section class="card">' + (S.hist.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Fecha</th><th>Acción</th><th>Pastelería</th><th>Correo</th><th>Detalle</th><th>Por</th></tr></thead><tbody>' + S.hist.map(function (h) {
+    return '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem">Correos automáticos</h2><p class="note" style="margin:4px 0 10px">Todos los días a las 10:00 Dulcia envía solo: “quedan 2 días de prueba”, “tu prueba termina hoy”, “tu prueba terminó”, “tu plan vence en 7 días” y “tu plan venció”. Cada correo llega una sola vez por cuenta y queda anotado aquí abajo.</p>' +
+      '<div class="row2"><button class="btn sm" data-avprueba>Enviarme los 5 correos de ejemplo</button><button class="btn ghost sm" data-avahora>Enviar los avisos pendientes ahora</button></div></section>' +
+      '<section class="card">' + (S.hist.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Fecha</th><th>Acción</th><th>Pastelería</th><th>Correo</th><th>Detalle</th><th>Por</th></tr></thead><tbody>' + S.hist.map(function (h) {
       return '<tr><td>' + fd(h.creado_en, 1) + '</td><td><b>' + esc(h.accion) + '</b></td><td>' + esc(h.pasteleria || "") + '</td><td>' + esc(h.correo || "") + '</td><td>' + esc(h.detalle || "") + '</td><td class="note" style="margin:0">' + esc(h.admin || "") + '</td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">Todavía no hay acciones registradas.</p>') + '</section>';
   }
 
@@ -176,6 +178,7 @@
       (sub ? '<button class="btn ghost sm danger" data-subx>Cancelar suscripción mensual</button>' : '') + '</div><p class="note" style="margin:6px 0 0">Pausar bloquea el acceso sin borrar nada. Reactivar no cambia la fecha de vencimiento.</p></div>' +
       '<div class="blk"><h3>Nota interna</h3><textarea id="gn" rows="3" placeholder="Solo la ves tú">' + esc(c.nota || "") + '</textarea><div style="margin-top:8px"><button class="btn ghost sm" data-nota>Guardar nota</button></div></div>' +
       '<div class="blk"><h3>Pagos</h3><div id="gpagos" class="note">Cargando…</div></div>' +
+      '<div class="blk"><h3>Correos de aviso enviados</h3><div id="gavisos" class="note">Cargando…</div></div>' +
       (c.es_admin ? '' : '<div class="blk"><h3 class="danger">Eliminar cuenta</h3><p class="note" style="margin:0 0 8px">Borra la pastelería, sus recetas, pedidos, gastos, clientes y su usuario. <b>No se puede deshacer.</b>' + (sub ? ' Antes se cancela su suscripción mensual en Mercado Pago.' : '') + ' Para confirmar, escribe el correo <b>' + esc(c.correo || c.nombre) + '</b>.</p><div class="row2"><input type="text" id="gdel" autocomplete="off" placeholder="' + esc(c.correo || c.nombre) + '"><button class="btn bad sm" data-del disabled>Eliminar para siempre</button></div></div>') +
       '</div>';
     dlg.dataset.id = id; if (!dlg.open) dlg.showModal();
@@ -183,6 +186,17 @@
       var ps = await rpc("admin_pagos", { p_negocio: id }), g = $("#gpagos"); if (!g || dlg.dataset.id !== id) return;
       g.innerHTML = ps && ps.length ? '<table class="pg"><tbody>' + ps.map(function (p) { return '<tr><td>' + fd(p.creado_en, 1) + '</td><td>' + esc(p.estado === "approved" ? "Aprobado" : p.estado) + '</td><td class="r">' + $$(p.monto) + '</td><td class="note" style="margin:0">N° ' + esc(p.id) + '</td></tr>'; }).join("") + '</tbody></table>' : 'Sin pagos registrados.';
     } catch (e) { var g2 = $("#gpagos"); if (g2) g2.textContent = errTxt(e); }
+    try {
+      var av = await rpc("admin_avisos", { p_negocio: id }), ga = $("#gavisos"); if (!ga || dlg.dataset.id !== id) return;
+      var AVL = { prueba_2d: "Quedan 2 días de prueba", prueba_hoy: "La prueba termina hoy", prueba_fin: "La prueba terminó", plan_7d: "El plan vence en 7 días", plan_fin: "El plan venció" };
+      ga.innerHTML = av && av.length ? '<table class="pg"><tbody>' + av.map(function (a) { return '<tr><td>' + fd(a.enviado_en, 1) + '</td><td>' + esc(AVL[a.tipo] || a.tipo) + '</td><td class="note" style="margin:0">' + esc(a.correo || "") + '</td></tr>'; }).join("") + '</tbody></table>' : 'Todavía no se le ha enviado ningún aviso.';
+    } catch (e) { var g3 = $("#gavisos"); if (g3) g3.textContent = "Falta ejecutar el SQL de los avisos."; }
+  }
+  async function avisos(accion) {
+    var s = await sb.auth.getSession(), tk = s.data.session.access_token;
+    var r = await fetch(C.url + "/functions/v1/avisos", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: C.key, "Content-Type": "application/json" }, body: JSON.stringify({ accion: accion || "" }) });
+    var d = await r.json().catch(function () { return {}; }); if (!r.ok || !d.ok) throw new Error(d.error || "No se pudo enviar");
+    return d;
   }
   async function accion(b, fn) {
     var id = dlg.dataset.id; b.disabled = true;
@@ -217,6 +231,8 @@
     if (t.hasAttribute("data-reload")) { t.disabled = true; await load(); toast("Datos actualizados"); return; }
     if (t.hasAttribute("data-out")) { logout(); return; }
     if (t.hasAttribute("data-xls")) { excel(); return; }
+    if (t.hasAttribute("data-avprueba")) { t.disabled = true; try { var d1 = await avisos("probar"); toast("Listo: revisa " + d1.a + " (5 correos)"); } catch (er) { toast(errTxt(er), true); } t.disabled = false; return; }
+    if (t.hasAttribute("data-avahora")) { t.disabled = true; try { var d2 = await avisos(""); toast(d2.enviados ? d2.enviados + " aviso" + (d2.enviados === 1 ? "" : "s") + " enviado" + (d2.enviados === 1 ? "" : "s") : "No había avisos pendientes"); await load(); } catch (er) { toast(errTxt(er), true); t.disabled = false; } return; }
     if (t.dataset.open) { abrir(t.dataset.open); return; }
     if (t.dataset.copy) { var el = document.getElementById(t.dataset.copy); try { await navigator.clipboard.writeText(el.textContent); toast("Mensaje copiado"); } catch (er) { toast("No se pudo copiar: selecciónalo y cópialo a mano", true); } return; }
     if (t.dataset.invdel) { t.disabled = true; try { toast(await rpc("admin_invitacion_borrar", { p_id: +t.dataset.invdel })); await load(); } catch (er) { toast(errTxt(er), true); t.disabled = false; } return; }
