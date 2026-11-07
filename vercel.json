@@ -1,1 +1,1 @@
-{ "rewrites": [ { "source": "/app", "destination": "/app.html" }, { "source": "/app/", "destination": "/app.html" } ] }
+{"rewrites": [{"source": "/app", "destination": "/app.html"}, {"source": "/app/", "destination": "/app.html"}, {"source": "/admin", "destination": "/admin.html"}, {"source": "/admin/", "destination": "/admin.html"}]}

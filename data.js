@@ -49,7 +49,7 @@
     gcats.forEach(function (n) { m["gc:" + n] = { t: "gc", row: { negocio_id: NEG, nombre: n } }; });
     gastos.forEach(function (g) { m["g:" + ensure(g)] = { t: "g", row: { id: g.uid, negocio_id: NEG, fecha: g.fecha, nombre: g.nombre, categoria: g.cat, monto: +g.monto || 0, iva_modo: g.iva } }; });
     recipes.forEach(function (rr) { var x = receta(rr); m["r:" + x.row.id] = { t: "r", row: x.row, grupos: x.grupos, items: x.items }; });
-    if (!window.NO_ING) ings.forEach(function (x) { m["i:" + ensure(x)] = { t: "i", row: { id: x.uid, negocio_id: NEG, nombre: x.n, unidad: x.u || "", costo: +x.c || 0, categoria: x.g || "Ingredientes" } }; });
+    if (!window.NO_ING) ings.forEach(function (x) { m["i:" + ensure(x)] = { t: "i", row: { id: x.uid, negocio_id: NEG, nombre: x.n, unidad: x.u || "", costo: +x.c || 0, envase: +x.e || 0, precio_envase: +x.pe || 0, categoria: x.g || "Ingredientes" } }; });
     orders.forEach(function (o) {
       var id = ensure(o);
       m["p:" + id] = { t: "p", row: { id: id, negocio_id: NEG, es_cotizacion: !!o.cot, numero_cotizacion: o.num || null, cliente: o.cliente, instagram: o.ig || "", whatsapp: o.wa || "", fecha: o.fecha, hora: t5(o.hora), categoria: o.cat, canal: o.canal, descripcion: o.desc || "", personas: o.personas || null, total: +o.total || 0, pagado: +o.pagado || 0, listo: !!o.listo, condiciones: o.cond == null ? null : o.cond, validez_dias: o.vig == null ? null : o.vig, origen: o.origen || "app" } };
@@ -226,7 +226,7 @@
       orders.push(o);
     });
     gastos.length = 0; R[9].data.forEach(function (g) { gastos.push({ id: gid++, uid: g.id, fecha: g.fecha, cat: g.categoria, nombre: g.nombre, monto: +g.monto, iva: g.iva_modo }); });
-    ings.length = 0; if (!window.NO_ING) (R[10].data || []).forEach(function (x) { ings.push({ id: iid++, uid: x.id, n: x.nombre, u: x.unidad || "", c: +x.costo || 0, g: x.categoria || "Ingredientes" }); });
+    ings.length = 0; if (!window.NO_ING) (R[10].data || []).forEach(function (x) { var e0 = x.envase == null ? 1 : +x.envase, pe0 = x.precio_envase == null ? (+x.costo || 0) * e0 : +x.precio_envase; ings.push({ id: iid++, uid: x.id, n: x.nombre, u: x.unidad || "", c: +x.costo || 0, e: e0, pe: pe0, g: x.categoria || "Ingredientes" }); });
     if (recipes.length) selR(recipes[0].id);
     snap = {}; var c = current(); Object.keys(c).forEach(function (k) { snap[k] = c[k].json; });
     loaded = true; setStatus("Todo guardado");
@@ -296,7 +296,7 @@
     { k: "mensual", n: "Mensual", p: "$ 5.990", per: "al mes", d: "Se cobra solo cada mes con Mercado Pago. Lo cancelas cuando quieras." },
     { k: "semestral", n: "Semestral", p: "$ 29.990", per: "cada 6 meses", d: "Un solo pago. Equivale a $ 4.998 al mes." },
     { k: "anual", n: "Anual", p: "$ 54.990", per: "al año", d: "Un solo pago. Equivale a $ 4.583 al mes: ahorras $ 16.890.", best: 1 }];
-  var PLN = { prueba: "prueba gratis", mensual: "mensual", semestral: "semestral", anual: "anual", vitalicio: "de por vida" };
+  var PLN = { prueba: "prueba gratis", mensual: "mensual", semestral: "semestral", anual: "anual", vitalicio: "de por vida", regalo: "de regalo" };
   function fd(d) { return new Date(d).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" }); }
   function quedan(c) { return c && c.vence_en ? Math.ceil((new Date(c.vence_en) - Date.now()) / 864e5) : null; }
   function dias(n) { return n <= 0 ? "hoy" : n === 1 ? "1 día" : n + " días"; }
@@ -400,6 +400,7 @@
     else if (c.plan === "prueba") t = "Estás en la <b>prueba gratis</b> hasta el " + fd(c.vence_en) + ". No dejaste tarjeta, así que no se cobra nada: si no eliges un plan, la cuenta solo se pausa.";
     else if (c.suscripcion_estado === "authorized") { t = "Plan <b>mensual</b>: $ 5.990 al mes, se cobra solo con Mercado Pago. Pagado hasta el " + fd(c.vence_en) + ". Si cancelas, no se hacen más cobros y sigues usando Dulcia hasta esa fecha."; b = '<button class="btn ghost sm" type="button" data-cancelsub>Cancelar suscripción</button>'; }
     else if (c.plan === "mensual") { t = "Plan <b>mensual</b> sin cobro automático. Puedes usar Dulcia hasta el " + fd(c.vence_en) + "."; }
+    else if (c.plan === "regalo") { t = "Tienes Dulcia <b>de regalo</b> hasta el " + fd(c.vence_en) + ". Cuando termine, puedes seguir con cualquier plan sin perder nada."; b = '<button class="btn sm" type="button" data-planes>Ver planes</button>'; }
     else { t = "Plan <b>" + PLN[c.plan] + "</b> pagado hasta el " + fd(c.vence_en) + ". Este plan no se renueva solo, así que no tienes que cancelar nada: si no lo renuevas, la cuenta se pausa al vencer y tus datos se guardan."; b = '<button class="btn sm" type="button" data-planes>Renovar o cambiar plan</button>'; }
     return '<div class="planbox"><p style="margin:0">' + t + "</p>" + (b ? '<div style="margin-top:10px">' + b + "</div>" : "") + "</div>";
   };

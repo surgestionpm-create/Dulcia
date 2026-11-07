@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Dulcia · Administración</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+body{min-height:100vh}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.abar select{width:auto;min-width:200px}
+.adm{max-width:1240px;margin:0 auto;padding:22px 20px 80px}
+.atop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.atop h1{font-size:2.2rem}
+.atop .who{color:var(--soft);font-size:.88rem}
+.atop .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.akpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.akpis .card{padding:16px 18px}
+.akpis .card:nth-child(1){background:var(--accent-soft)}
+.akpis .card:nth-child(2){background:var(--butter)}
+.akpis .card:nth-child(3){background:var(--ok-bg)}
+.akpis .card:nth-child(7){background:var(--ok-bg)}
+.akpis .card:nth-child(8){background:var(--accent-soft)}
+.akpis .kpi .v{font-size:1.7rem}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.tabs button{border:1.5px solid var(--line);background:var(--surface);border-radius:99px;padding:.45em 1.1em;font-weight:600;color:var(--soft);cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tabs .cnt{font-weight:500;opacity:.8;margin-left:4px}
+.abar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.abar input[type=search]{flex:1;min-width:220px;border:1.5px solid var(--line);border-radius:14px;padding:.6em .9em;background:var(--surface)}
+.fchips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.fchips button{border:1.5px solid var(--line);background:var(--surface);border-radius:99px;padding:.3em .85em;font-size:.84rem;font-weight:500;cursor:pointer;color:var(--ink)}
+.fchips button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+table.acc td{vertical-align:middle}
+table.acc .nm b{display:block}
+table.acc .nm span{font-size:.82rem;color:var(--soft)}
+table.acc tr.row{cursor:pointer}
+table.acc tr.row:hover td{background:rgba(42,30,46,.035)}
+.st{display:inline-block;border-radius:99px;padding:.12em .7em;font-size:.76rem;font-weight:600;white-space:nowrap}
+.st.prueba{background:var(--butter);color:#6B4E00}.st.pagando{background:var(--ok-bg);color:var(--ok)}.st.regalo{background:#E4D9F5;color:#4F3388}
+.st.vitalicio{background:#D2E8F7;color:#1D4F78}.st.vencida{background:var(--bad-bg);color:var(--bad)}.st.pausada{background:var(--line);color:var(--ink)}
+.dias.bad{color:var(--bad);font-weight:600}.dias.warn{color:var(--warn);font-weight:600}
+.empty{color:var(--soft);text-align:center;padding:24px}
+.det{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.det div{background:var(--bg);border-radius:14px;padding:10px 12px}
+.det dt{font-size:.74rem;color:var(--soft)}.det dd{margin:2px 0 0;font-weight:600}
+.blk{border-top:1px dashed var(--line);padding-top:14px}
+.blk h3{font-size:1.15rem;margin-bottom:8px}
+.row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row2 input,.row2 select{width:auto;flex:1;min-width:150px}
+.months{display:flex;gap:8px;flex-wrap:wrap}
+.months .btn{min-width:84px}
+.danger{color:var(--bad)}
+.btn.bad{background:var(--bad);color:#fff;box-shadow:none}
+.btn:disabled{opacity:.45;cursor:default}
+.copybox{background:var(--bg);border-radius:14px;padding:12px 14px;white-space:pre-wrap;font-size:.92rem;line-height:1.5}
+.okmsg{background:var(--ok-bg);color:var(--ok);border-radius:12px;padding:.7em .9em;font-size:.92rem}
+.errmsg{background:var(--bad-bg);color:var(--bad);border-radius:12px;padding:.7em .9em;font-size:.92rem}
+#login{max-width:420px;margin:12vh auto;padding:28px}
+#login form{display:flex;flex-direction:column;gap:12px}
+#login label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft)}
+dialog .dlg{max-height:calc(100vh - 40px);overflow:auto}
+dialog.wide{width:min(760px,calc(100vw - 24px))}
+.pg td{font-size:.9rem}
+@media(max-width:1100px){.akpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){#invg{grid-template-columns:minmax(0,1fr)!important}}
+@media(max-width:760px){
+  .akpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .det{grid-template-columns:repeat(2,minmax(0,1fr))}
+  table.acc thead{display:none}
+  table.acc,table.acc tbody,table.acc tr,table.acc td{display:block;width:100%}
+  table.acc tr.row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 4px;border-bottom:1px dashed var(--line)}
+  table.acc td{border:0!important;padding:0!important}
+  table.acc td.c-nm{grid-column:1}table.acc td.c-st{grid-column:2;grid-row:1;text-align:right}
+  table.acc td.c-plan,table.acc td.c-dias,table.acc td.c-pag,table.acc td.c-uso{display:inline;font-size:.85rem;color:var(--soft)}
+  table.acc td.c-plan::before{content:"Plan: "}table.acc td.c-dias::before{content:"Días: "}table.acc td.c-pag::before{content:"Pagado: "}table.acc td.c-uso::before{content:"Uso: "}
+  table.acc td.c-vence,table.acc td.c-act,table.acc td.c-cre,table.acc td.c-go{display:none}
+}
+</style>
+</head>
+<body>
+<div id="root"><p class="empty">Cargando…</p></div>
+<dialog id="dlg" class="wide"></dialog>
+<div id="toast" hidden></div>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
