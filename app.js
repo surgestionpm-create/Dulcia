@@ -254,21 +254,23 @@ var FC=new Intl.NumberFormat("es-CL",{maximumFractionDigits:2,minimumFractionDig
 function $$u(n){n=+n||0;return "$ "+(Math.abs(n)<100&&Math.round(n)!==n?FC.format(n):fmN.format(Math.round(n)))}
 function fq(n){return FQ.format(n)}
 function vCost(){
-  var top=head("Recetas",'<button class="btn ghost" data-xlsx>Cargar desde Excel</button><button class="btn" data-newr>Nueva receta</button>');
-  if(!recipes.length)return top+'<div class="card empty">Aún no tienes recetas. Crea la primera con “Nueva receta”, o cárgalas todas de una vez con “Cargar desde Excel”.</div>';
-  var chips=recipes.map(function(r){return '<button class="rc'+(r.id===curR?' on':'')+'" data-sel="'+r.id+'"><b>'+esc(r.nombre)+'</b><span>'+esc(r.rinde)+'</span><span>Costo '+$$(rcost(r))+'</span></button>'}).join("");
+  var lupa='<label class="rsearch"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" id="rq" placeholder="Buscar receta" aria-label="Buscar receta" value="'+esc(RQ)+'"></label>';
+  var top=head("Recetas",(recipes.length?lupa:'')+'<button class="btn ghost" data-xlsx>Cargar desde Excel</button><button class="btn" data-newr>Nueva receta</button>');
+  var tip=window.NO_ING?'':'<div class="rtip'+(ings.length?'':' fuerte')+'"><span class="rtipi" aria-hidden="true">💡</span><div><b>Para crear una receta, primero crea sus ingredientes.</b> Anótalos en <button class="lnk" data-v="ing">Ingredientes</button> con lo que pagas y cuánto trae el envase; así cada receta calcula sola su costo. Si te falta uno mientras armas la receta, elige “+ Crear ingrediente nuevo” en la lista.</div></div>';
+  if(!recipes.length)return top+tip+'<div class="card empty">Aún no tienes recetas. Crea la primera con “Nueva receta”, o cárgalas todas de una vez con “Cargar desde Excel”.</div>';
+  var qn=xNorm(RQ),vis=0,chips=recipes.slice().sort(function(a,b){return String(a.nombre||"").localeCompare(String(b.nombre||""),"es",{sensitivity:"base",numeric:true})}).map(function(r){var rn=xNorm(r.nombre),hid=qn&&rn.indexOf(qn)<0&&r.id!==curR;if(!hid)vis++;return '<button class="rc'+(r.id===curR?' on':'')+'" data-sel="'+r.id+'" data-rn="'+esc(rn)+'"'+(hid?' hidden':'')+'><b>'+esc(r.nombre)+'</b><span>'+esc(r.rinde)+'</span><span>Costo '+$$(rcost(r))+'</span></button>'}).join("")+'<div class="rnone note" id="rnone"'+(vis?' hidden':'')+'>No hay recetas con ese nombre.</div>';
   var g="",gl=groups();
   gl.forEach(function(gp,gi){
     g+='<tr class="grp"><td colspan="5"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span>'+esc(gp)+'</span><label class="chk"><input type="checkbox" data-gbuy="'+gi+'"'+(gbuy[gp]!==false?' checked':'')+'> se compra</label></div></td><td><button class="x" data-delgrp="'+gi+'" aria-label="Eliminar categoría de costo">✕</button></td></tr>';
     recipe.forEach(function(r,i){ if(r.g!==gp)return;
       if(window.NO_ING)g+='<tr><td><input class="t" type="text" value="'+esc(r.n)+'" data-r="'+i+'" data-k="n" aria-label="Nombre"></td><td style="width:84px"><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td style="width:64px"><input class="u t" type="text" value="'+esc(r.u)+'" data-r="'+i+'" data-k="u" aria-label="Unidad"></td><td style="width:100px"><input type="text" class="money" inputmode="decimal" value="'+mfmt(r.c)+'" data-r="'+i+'" data-k="c" aria-label="Costo por unidad"></td>';
       else{var ix=r.n?ingFind(r.n,r.u):null;
-      g+='<tr><td><select class="ingsel" data-pick="'+i+'" aria-label="Ingrediente">'+ingOpts(ix)+'</select>'+(r.n&&!ix?'<div class="note" style="margin:2px 0 0;color:var(--bad)">“'+esc(r.n)+'” no está en Ingredientes</div>':'')+'</td><td style="width:84px"><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td style="width:56px" class="ro"><span class="rov">'+esc(r.u||"—")+'</span></td><td style="width:110px" class="r ro" title="El precio se cambia en Ingredientes"><span class="rov">'+(r.n&&ix&&!(+ix.c)?'<button class="lnk bad" data-v="ing">Sin precio</button>':$$u(r.c))+'</span></td>';}
+      g+='<tr><td><button type="button" class="ingpick'+(ix?'':' empty')+'" data-pickb="'+i+'" aria-haspopup="listbox"><span>'+(ix?esc(ix.n):'Elige un ingrediente…')+'</span><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+(r.n&&!ix?'<div class="note" style="margin:2px 0 0;color:var(--bad)">“'+esc(r.n)+'” no está en Ingredientes</div>':'')+'</td><td style="width:84px"><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td style="width:56px" class="ro"><span class="rov">'+esc(r.u||"—")+'</span></td><td style="width:110px" class="r ro" title="El precio se cambia en Ingredientes"><span class="rov">'+(r.n&&ix&&!(+ix.c)?'<button class="lnk bad" data-v="ing">Sin precio</button>':$$u(r.c))+'</span></td>';}
       g+='<td class="r" style="width:96px"><span class="rov" id="sub'+i+'">'+$$(r.q*r.c)+'</span></td><td style="width:34px"><button class="x" data-delrow="'+i+'" aria-label="Quitar ítem">✕</button></td></tr>';
     });
     g+='<tr><td colspan="6"><button class="btn ghost sm" data-addrow="'+gi+'">+ Agregar ítem</button></td></tr>';
   });
-  return top+'<div class="rlist">'+chips+'</div>'+
+  return top+tip+'<div class="rlist">'+chips+'</div>'+
   '<div class="grid two costgrid"><section class="card cost"><div class="f" style="margin-bottom:10px"><label>Nombre de la receta<input type="text" id="rn" value="'+esc(rp.nombre)+'"></label><label>Rinde<input type="text" id="rr" value="'+esc(rp.rinde)+'"></label></div>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-addgrp>+ Nueva categoría de costo</button><button class="btn ghost sm" data-dupr>Duplicar receta</button><button class="btn ghost sm danger" data-delr>Eliminar receta</button></div>'+
   '<p class="note">Marca “se compra” en las categorías que van a la lista de Compras.'+(window.NO_ING?'':' Los ingredientes se eligen de tu lista de <button class="lnk" data-v="ing">Ingredientes</button>; su unidad y precio se cambian allá.')+'</p>'+
@@ -710,6 +712,50 @@ function ingOpts(sel){
     if(l.length)h+='<optgroup label="'+esc(g)+'">'+l.map(function(x){return '<option value="'+x.id+'"'+(sel===x?' selected':'')+'>'+esc(x.n)+'</option>'}).join("")+'</optgroup>'});
   return h+'<option value="new">+ Crear ingrediente nuevo…</option>';
 }
+var RQ="";
+function pickClose(){var p=$("#ipk");if(p)p.remove();document.querySelectorAll('[data-pickb][aria-expanded]').forEach(function(b){b.removeAttribute("aria-expanded")})}
+function pickPlace(){
+  var p=$("#ipk");if(!p)return;var b=document.querySelector('[data-pickb="'+p.dataset.row+'"]');if(!b){pickClose();return}
+  var vv=window.visualViewport,vh=vv?vv.height+vv.offsetTop:innerHeight,r=b.getBoundingClientRect(),w=Math.min(Math.max(r.width,290),innerWidth-16),below=vh-r.bottom;
+  p.style.width=w+"px";p.style.left=Math.min(Math.max(8,r.left),innerWidth-w-8)+"px";p.style.top=p.style.bottom="";
+  if(below<260&&r.top>below){p.style.bottom=(innerHeight-r.top+4)+"px";p.style.maxHeight=Math.min(380,r.top-12)+"px"}else{p.style.top=(r.bottom+4)+"px";p.style.maxHeight=Math.max(160,Math.min(380,below-12))+"px"}
+}
+function pickFill(q){
+  var p=$("#ipk");if(!p)return;var n=xNorm(q),h="",cnt=0;
+  ingCats().forEach(function(g){var l=ings.filter(function(x){return x.g===g&&(!n||xNorm(x.n).indexOf(n)>=0)}).sort(function(a,b){return a.n.localeCompare(b.n,"es",{sensitivity:"base"})});
+    if(l.length){cnt+=l.length;h+='<div class="ipkg">'+esc(g)+'</div>'+l.map(function(x){return '<button type="button" class="ipko" role="option" data-pko="'+x.id+'"><span>'+esc(x.n)+'</span><small>'+esc(x.u)+(+x.c?' · '+$$u(x.c):' · sin precio')+'</small></button>'}).join("")}});
+  if(!cnt)h+='<div class="ipkn">'+(ings.length?'No hay ingredientes con “'+esc(q)+'”.':'Aún no tienes ingredientes.')+'</div>';
+  h+='<button type="button" class="ipko nuevo" data-pko="new"><span>+ Crear ingrediente nuevo'+(q.trim()?': “'+esc(q.trim())+'”':'…')+'</span></button>';
+  var l=p.querySelector(".ipkl");l.innerHTML=h;l.scrollTop=0;var f=l.querySelector(".ipko");if(f)f.classList.add("act");
+}
+function pickOpen(b){
+  pickClose();var p=document.createElement("div");p.id="ipk";p.dataset.row=b.dataset.pickb;
+  p.innerHTML='<div class="ipks"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" id="ipkq" placeholder="Buscar ingrediente…" autocomplete="off" aria-label="Buscar ingrediente"></div><div class="ipkl" role="listbox"></div>';
+  document.body.appendChild(p);pickFill("");pickPlace();b.setAttribute("aria-expanded","true");
+  setTimeout(function(){var q=$("#ipkq");if(q)q.focus()},0);
+}
+function pickChoose(o){
+  var p=$("#ipk");if(!p)return;var i=+p.dataset.row,r=recipe[i];if(!r){pickClose();return}
+  if(o.dataset.pko==="new"){var q=($("#ipkq")||{}).value||"";pickClose();openIngNew(i,r.g);var nn=$("#in_n");if(nn&&q.trim())nn.value=q.trim();return}
+  var x=ings.find(function(z){return z.id===+o.dataset.pko});pickClose();if(x){r.n=x.n;r.u=x.u;r.c=x.c;render()}
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("[data-pickb]");if(b){e.stopPropagation();if($("#ipk")&&$("#ipk").dataset.row===b.dataset.pickb)pickClose();else pickOpen(b);return}
+  var o=e.target.closest&&e.target.closest("[data-pko]");if(o){e.stopPropagation();pickChoose(o);return}
+  if(!(e.target.closest&&e.target.closest("#ipk")))pickClose();
+},true);
+document.addEventListener("input",function(e){
+  if(e.target.id==="ipkq"){pickFill(e.target.value);return}
+  if(e.target.id==="rq"){RQ=e.target.value;var q=xNorm(RQ),n=0;document.querySelectorAll(".rlist .rc").forEach(function(c){var v=!q||c.dataset.rn.indexOf(q)>=0||c.classList.contains("on");c.hidden=!v;if(v)n++});var no=$("#rnone");if(no)no.hidden=n>0}
+});
+document.addEventListener("keydown",function(e){
+  if(e.target.id!=="ipkq")return;var l=[].slice.call(document.querySelectorAll("#ipk .ipko")),a=l.findIndex(function(x){return x.classList.contains("act")});
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(a>=0)l[a].classList.remove("act");a=e.key==="ArrowDown"?Math.min(l.length-1,a+1):Math.max(0,a-1);if(l[a]){l[a].classList.add("act");l[a].scrollIntoView({block:"nearest"})}}
+  else if(e.key==="Enter"){e.preventDefault();if(l[a])pickChoose(l[a])}
+  else if(e.key==="Escape"){var row=$("#ipk").dataset.row;pickClose();var bb=document.querySelector('[data-pickb="'+row+'"]');if(bb)bb.focus()}
+});
+addEventListener("resize",pickPlace);if(window.visualViewport)visualViewport.addEventListener("resize",pickPlace);
+document.addEventListener("scroll",function(e){if(!(e.target&&e.target.closest&&e.target.closest("#ipk")))pickPlace()},true);
 function unitOpts(u){var l=UNITS.slice();if(u&&l.indexOf(u)<0)l.push(u);return l.map(function(x){return '<option'+(x===u?' selected':'')+'>'+esc(x)+'</option>'}).join("")}
 function openIngNew(row,cat){
   var d=$("#dlg");
