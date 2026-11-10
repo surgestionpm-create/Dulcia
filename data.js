@@ -3,7 +3,7 @@
   var sb = window.__FAKE_SB__ || window.supabase.createClient(DULCIA_CONFIG.url, DULCIA_CONFIG.key, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
-  var NEG = null, snap = {}, fotoPath = {}, saving = false, again = false, timer = null, retry = null, loaded = false;
+  var NEG = null, snap = {}, fotoPath = {}, saving = false, again = false, timer = null, retry = null, loaded = false, fallas = 0, ultAviso = "", ultAvisoT = 0, ultLog = "";
   window.SYNC_TXT = "";
   window.USER_EMAIL = "";
 
@@ -101,7 +101,13 @@
       if (!chg.length && !old.some(function (k) { return !(k in cur); })) { setStatus("Todo guardado"); saving = false; return; }
       setStatus("Guardando…");
       var by = function (t) { return chg.filter(function (k) { return cur[k].t === t; }).map(function (k) { return cur[k]; }); };
-      // borrar
+      // borrar (primero lo que depende de las recetas borradas, para que la base no lo bloquee)
+      for (var ci = 0; ci < del.r.length; ci += 100) {
+        var rb = del.r.slice(ci, ci + 100);
+        chk(await sb.from("pedido_recetas").delete().in("receta_id", rb));
+        chk(await sb.from("receta_items").delete().in("receta_id", rb));
+        chk(await sb.from("receta_grupos").delete().in("receta_id", rb));
+      }
       for (var ci = 0; ci < del.i.length; ci += 100) chk(await sb.from("ingredientes").delete().in("id", del.i.slice(ci, ci + 100)));
       for (var ci = 0; ci < del.r.length; ci += 100) chk(await sb.from("recetas").delete().in("id", del.r.slice(ci, ci + 100)));
       for (var ci = 0; ci < del.p.length; ci += 100) chk(await sb.from("pedidos").delete().in("id", del.p.slice(ci, ci + 100)));
@@ -143,17 +149,27 @@
         if (pfr.length) chk(await sb.from("pedido_fotos").insert(pfr));
       }
       snap = {}; keys.forEach(function (k) { snap[k] = cur[k].json; });
-      setStatus("Todo guardado");
+      setStatus("Todo guardado"); fallas = 0; ultAviso = "";
     } catch (e) {
       console.error("Error al guardar", e);
-      setStatus("No se pudo guardar. Reintentando…");
-      if (window.toast) toast("No se pudo guardar. Revisa tu conexión; reintentamos solos.");
-      retry = setTimeout(save, 8000);
+      fallas++;
+      var raw = (e && (e.message || e.details || e.hint)) || String(e || ""), code = (e && e.code) || "", red = /Load failed|Failed to fetch|NetworkError|network|timeout|aborted/i.test(raw) || !navigator.onLine;
+      var txt = red ? "Sin conexión: tus cambios quedan en esta pantalla y se guardan solos cuando vuelva internet."
+        : /row-level security|42501|permission denied/i.test(raw + code) ? "No se pudo guardar: tu plan no está vigente. Elige un plan en Ajustes para seguir guardando."
+        : /column|PGRST204|42703|schema cache/i.test(raw + code) ? "No se pudo guardar por un problema del sistema (falta actualizar la base de datos). Ya quedó avisado a Dulcia."
+        : "No se pudo guardar por un problema del sistema. Reintentamos solos; si sigue, escríbenos.";
+      setStatus(red ? "Sin conexión. Reintentando…" : "No se pudo guardar. Reintentando…");
+      // un solo aviso por tipo de problema (y uno nuevo cada 2 minutos si sigue)
+      if (window.toast && (txt !== ultAviso || Date.now() - ultAvisoT > 120000)) { toast(txt); ultAviso = txt; ultAvisoT = Date.now(); }
+      // se anota el error real para poder revisarlo (no aplica cuando no hay internet)
+      if (!red && raw + code !== ultLog) { ultLog = raw + code; try { sb.from("errores_app").insert({ negocio_id: NEG, donde: "guardar", codigo: String(code).slice(0, 40), mensaje: String(raw).slice(0, 900), navegador: navigator.userAgent.slice(0, 200) }).then(function () {}, function () {}); } catch (e2) {} }
+      retry = setTimeout(save, Math.min(60000, 8000 * fallas));
     }
     saving = false;
     if (again) { again = false; scheduleSave(); }
   }
   window.dulciaSaveNow = save;
+  addEventListener("online", function () { if (fallas) { fallas = 0; clearTimeout(retry); save(); } });
   var _render = window.render; window.render = function () { _render.apply(this, arguments); scheduleSave(); };
 
   /* ---------- cargar ---------- */
@@ -174,6 +190,34 @@
     });
   }
   var SU_DAYS = 30, SU_MIN = 3 * 864e5;
+  /* Meta Pixel: Subscribe / Purchase solo cuando el pago ya está confirmado en la cuenta (no al hacer clic). */
+  var PX_PEND = "dulcia_px_pend", PX_DONE = "dulcia_px_done", PX_PRECIO = { mensual: 5990, semestral: 29990, anual: 54990 };
+  function lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+  function lsSet(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  (function () { // al volver de Mercado Pago se guarda la referencia del pago (antes de que la app limpie la URL)
+    var q = new URLSearchParams(location.search); if (q.get("pago") !== "ok") return;
+    var p = lsGet(PX_PEND); if (!p) return;
+    p.ref = q.get("payment_id") || q.get("collection_id") || q.get("preapproval_id") || p.ref || ""; lsSet(PX_PEND, p);
+  })();
+  function pxPendiente(plan) {
+    var c = window.CUENTA || {};
+    lsSet(PX_PEND, { plan: plan, t: Date.now(), neg: c.negocio_id || "", vence: c.vence_en || "", sus: c.suscripcion_estado || "", ref: "" });
+  }
+  function pxRevisar() {
+    var p = lsGet(PX_PEND), c = window.CUENTA; if (!p || !c) return;
+    if (Date.now() - p.t > 3 * 864e5 || (p.neg && c.negocio_id && p.neg !== c.negocio_id)) { lsSet(PX_PEND, null); return; }
+    var antes = p.vence ? Date.parse(p.vence) : 0, ahora = c.vence_en ? Date.parse(c.vence_en) : 0, ok = false;
+    if (p.plan === "mensual") ok = c.suscripcion_estado === "authorized" && p.sus !== "authorized";
+    else ok = c.plan === p.plan && ahora > antes + 20 * 864e5; // se sumaron los meses pagados
+    if (!ok) return;
+    var id = (p.plan === "mensual" ? "sub-" : "pur-") + (p.ref || (c.negocio_id + "-" + p.plan + "-" + String(c.vence_en || "").slice(0, 10)));
+    var hechos = lsGet(PX_DONE) || [];
+    if (hechos.indexOf(id) < 0 && window.dulciaPixel) {
+      dulciaPixel(p.plan === "mensual" ? "Subscribe" : "Purchase", { value: PX_PRECIO[p.plan] || 0, currency: "CLP", content_name: "Dulcia " + p.plan, content_type: "product", content_ids: [p.plan] }, id);
+      hechos.push(id); lsSet(PX_DONE, hechos.slice(-20));
+    }
+    lsSet(PX_PEND, null);
+  }
   function suLoad() { try { return JSON.parse(localStorage.getItem("dulcia_su_" + NEG) || "{}"); } catch (e) { return {}; } }
   function suSave(c) { try { localStorage.setItem("dulcia_su_" + NEG, JSON.stringify(c)); } catch (e) {} }
   async function signed(paths) {
@@ -313,7 +357,7 @@
     function upd() { var v = (root.querySelector("input[name=plan]:checked") || {}).value; mail.hidden = v !== "mensual"; }
     root.querySelectorAll("input[name=plan]").forEach(function (r) { r.onchange = upd; }); upd();
     root.querySelector("#pg").onclick = async function () {
-      var b = this, plan = root.querySelector("input[name=plan]:checked").value; busy(b, true); var PV = { mensual: 5990, semestral: 29990, anual: 54990 }; if (window.dulciaEvent) dulciaEvent("begin_checkout", { currency: "CLP", value: PV[plan] || 0, items: [{ item_id: plan, item_name: "Dulcia " + plan, price: PV[plan] || 0, quantity: 1 }] });
+      var b = this, plan = root.querySelector("input[name=plan]:checked").value; busy(b, true); var PV = { mensual: 5990, semestral: 29990, anual: 54990 }; pxPendiente(plan); if (window.dulciaEvent) dulciaEvent("begin_checkout", { currency: "CLP", value: PV[plan] || 0, items: [{ item_id: plan, item_name: "Dulcia " + plan, price: PV[plan] || 0, quantity: 1 }] });
       try {
         var cfgd = window.DULCIA_CONFIG || {}, s = await sb.auth.getSession(), tk = s.data.session.access_token;
         var r = await fetch(cfgd.url + "/functions/v1/crear-pago", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: cfgd.key, "Content-Type": "application/json" }, body: JSON.stringify({ plan: plan, email: root.querySelector("#mpmail").value.trim() }) });
@@ -414,7 +458,7 @@
     bindPlanes(d, function (m) { var e = d.querySelector(".msg"); e.textContent = "No pudimos abrir el pago. " + m; e.hidden = false; });
   }
   async function refreshCuenta() {
-    var r = await sb.rpc("mi_cuenta"); if (r.data && r.data[0]) window.CUENTA = r.data[0];
+    var r = await sb.rpc("mi_cuenta"); if (r.data && r.data[0]) { window.CUENTA = r.data[0]; pxRevisar(); }
     if (typeof render === "function") render();
   }
   async function cancelSub(b) {
@@ -468,7 +512,7 @@
     document.getElementById("lo").onclick = doLogout;
     document.getElementById("af").onsubmit = async function (e) {
       e.preventDefault(); var b = e.target.querySelector(".btn"); busy(b, true);
-      try { var r = await sb.rpc("crear_negocio", { p_nombre: document.getElementById("an").value.trim() }); if (r.error) throw r.error; if (window.dulciaEvent) dulciaEvent("sign_up", { method: "correo" }); var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session); }
+      try { var r = await sb.rpc("crear_negocio", { p_nombre: document.getElementById("an").value.trim() }); if (r.error) throw r.error; if (window.dulciaEvent) dulciaEvent("sign_up", { method: "correo" }); if (window.dulciaPixel) dulciaPixel("CompleteRegistration", { content_name: "Cuenta Dulcia", status: true }); var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session); }
       catch (err) { note(msg(err)); busy(b, false); }
     };
   }
@@ -501,14 +545,14 @@
     var r = await sb.rpc("mi_cuenta");
     if (r.error) { show('<h1>Error</h1><p>' + msg(r.error) + '</p><button class="btn" onclick="location.reload()">Reintentar</button>'); return; }
     if (!r.data || !r.data.length) { showOnboard(); return; }
-    window.CUENTA = r.data[0];
+    window.CUENTA = r.data[0]; pxRevisar();
     if (!r.data[0].activo) { showPending(r.data[0]); return; }
     if (window.__pv) { clearInterval(window.__pv); window.__pv = 0; }
     NEG = r.data[0].negocio_id; await enter();
     if (/[?&]pago=ok/.test(location.search)) {
       try { history.replaceState(null, "", location.pathname); } catch (e) {}
       if (typeof toast === "function") toast("¡Gracias! Tu pago se está confirmando. La fecha de tu plan se actualiza en unos minutos.");
-      setTimeout(refreshCuenta, 20000);
+      [20000, 60000, 180000, 600000].forEach(function (ms) { setTimeout(refreshCuenta, ms); }); // la confirmación de Mercado Pago puede tardar
     }
   }
   async function doLogout() { try { await save(); } catch (e) {} await sb.auth.signOut(); location.reload(); }
