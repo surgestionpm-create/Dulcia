@@ -17,6 +17,18 @@ function selR(id){var r=recipes.find(function(q){return q.id===id});if(r){curR=i
 var wk=(function(){var d=pd(TODAY),k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")})(), catsOpen=null;
 var cfg={costeo:"real",cap:3,logo:null,logoData:null,logoPath:null,logoDirty:false,tel:"",mail:"",vig:7,abono:50,cond:"",nombre:"",gcal:false,asked:true,url:"",msg:""};
 var hora={sueldo:0,horas:160};
+var MAY={desp:0,pack:0,coord:0,fact:0};
+function vhora(){return hora.sueldo/Math.max(1,hora.horas)}
+function hasH(r){return (r.items||[]).some(function(it){return String(it.u||"").trim().toLowerCase()==="h"})}
+function moOn(r){return r.mo==null?!hasH(r):!!r.mo}
+function labor(r){return window.NO_P2||!moOn(r)?0:(+r.ta||0)/60*vhora()}
+function costTanda(r){return rcost(r)+labor(r)}
+function redon(n){return n<10000?Math.ceil(n/100)*100:Math.ceil(n/1000)*1000}
+function mayCalc(r){
+  var un=r.un||1,cu=costTanda(r)/un,pk=r.mpk===""||r.mpk==null?+MAY.pack||0:+r.mpk,cuM=cu+pk,mm=(r.mm==null?45:+r.mm)/100;
+  var neto=redon(cuM/(1-mm)),f=(+MAY.fact||0)/100,g=neto*(1-f)-cuM,desp=r.mds===""||r.mds==null?+MAY.desp||0:+r.mds,F=desp+(+MAY.coord||0)*vhora();
+  return {un:un,cu:cu,pk:pk,cuM:cuM,neto:neto,g:g,desp:desp,F:F,eq:F>0&&g>0?Math.ceil(F/g):0,rec:F>0&&g>0?Math.ceil(F/(0.2*g)):0};
+}
 var gcats=[];
 var gid=1, gastos=[];
 function gN(g){return g.iva==="incl"?g.monto/IVA:g.monto}
@@ -70,11 +82,11 @@ ICON.gas='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-widt
 ICON.cfg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>';
 ICON.mkt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6L6 10z"/><path d="M16 9a4 4 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11"/></svg>';
 ICON.com='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h10l2-8H6.5"/><circle cx="9" cy="19.500" r="1.200"/><circle cx="17" cy="19.500" r="1.200"/></svg>';
-var NAV=[["panel","Panel","panel"],["cal","Calendario","cal"],["ped","Pedidos","ped"],["prod","Producción","prod"],["cost","Recetas","cost"],["ing","Ingredientes","ing"],["com","Compras","com"],["gas","Gastos","gas"],["mkt","Marketing","mkt"],["cfg","Ajustes","cfg"]];
+var NAV=[["panel","Panel","panel"],["cal","Calendario","cal"],["ped","Pedidos","ped"],["prod","Producción","prod"],["cost","Recetas","cost"],["ing","Ingredientes","ing"],["com","Compras","com"],["inv","Inventario","inv"],["gas","Gastos","gas"],["mkt","Marketing","mkt"],["cfg","Ajustes","cfg"]];
 function renderNav(){
   $("#side").innerHTML='<div class="brand"><img class="blogo" src="'+logoSrc()+'" alt=""><div><div class="bn">'+esc(cfg.nombre)+'</div><small>con Dulcia</small></div></div><div style="height:14px"></div>'+NAV.map(function(n){
     return '<button class="nav" data-v="'+n[0]+'"'+(view===n[0]?' aria-current="page"':'')+'>'+ICON[n[2]]+'<span>'+n[1]+'</span></button>'}).join("")+
-    '<button class="nav" disabled>'+ICON.inv+'<span>Inventario</span><small>pronto</small></button>'+
+
     '<div class="demo" id="syncst">'+esc(window.SYNC_TXT||"")+'</div>';
 }
 function monthBar(){
@@ -233,12 +245,27 @@ function vPed(){
 }
 
 /* ---------- PRODUCCION ---------- */
+function hTxt(min){var h=min/60;return (h<10?fq(Math.round(h*10)/10):fq(Math.round(h)))+" h"}
 function udPl(r,n){var u=String(r&&r.ud||"").trim()||"unidad";if(n===1)return u;var w=u.split(" "),f=w[0];w[0]=/[aeiouáéó]$/i.test(f)?f+"s":/z$/i.test(f)?f.slice(0,-1)+"ces":f+"es";return w.join(" ")}
 var PRODR=7;
 function prodSum(dias){
-  var by={},sin=0;real().filter(function(o){return dias.indexOf(o.fecha)>=0}).forEach(function(o){var ln=(o.items||[]).filter(function(l){return recipes.some(function(r){return r.id===l.rid})});if(!ln.length){sin++;return}
-    ln.forEach(function(l){var r=recipes.find(function(q){return q.id===l.rid}),x=by[r.id]=by[r.id]||{r:r,q:0,listo:0,ped:0};x.q+=+l.q||0;x.ped++;if(o.listo)x.listo+=+l.q||0})});
-  return {rows:Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){return a.r.nombre.localeCompare(b.r.nombre,"es")}),sin:sin};
+  var by={},sin=0,pd2={};real().filter(function(o){return dias.indexOf(o.fecha)>=0}).forEach(function(o){var ln=(o.items||[]).filter(function(l){return recipes.some(function(r){return r.id===l.rid})});if(!ln.length){sin++;return}
+    ln.forEach(function(l){var r=recipes.find(function(q){return q.id===l.rid}),x=by[r.id]=by[r.id]||{r:r,q:0,listo:0,ped:0,ta:0,te:0,tn:0};x.q+=+l.q||0;x.ped++;if(o.listo)x.listo+=+l.q||0;var k=r.id+"|"+o.fecha;pd2[k]=(pd2[k]||0)+(+l.q||0)})});
+  // tiempo: por día se hacen tandas completas de cada receta
+  Object.keys(pd2).forEach(function(k){var r=by[k.split("|")[0]].r,t=Math.ceil(pd2[k]/(r.un||1)-1e-9);by[r.id].tn+=t;by[r.id].ta+=t*(+r.ta||0);by[r.id].te+=t*(+r.te||0)});
+  var rows=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){return a.r.nombre.localeCompare(b.r.nombre,"es")});
+  return {rows:rows,sin:sin,ta:rows.reduce(function(a,x){return a+x.ta},0),te:rows.reduce(function(a,x){return a+x.te},0),sinT:rows.filter(function(x){return !(+x.r.ta)}).length};
+}
+function invUso(o){ // ingredientes que usa un pedido (con merma), por ingrediente
+  var u={};(o.items||[]).forEach(function(l){var r=recipes.find(function(q){return q.id===l.rid});if(!r)return;
+    r.items.forEach(function(it){if(gbuy[it.g]===false||!it.n)return;var x=ingFind(it.n,it.u);if(!x)return;var k=ingK(x.n,x.u);u[k]=(u[k]||0)+it.q*(+l.q||0)/(r.un||1)*(1+(+x.mm||0)/100)})});
+  return u;
+}
+function invListo(o){
+  if(window.NO_P2)return "";
+  if(o.listo&&!o.desc_st){var u=invUso(o),n=0;Object.keys(u).forEach(function(k){var x=ings.find(function(i){return ingK(i.n,i.u)===k});if(x){x.st=(+x.st||0)-u[k];n++}});o.desc_st=n?u:null;return n?"Inventario: se descontaron "+n+" ingrediente"+(n===1?"":"s"):""}
+  if(!o.listo&&o.desc_st){var d=o.desc_st,m=0;Object.keys(d).forEach(function(k){var x=ings.find(function(i){return ingK(i.n,i.u)===k});if(x){x.st=(+x.st||0)+d[k];m++}});o.desc_st=null;return m?"Inventario: se devolvieron "+m+" ingrediente"+(m===1?"":"s"):""}
+  return "";
 }
 function vProd(){
   var t0=pd(TODAY), days=[];
@@ -246,12 +273,12 @@ function vProd(){
   var total=0,html=days.map(function(iso){
     var ev=real().filter(function(x){return x.fecha===iso}).sort(function(a,b){return a.hora<b.hora?-1:1});
     total+=ev.length;
-    var sd=prodSum([iso]).rows;
-    return '<div class="day"><h3>'+fechaLarga(iso)+(iso===TODAY?' (hoy)':'')+'</h3>'+(sd.length?'<div class="daysum">'+sd.map(function(x){return '<span>'+fq(x.q)+' '+esc(udPl(x.r,x.q))+' · '+esc(x.r.nombre)+'</span>'}).join("")+'</div>':'')+(ev.length?ev.map(function(x){
+    var sdd=prodSum([iso]),sd=sdd.rows;
+    return '<div class="day"><h3>'+fechaLarga(iso)+(iso===TODAY?' (hoy)':'')+'</h3>'+(sd.length?'<div class="daysum">'+(!window.NO_P2&&sdd.ta?'<span class="dh">⏱ '+hTxt(sdd.ta)+'</span>':'')+sd.map(function(x){return '<span>'+fq(x.q)+' '+esc(udPl(x.r,x.q))+' · '+esc(x.r.nombre)+'</span>'}).join("")+'</div>':'')+(ev.length?ev.map(function(x){
       return '<label class="prod'+(x.listo?' done':'')+'"><input type="checkbox" data-l="'+x.id+'"'+(x.listo?' checked':'')+'><div style="flex:1;min-width:0"><b>'+x.hora+' · '+esc(x.cliente)+'</b><div class="note" style="margin:0">'+esc(x.cat)+(x.personas?' · '+persTxt(x):'')+' · '+esc(x.desc)+'</div></div>'+(x.fotos[0]?'<img class="thumb" loading="lazy" decoding="async" style="width:48px;height:48px" src="'+th(x.fotos[0])+'" alt="">':'')+'</label>'}).join(""):'<div class="note">Sin pedidos.</div>')+'</div>'}).join("");
-  var sm=prodSum(days),tot=sm.rows.length?'<section class="card prodsum"><h2 style="font-size:1.35rem">Total a producir · próximos 7 días</h2><div class="scroll"><table class="pg"><thead><tr><th>Receta</th><th class="r">Cantidad</th>'+(window.NO_UN?'':'<th class="r">Tandas de receta</th>')+'<th class="r">Pedidos</th><th class="r">Listo</th></tr></thead><tbody>'+
-    sm.rows.map(function(x){var un=x.r.un||1;return '<tr><td><b>'+esc(x.r.nombre)+'</b></td><td class="r"><b>'+fq(x.q)+'</b> '+esc(udPl(x.r,x.q))+'</td>'+(window.NO_UN?'':'<td class="r">'+(un>1?fq(Math.round(x.q/un*100)/100)+' <span class="note" style="margin:0">(rinde '+un+')</span>':fq(x.q))+'</td>')+'<td class="r">'+x.ped+'</td><td class="r">'+(x.listo>=x.q?'<span class="st pagando">Todo</span>':x.listo?fq(x.listo)+' de '+fq(x.q):'—')+'</td></tr>'}).join("")+
-    '</tbody></table></div>'+(sm.sin?'<p class="note" style="margin:8px 0 0">'+sm.sin+' pedido'+(sm.sin===1?'':'s')+' sin receta no se cuenta'+(sm.sin===1?'':'n')+'. Asígnales una receta para incluirlos.</p>':'')+'</section>':'';
+  var sm=prodSum(days),tot=sm.rows.length?'<section class="card prodsum"><h2 style="font-size:1.35rem">Total a producir · próximos 7 días</h2><div class="scroll"><table class="pg"><thead><tr><th>Receta</th><th class="r">Cantidad</th>'+(window.NO_UN?'':'<th class="r">Tandas de receta</th>')+'<th class="r">Pedidos</th>'+(window.NO_P2?'':'<th class="r">Trabajo activo</th>')+'<th class="r">Listo</th></tr></thead><tbody>'+
+    sm.rows.map(function(x){var un=x.r.un||1;return '<tr><td><b>'+esc(x.r.nombre)+'</b></td><td class="r"><b>'+fq(x.q)+'</b> '+esc(udPl(x.r,x.q))+'</td>'+(window.NO_UN?'':'<td class="r">'+(un>1?fq(x.tn)+' <span class="note" style="margin:0">(rinde '+un+(x.tn*un>x.q?', sobran '+fq(x.tn*un-x.q):'')+')</span>':fq(x.q))+'</td>')+'<td class="r">'+x.ped+'</td>'+(window.NO_P2?'':'<td class="r">'+(+x.r.ta?hTxt(x.ta):'<button class="lnk" data-gorec="'+x.r.id+'" title="Anota el tiempo en la receta">sin tiempo</button>')+'</td>')+'<td class="r">'+(x.listo>=x.q?'<span class="st pagando">Todo</span>':x.listo?fq(x.listo)+' de '+fq(x.q):'—')+'</td></tr>'}).join("")+
+    '</tbody></table></div>'+(window.NO_P2?'':!sm.ta?'<p class="ptime note">Anota el tiempo de trabajo de cada receta (Recetas → Tiempo de producción) para ver cuántas horas necesitas por día y por semana.</p>':'<p class="ptime"><b>'+hTxt(sm.ta)+' de trabajo activo</b> en los próximos 7 días'+(sm.te?' · '+hTxt(sm.te)+' de horno o reposo':'')+(hora.sueldo?' · mano de obra '+$$(sm.ta/60*vhora()):'')+(sm.sinT?'. <span class="note" style="margin:0">'+sm.sinT+' receta'+(sm.sinT===1?'':'s')+' sin tiempo anotado.</span>':'')+'</p>')+(sm.sin?'<p class="note" style="margin:8px 0 0">'+sm.sin+' pedido'+(sm.sin===1?'':'s')+' sin receta no se cuenta'+(sm.sin===1?'':'n')+'. Asígnales una receta para incluirlos.</p>':'')+'</section>':'';
   return head("Producción",'<span class="note" style="margin:0">Próximos 7 días · '+total+' pedidos</span>')+tot+html;
 }
 
@@ -272,47 +299,73 @@ function vCost(){
   var qn=xNorm(RQ),vis=0,chips=recipes.slice().sort(function(a,b){return String(a.nombre||"").localeCompare(String(b.nombre||""),"es",{sensitivity:"base",numeric:true})}).map(function(r){var rn=xNorm(r.nombre),hid=qn&&rn.indexOf(qn)<0&&r.id!==curR;if(!hid)vis++;return '<button class="rc'+(r.id===curR?' on':'')+'" data-sel="'+r.id+'" data-rn="'+esc(rn)+'"'+(hid?' hidden':'')+'><b>'+esc(r.nombre)+'</b><span>'+esc(r.rinde)+'</span><span>Costo '+$$(rcost(r))+'</span></button>'}).join("")+'<div class="rnone note" id="rnone"'+(vis?' hidden':'')+'>No hay recetas con ese nombre.</div>';
   var g="",gl=groups();
   gl.forEach(function(gp,gi){
-    g+='<tr class="grp"><td colspan="5"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span>'+esc(gp)+'</span><label class="chk"><input type="checkbox" data-gbuy="'+gi+'"'+(gbuy[gp]!==false?' checked':'')+'> se compra</label></div></td><td><button class="x" data-delgrp="'+gi+'" aria-label="Eliminar categoría de costo">✕</button></td></tr>';
+    g+='<tr class="grp"><td colspan="5"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span>'+esc(gp)+'</span><label class="chk"><input type="checkbox" data-gbuy="'+gi+'"'+(gbuy[gp]!==false?' checked':'')+'> <b>Se incluye en Compras</b></label><span class="chkx">'+(gbuy[gp]!==false?'Estos ítems suman a tu lista de compras de la semana.':'No va a Compras: úsalo para mano de obra, gas, luz u otros costos que no compras por pedido.')+'</span></div></td><td><button class="x" data-delgrp="'+gi+'" aria-label="Eliminar categoría de costo">✕</button></td></tr>';
     recipe.forEach(function(r,i){ if(r.g!==gp)return;
-      if(window.NO_ING)g+='<tr><td><input class="t" type="text" value="'+esc(r.n)+'" data-r="'+i+'" data-k="n" aria-label="Nombre"></td><td style="width:84px"><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td style="width:64px"><input class="u t" type="text" value="'+esc(r.u)+'" data-r="'+i+'" data-k="u" aria-label="Unidad"></td><td style="width:100px"><input type="text" class="money" inputmode="decimal" value="'+mfmt(r.c)+'" data-r="'+i+'" data-k="c" aria-label="Costo por unidad"></td>';
+      if(window.NO_ING)g+='<tr><td><input class="t" type="text" value="'+esc(r.n)+'" data-r="'+i+'" data-k="n" aria-label="Nombre"></td><td><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td><input class="u t" type="text" value="'+esc(r.u)+'" data-r="'+i+'" data-k="u" aria-label="Unidad"></td><td><input type="text" class="money" inputmode="decimal" value="'+mfmt(r.c)+'" data-r="'+i+'" data-k="c" aria-label="Costo por unidad"></td>';
       else{var ix=r.n?ingFind(r.n,r.u):null;
-      g+='<tr><td><button type="button" class="ingpick'+(ix?'':' empty')+'" data-pickb="'+i+'" aria-haspopup="listbox"><span>'+(ix?esc(ix.n):'Elige un ingrediente…')+'</span><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+(r.n&&!ix?'<div class="note" style="margin:2px 0 0;color:var(--bad)">“'+esc(r.n)+'” no está en Ingredientes</div>':'')+'</td><td style="width:84px"><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td style="width:56px" class="ro"><span class="rov">'+esc(r.u||"—")+'</span></td><td style="width:110px" class="r ro" title="El precio se cambia en Ingredientes"><span class="rov">'+(r.n&&ix&&!(+ix.c)?'<button class="lnk bad" data-v="ing">Sin precio</button>':$$u(r.c))+'</span></td>';}
-      g+='<td class="r" style="width:96px"><span class="rov" id="sub'+i+'">'+$$(r.q*r.c)+'</span></td><td style="width:34px"><button class="x" data-delrow="'+i+'" aria-label="Quitar ítem">✕</button></td></tr>';
+      g+='<tr><td><button type="button" class="ingpick'+(ix?'':' empty')+'" data-pickb="'+i+'" aria-haspopup="listbox"><span>'+(ix?esc(ix.n):'Elige un ingrediente…')+'</span><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+(r.n&&!ix?'<div class="note" style="margin:2px 0 0;color:var(--bad)">“'+esc(r.n)+'” no está en Ingredientes</div>':'')+'</td><td><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td class="ro"><span class="rov">'+esc(r.u||"—")+'</span></td><td class="r ro" title=""El precio se cambia en Ingredientes"><span class="rov">'+(r.n&&ix&&!(+ix.c)?'<button class="lnk bad" data-v="ing">Sin precio</button>':$$u(r.c))+'</span></td>';}
+      g+='<td class="r"><span class="rov" id="sub'+i+'">'+$$(r.q*r.c)+'</span></td><td><button class="x" data-delrow=""'+i+'" aria-label="Quitar ítem">✕</button></td></tr>';
     });
     g+='<tr><td colspan="6"><button class="btn ghost sm" data-addrow="'+gi+'">+ Agregar ítem</button></td></tr>';
   });
   return top+tip+'<div class="rlist">'+chips+'</div>'+
   '<div class="grid two costgrid"><section class="card cost"><div class="f" style="margin-bottom:10px"><label>Nombre de la receta<input type="text" id="rn" value="'+esc(rp.nombre)+'"></label><label>Rinde<input type="text" id="rr" value="'+esc(rp.rinde)+'"></label>'+
-    (window.NO_UN?'':'<label>Unidades que rinde<input type="number" id="run" min="1" step="1" inputmode="numeric" value="'+(rp.un||1)+'"></label><label>Se vende por<input type="text" id="rud" style="text-align:left" maxlength="30" placeholder="Ej.: galleta, torta, caja" value="'+esc(rp.ud||"")+'"></label>')+'</div>'+
+    (window.NO_UN?'':'<label>Unidades que rinde<input type="number" id="run" style="text-align:left" min="1" step="1" inputmode="numeric" value="'+(rp.un||1)+'"></label><label>Se vende por<input type="text" id="rud" style="text-align:left" maxlength="30" placeholder="Ej.: galleta, torta, caja" value="'+esc(rp.ud||"")+'"></label>')+'</div>'+
     (window.NO_UN?'':'<p class="note" style="margin:-4px 0 10px">En los pedidos, la cantidad es en <b>'+esc(udPl(rp,2))+'</b>. Ej.: si rinde 24 y piden 6, la app calcula ¼ de la receta.</p>')+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-addgrp>+ Nueva categoría de costo</button><button class="btn ghost sm" data-dupr>Duplicar receta</button><button class="btn ghost sm danger" data-delr>Eliminar receta</button></div>'+
-  '<p class="note">Marca “se compra” en las categorías que van a la lista de Compras.'+(window.NO_ING?'':' Los ingredientes se eligen de tu lista de <button class="lnk" data-v="ing">Ingredientes</button>; su unidad y precio se cambian allá.')+'</p>'+
-  '<div class="scroll"><table><thead><tr><th>Ítem</th><th class="r">Cantidad</th><th>Unidad</th><th class="r">Costo unidad</th><th class="r">Subtotal</th><th></th></tr></thead><tbody>'+g+'<tr class="tot"><td colspan="4">Costo total</td><td class="r" id="rtot"></td><td></td></tr></tbody></table></div></section>'+
+  '<p class="note">Marca “Se incluye en Compras” en las categorías que compras para cada pedido (ingredientes, cajas, decoración). Desmárcalo en mano de obra o gastos fijos: igual suman al costo de la receta, pero no aparecen en la lista de Compras.'+(window.NO_ING?'':' Los ingredientes se eligen de tu lista de <button class="lnk" data-v="ing">Ingredientes</button>; su unidad y precio se cambian allá.')+'</p>'+
+  '<div class="scroll"><table class="rtab"><colgroup><col><col class="c-q"><col class="c-u"><col class="c-c"><col class="c-s"><col class="c-x"></colgroup><thead><tr><th>Ítem</th><th class="r">Cantidad</th><th>Unidad</th><th class="r">Costo unidad</th><th class="r">Subtotal</th><th></th></tr></thead><tbody>'+g+'<tr class="tot"><td colspan="4">Costo total</td><td class="r" id="rtot"></td><td></td></tr></tbody></table></div></section>'+
   '<div class="grid" style="align-content:start"><section class="card" id="rsum">'+rskel()+'</section></div></div>';
 }
 function rsum(){
-  var c=rtot(), m=rp.margen/100, neto=c/(1-m), sug=Math.ceil(neto*IVA/1000)*1000;
-  var pn=rp.precio/IVA, real=pn>0?(pn-c)/pn*100:0;
-  $("#rtot").textContent=$$(c);
+  var ci=rtot(), lab=labor(rp), c=ci+lab, un=rp.un||1, cu=c/un, m=rp.margen/100, netoU=cu/(1-m), sug=redon(netoU*IVA), u1=udPl(rp,1);
+  var pn=rp.precio/IVA, real=pn>0?(pn-cu)/pn*100:0;
+  $("#rtot").textContent=$$(ci);
   $("#mgv").textContent=rp.margen+"%";
-  $("#sug").textContent=$$(sug); $("#sugn").textContent="con IVA · neto "+$$(neto);
-  $("#kc").textContent=$$(c); $("#kg").textContent=$$(neto-c);
+  $("#sug").textContent=$$(sug); $("#sugn").textContent="con IVA, por "+u1+" · neto "+$$(netoU)+(un>1?" · tanda de "+un+": "+$$(sug*un):"");
+  $("#kc").textContent=$$(ci); $("#kg").textContent=$$(netoU-cu);
+  if($("#klab")){$("#klab").textContent=lab?$$(lab):"—";$("#ktot").textContent=$$(c);$("#kcu").textContent=$$(cu);$("#kcul").textContent="Costo por "+u1;$("#kgl").textContent="Ganancia por "+u1}
+  if($("#msug")){var mc=mayCalc(rp);$("#mgmv").textContent=(rp.mm==null?45:rp.mm)+"%";
+    $("#msug").textContent=$$(mc.neto)+" + IVA";$("#msugn").textContent="por "+u1+" · "+$$(Math.round(mc.neto*IVA))+" con IVA"+(sug>0?" · "+Math.round((1-mc.neto*IVA/sug)*100)+"% menos que a público":"");
+    $("#mcu").textContent=$$(mc.cuM);$("#mg1").textContent=$$(mc.g);
+    var t;if(mc.g<=0)t='<b class="neg">Con este margen pierdes plata en cada '+esc(u1)+'.</b> Sube el margen mayorista.';
+    else if(!mc.F)t='No tienes costos por pedido mayorista. Configúralos en <button class="lnk" data-v="cfg">Ajustes</button> (despacho, coordinación, factura) para calcular el mínimo.';
+    else t='Cada pedido mayorista te cuesta '+$$(mc.F)+' (despacho '+$$(mc.desp)+(MAY.coord?' + coordinación '+fq(MAY.coord)+' h':'')+').<br><b>Punto de equilibrio: '+fq(mc.eq)+' '+esc(udPl(rp,mc.eq))+'.</b> Bajo esa cantidad, el pedido no deja ganancia.<br><b>Mínimo recomendado: '+fq(mc.rec)+' '+esc(udPl(rp,mc.rec))+'</b>, así el despacho y la coordinación se comen menos del 20% de tu ganancia.';
+    $("#mmin").innerHTML=t;
+    var mr=$("#mreal");if(mr){var pm=+rp.pm||0;mr.innerHTML=pm?'Margen real mayorista: <span class="'+((pm-mc.cuM)/pm*100>=(rp.mm==null?45:rp.mm)?'pos':'neg')+'">'+((pm-mc.cuM)/pm*100).toFixed(1)+'%</span> · ganancia '+$$(pm*(1-(+MAY.fact||0)/100)-mc.cuM)+' por '+esc(u1):'<span class="note" style="margin:0">Sin precio mayorista: en los pedidos mayoristas el precio quedará en $ 0 hasta que lo anotes.</span>'}}
+  if($("#tlab")){var vh=vhora();$("#tlab").innerHTML=!rp.ta?'Anota el tiempo activo para calcular la mano de obra.':!vh?'Completa “Tu hora de trabajo” (abajo) para valorizar el tiempo.':'Mano de obra por tanda: <b>'+$$((+rp.ta||0)/60*vh)+'</b> ('+fq(rp.ta)+' min × '+$$(vh)+'/h)'+(moOn(rp)?'':' · <span class="note" style="margin:0">no se suma al costo</span>');
+    $("#thh").textContent=hasH(rp)?'Esta receta ya tiene horas de trabajo como ítem. Para no contarla dos veces, deja esto desmarcado o quita ese ítem.':''}
   var r=$("#real"); r.textContent=real.toFixed(1)+"%"; r.className=real>=rp.margen?"pos":"neg";
-  $("#realg").textContent=$$(pn-c);
+  $("#realg").textContent=$$(pn-cu);
   $("#hv").textContent=$$(hora.sueldo/Math.max(1,hora.horas));
 }
 function rskel(){
   return '<h2 style="font-size:1.38rem">Precio sugerido</h2>'+
    '<label style="display:block;margin-top:10px;font-size:.85rem;color:var(--soft)">Margen que quieres ganar: <b style="color:var(--ink)" id="mgv"></b><input type="range" id="mg" min="40" max="90" value="'+rp.margen+'"></label>'+
    '<div class="big" style="margin-top:8px" id="sug"></div><div class="note" style="margin-top:0" id="sugn"></div>'+
-   '<dl class="kv" style="margin-top:14px"><dt>Costo de producción</dt><dd id="kc"></dd><dt>Ganancia por receta</dt><dd id="kg"></dd></dl>'+
-   '<h3 style="font-size:1.2rem;margin-top:20px">Con tu precio actual</h3>'+
-   '<label style="display:block;margin-top:6px;font-size:.85rem;color:var(--soft)">Precio que cobras (con IVA)<input type="text" class="money" inputmode="numeric" id="pa" value="'+mfmt(rp.precio)+'"></label>'+
-   '<p style="margin:10px 0 0;font-weight:600">Margen real: <span id="real"></span> · ganancia <span id="realg"></span></p>'+
+   (window.NO_P2?'<dl class="kv" style="margin-top:14px"><dt>Costo de producción</dt><dd id="kc"></dd><dt>Ganancia por receta</dt><dd id="kg"></dd></dl>':
+   '<dl class="kv" style="margin-top:14px"><dt>Ingredientes y otros</dt><dd id="kc"></dd><dt>Mano de obra</dt><dd id="klab"></dd><dt>Costo por tanda</dt><dd id="ktot"></dd><dt id="kcul">Costo por unidad</dt><dd id="kcu"></dd><dt id="kgl">Ganancia</dt><dd id="kg"></dd></dl>')+
+   '<h3 style="font-size:1.2rem;margin-top:20px">'+(window.NO_PM?'Con tu precio actual':'Tu precio a público (minorista)')+'</h3>'+
+   '<label style="display:block;margin-top:6px;font-size:.85rem;color:var(--soft)">Precio que cobras por '+esc(udPl(rp,1))+' (con IVA)<input type="text" class="money" inputmode="numeric" id="pa" value="'+mfmt(rp.precio)+'"></label>'+
+   '<p style="margin:10px 0 0;font-weight:600">Margen real: <span id="real"></span> · ganancia <span id="realg"></span></p>'+(window.NO_PM?'':'<p style="margin:4px 0 0"><button class="lnk" data-usesug="min">Usar el precio sugerido</button></p>')+
+   (window.NO_P2?'':
+   '<h3 class="rsec">Precio mayorista</h3><p class="note" style="margin-top:2px">Para cafeterías, almacenes o reventa. Normalmente se trabaja con un margen de 40–55%.</p>'+
+   '<label style="display:block;margin-top:8px;font-size:.85rem;color:var(--soft)">Margen mayorista: <b style="color:var(--ink)" id="mgmv"></b><input type="range" id="mgm" min="15" max="75" value="'+(rp.mm==null?45:rp.mm)+'"></label>'+
+   '<div class="big" style="margin-top:6px;font-size:1.9rem" id="msug"></div><div class="note" style="margin-top:0" id="msugn"></div>'+
+   '<dl class="kv" style="margin-top:10px"><dt>Costo con packaging</dt><dd id="mcu"></dd><dt>Ganancia por unidad</dt><dd id="mg1"></dd></dl>'+
+   '<div class="mmin" id="mmin"></div>'+
+   (window.NO_PM?'':'<label style="display:block;margin-top:12px;font-size:.85rem;color:var(--soft)">Tu precio mayorista por '+esc(udPl(rp,1))+' (+ IVA)<input type="text" class="money" inputmode="numeric" id="pmy" value="'+mfmt(rp.pm||0)+'"></label>'+
+   '<p style="margin:8px 0 0;font-weight:600" id="mreal"></p><p style="margin:4px 0 0"><button class="lnk" data-usesug="may">Usar el precio sugerido</button></p>')+
+   '<div class="f" style="margin-top:10px"><label>Packaging mayorista por '+esc(udPl(rp,1))+'<input type="text" class="money" inputmode="numeric" id="mpk" placeholder="General: '+$$(MAY.pack)+'" value="'+(rp.mpk===""||rp.mpk==null?"":mfmt(rp.mpk))+'"></label><label>Despacho por pedido<input type="text" class="money" inputmode="numeric" id="mds" placeholder="General: '+$$(MAY.desp)+'" value="'+(rp.mds===""||rp.mds==null?"":mfmt(rp.mds))+'"></label></div>'+
+   '<p class="note" style="margin-top:4px">Vacío = usa el valor general de <button class="lnk" data-v="cfg">Ajustes</button>.</p>'+
+   '<h3 class="rsec">Tiempo de producción</h3><p class="note" style="margin-top:2px">Por tanda (la receta completa). Producción suma las horas de la semana.</p>'+
+   '<div class="f" style="margin-top:8px"><label>Trabajo activo (min)<input type="number" id="ta" min="0" step="5" inputmode="numeric" style="text-align:left" value="'+(+rp.ta||"")+'" placeholder="Ej.: 45"></label><label>Horno o reposo (min)<input type="number" id="te" min="0" step="5" inputmode="numeric" style="text-align:left" value="'+(+rp.te||"")+'" placeholder="Ej.: 35"></label></div>'+
+   '<label class="chk" style="margin-top:10px;font-size:.88rem"><input type="checkbox" id="moch"'+(moOn(rp)?' checked':'')+'> <b>Sumar la mano de obra al costo</b></label><p class="note" id="thh" style="margin:4px 0 0;color:var(--bad)"></p>'+
+   '<p class="note" id="tlab" style="margin-top:6px"></p>')+
    '<h3 style="font-size:1.2rem;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">Tu hora de trabajo</h3>'+
    '<p class="note" style="margin-top:2px">Cuánto cobrar por hora para ganar el sueldo que quieres.</p>'+
    '<div class="f" style="margin-top:8px"><label>Sueldo mensual que quieres<input type="text" class="money" inputmode="numeric" id="hs" value="'+mfmt(hora.sueldo)+'"></label><label>Horas que trabajas al mes<input type="number" id="hh" value="'+hora.horas+'"></label></div>'+
-   '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap"><div><span class="big" style="font-size:1.5rem" id="hv"></span> <span class="note">por hora</span></div><button class="btn sm" data-usehour>Usar en la receta</button></div>'+
+   '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap"><div><span class="big" style="font-size:1.5rem" id="hv"></span> <span class="note">por hora</span></div>'+(window.NO_P2?'<button class="btn sm" data-usehour>Usar en la receta</button>':'')+'</div>'+(window.NO_P2?'':'<p class="note">Este valor se usa para la mano de obra (tiempo activo de cada receta) y para la coordinación de los pedidos mayoristas.</p>')+
    '<p class="note">Si ya anotaste tu sueldo en Gastos, cuéntalo en un solo lugar: aquí o allá. Si no, lo sumarías dos veces.</p>';
 }
 function openNewR(){
@@ -769,6 +822,17 @@ document.addEventListener("keydown",function(e){
 });
 addEventListener("resize",pickPlace);if(window.visualViewport)visualViewport.addEventListener("resize",pickPlace);
 document.addEventListener("scroll",function(e){if(!(e.target&&e.target.closest&&e.target.closest("#ipk")))pickPlace()},true);
+document.addEventListener("input",function(e){var t=e.target,id=t.id;if(!id)return;
+  var num=function(v){return Math.round(+String(v).replace(/[^\d,.-]/g,"").replace(/\./g,"").replace(",",".")||0)};
+  if(id==="mgm"){rp.mm=+t.value;rsum()}else if(id==="mpk"){rp.mpk=t.value.trim()===""?"":num(t.value);rsum()}else if(id==="mds"){rp.mds=t.value.trim()===""?"":num(t.value);rsum()}
+  else if(id==="ta"){rp.ta=Math.max(0,+t.value||0);rsum()}else if(id==="te"){rp.te=Math.max(0,+t.value||0)}
+  else if(id==="myd"){MAY.desp=num(t.value)}else if(id==="myp"){MAY.pack=num(t.value)}else if(id==="myc"){MAY.coord=Math.max(0,+t.value||0)}else if(id==="myf"){MAY.fact=Math.min(100,Math.max(0,+t.value||0))}
+});
+document.addEventListener("change",function(e){if(e.target.id==="moch"){rp.mo=e.target.checked;rsum()}});
+document.addEventListener("input",function(e){if(e.target.id==="pmy"){rp.pm=mnum(e.target.value);rsum()}});
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-usesug]");if(!t)return;
+  if(t.dataset.usesug==="min"){var c=costTanda(rp)/(rp.un||1);rp.precio=redon(c/(1-rp.margen/100)*IVA);var a=$("#pa");if(a)a.value=mfmt(rp.precio)}
+  else{rp.pm=mayCalc(rp).neto;var b=$("#pmy");if(b)b.value=mfmt(rp.pm)}rsum();toast("Precio actualizado")});
 function unitOpts(u){var l=UNITS.slice();if(u&&l.indexOf(u)<0)l.push(u);return l.map(function(x){return '<option'+(x===u?' selected':'')+'>'+esc(x)+'</option>'}).join("")}
 function openIngNew(row,cat){
   var d=$("#dlg");
@@ -798,7 +862,7 @@ function inRes(){var u=$("#in_u"),r=$("#in_res");if(!u||!r)return;var ev=parseFl
 document.addEventListener("input",function(e){var t=e.target;if(t.id==="in_u"||t.id==="in_e"||t.id==="in_c"||t.id==="in_n")inRes()});
 document.addEventListener("change",function(e){if(e.target.id==="in_u")inRes()});
 /* ---------- Ingredientes por Excel ---------- */
-var IX_H=["Ingrediente","Unidad","Cuánto trae el envase","Precio del envase","Categoría"];
+var IX_H=["Ingrediente","Unidad","Cuánto trae el envase","Precio del envase","Categoría","Stock actual","Stock mínimo","Merma %"];
 function ixUnit(u){var k=xNorm(u);var m={g:"g",gr:"g",grs:"g",gramo:"g",gramos:"g",kg:"kg",kilo:"kg",kilos:"kg",kilogramo:"kg",kilogramos:"kg",ml:"ml",cc:"ml",mililitro:"ml",mililitros:"ml",l:"l",lt:"l",lts:"l",litro:"l",litros:"l",un:"un",u:"un",und:"un",unidad:"un",unidades:"un",cda:"cda",cucharada:"cda",cucharadas:"cda",cdta:"cdta",cucharadita:"cdta",cucharaditas:"cdta",taza:"taza",tazas:"taza",h:"h",hora:"h",horas:"h",cm:"cm",m:"m",metro:"m",metros:"m"};return m[k]||""}
 function openIngX(){
   var d=$("#dlg");
@@ -809,24 +873,25 @@ function openIngX(){
   if(!d.open)d.showModal();
 }
 function ixBook(X,rows){
-  var ws=X.utils.aoa_to_sheet([IX_H].concat(rows));ws["!cols"]=[30,10,20,18,18].map(function(w){return {wch:w}});
-  var ins=X.utils.aoa_to_sheet([["Cómo llenar la hoja Ingredientes"],[""],["Ingrediente: el nombre tal como quieres verlo en tus recetas."],["Unidad: g, kg, ml, l, un, cda, cdta, taza, h, cm o m. Es la unidad en que usas el ingrediente en las recetas."],["Cuánto trae el envase: en esa misma unidad. Ej.: bolsa de harina de 1 kg con unidad g → 1000."],["Precio del envase: lo que pagas por ese envase, con IVA. Ej.: 1290."],["Categoría: Ingredientes, Empaque y decoración, o Mano de obra y gastos (o una categoría tuya)."],[""],["El costo por unidad lo calcula Dulcia: precio del envase ÷ cuánto trae."]]);ins["!cols"]=[{wch:110}];
+  var ws=X.utils.aoa_to_sheet([IX_H].concat(rows));ws["!cols"]=[30,10,20,18,18,14,14,10].map(function(w){return {wch:w}});
+  var ins=X.utils.aoa_to_sheet([["Cómo llenar la hoja Ingredientes"],[""],["Ingrediente: el nombre tal como quieres verlo en tus recetas."],["Unidad: g, kg, ml, l, un, cda, cdta, taza, h, cm o m. Es la unidad en que usas el ingrediente en las recetas."],["Cuánto trae el envase: en esa misma unidad. Ej.: bolsa de harina de 1 kg con unidad g → 1000."],["Precio del envase: lo que pagas por ese envase, con IVA. Ej.: 1290."],["Categoría: Ingredientes, Empaque y decoración, o Mano de obra y gastos (o una categoría tuya)."],["Stock actual y stock mínimo: en la misma unidad. Si los dejas vacíos, no se cambian."],["Merma %: lo que se pierde al usarlo (ej.: 5 para frutas). Se suma a lo que necesitas comprar."],[""],["El costo por unidad lo calcula Dulcia: precio del envase ÷ cuánto trae."]]);ins["!cols"]=[{wch:110}];
   var wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Ingredientes");X.utils.book_append_sheet(wb,ins,"Instrucciones");return wb;
 }
-function ixTemplate(){xlsxLib().then(function(X){X.writeFile(ixBook(X,[["Harina sin polvos","g",1000,1290,I],["Huevos","un",30,7990,I],["Mantequilla","g",250,2890,I],["Caja torta 20 cm","un",1,900,E]]),"Plantilla_ingredientes_Dulcia.xlsx");toast("Plantilla descargada")}).catch(function(e){toast(e.message)})}
-function ixExport(){xlsxLib().then(function(X){var l=ings.slice().sort(function(a,b){return (a.g+a.n).localeCompare(b.g+b.n,"es")});X.writeFile(ixBook(X,l.map(function(x){return [x.n,x.u,+x.e||0,Math.round(+x.pe||0),x.g]})),"Ingredientes_Dulcia.xlsx");toast(l.length+" ingredientes descargados")}).catch(function(e){toast(e.message)})}
+function ixTemplate(){xlsxLib().then(function(X){X.writeFile(ixBook(X,[["Harina sin polvos","g",1000,1290,I,2500,1000,0],["Huevos","un",30,7990,I,30,15,0],["Mantequilla","g",250,2890,I,500,250,0],["Frutillas","g",1000,3990,I,0,0,10],["Caja torta 20 cm","un",1,900,E,10,5,0]]),"Plantilla_ingredientes_Dulcia.xlsx");toast("Plantilla descargada")}).catch(function(e){toast(e.message)})}
+function ixExport(){xlsxLib().then(function(X){var l=ings.slice().sort(function(a,b){return (a.g+a.n).localeCompare(b.g+b.n,"es")});X.writeFile(ixBook(X,l.map(function(x){return [x.n,x.u,+x.e||0,Math.round(+x.pe||0),x.g,Math.round((+x.st||0)*100)/100,+x.mn||0,+x.mm||0]})),"Ingredientes_Dulcia.xlsx");toast(l.length+" ingredientes descargados")}).catch(function(e){toast(e.message)})}
 function ixParse(buf,X){
   var wb=X.read(buf,{type:"array",raw:true}),ws=wb.Sheets["Ingredientes"]||wb.Sheets[wb.SheetNames[0]],aoa=X.utils.sheet_to_json(ws,{header:1,defval:"",raw:true}),hi=-1,col={};
   for(var i=0;i<Math.min(aoa.length,15)&&hi<0;i++){var h=aoa[i].map(xNorm);if((h.indexOf("ingrediente")>=0||h.indexOf("nombre")>=0)&&h.indexOf("unidad")>=0)hi=i}
   if(hi<0)throw new Error("No encontramos las columnas de la plantilla (Ingrediente y Unidad). Usa la plantilla de Dulcia.");
-  aoa[hi].forEach(function(h,j){var k=xNorm(h);if(k==="ingrediente"||k==="nombre")col.n=j;else if(k==="unidad")col.u=j;else if(k.indexOf("cuantotrae")===0||k.indexOf("envase")===0&&k.indexOf("precio")<0)col.e=j;else if(k.indexOf("precio")===0)col.p=j;else if(k.indexOf("categoria")===0)col.g=j});
+  aoa[hi].forEach(function(h,j){var k=xNorm(h);if(k==="ingrediente"||k==="nombre")col.n=j;else if(k==="unidad")col.u=j;else if(k.indexOf("cuantotrae")===0||k.indexOf("envase")===0&&k.indexOf("precio")<0)col.e=j;else if(k.indexOf("precio")===0)col.p=j;else if(k.indexOf("categoria")===0)col.g=j;else if(k.indexOf("stockactual")===0||k==="stock"||k==="tengo")col.st=j;else if(k.indexOf("stockminimo")===0||k==="minimo")col.mn=j;else if(k.indexOf("merma")===0)col.mm=j});
   var out=[],err=[],seen={};
   for(var r=hi+1;r<aoa.length;r++){var row=aoa[r],g=function(c){return c==null?"":row[c]};var n=String(g(col.n)).trim();if(!n)continue;
     var u=ixUnit(g(col.u)),e=xNum(g(col.e)),p=xNum(g(col.p)),cat=String(g(col.g)).trim();
     if(!u){err.push("Fila "+(r+1)+" ("+n+"): unidad “"+g(col.u)+"” no válida. Usa g, kg, ml, l, un, cda, cdta, taza, h, cm o m.");continue}
     if(isNaN(e)||e<=0)e=1; if(isNaN(p)||p<0)p=0;
     var k=ingK(n,u);if(seen[k]){err.push("Fila "+(r+1)+": “"+n+"” ("+u+") está repetido; se usa la primera fila.");continue}seen[k]=1;
-    out.push({n:n,u:u,e:e,pe:Math.round(p),g:cat||I,ex:ingFind(n,u)})}
+    var ov=function(c){var v=g(c);return v===""||v==null?null:xNum(v)},st=ov(col.st),mn=ov(col.mn),mm=ov(col.mm);
+    out.push({n:n,u:u,e:e,pe:Math.round(p),g:cat||I,st:isNaN(st)?null:st,mn:isNaN(mn)?null:mn,mm:isNaN(mm)?null:mm,ex:ingFind(n,u)})}
   return {rows:out,err:err};
 }
 function ixPreview(res){
@@ -839,8 +904,9 @@ function ixPreview(res){
 function ixImport(){
   var res=window._ixres;if(!res)return;var nu=0,up=0,rec=0;
   res.rows.forEach(function(x){var it=ingFind(x.n,x.u);
-    if(it){it.e=x.e;it.pe=x.pe;it.g=x.g;ingCalc(it);rec+=ingPrice(it,it.c);up++}
-    else{var ni={id:iid++,n:x.n,u:x.u,e:x.e,pe:x.pe,g:x.g};ingCalc(ni);ings.push(ni);nu++}});
+    var inv=function(o){if(x.st!=null)o.st=x.st;if(x.mn!=null)o.mn=Math.max(0,x.mn);if(x.mm!=null)o.mm=Math.min(90,Math.max(0,x.mm))};
+    if(it){it.e=x.e;it.pe=x.pe;it.g=x.g;inv(it);ingCalc(it);rec+=ingPrice(it,it.c);up++}
+    else{var ni={id:iid++,n:x.n,u:x.u,e:x.e,pe:x.pe,g:x.g};inv(ni);ingCalc(ni);ings.push(ni);nu++}});
   window._ixres=null;$("#dlg").close();render();
   toast(nu+" nuevo"+(nu===1?"":"s")+" · "+up+" actualizado"+(up===1?"":"s")+(rec?" · costos aplicados en "+rec+" receta"+(rec===1?"":"s"):""));
 }
@@ -849,6 +915,35 @@ document.addEventListener("click",function(e){var t=e.target.closest("button");i
 document.addEventListener("change",function(e){var t=e.target;if(t.id!=="iximp"||!t.files||!t.files[0])return;var f=t.files[0],m=$("#ixmsg");if(m)m.innerHTML='<p class="note">Leyendo '+esc(f.name)+'…</p>';
   Promise.all([xlsxLib(),f.arrayBuffer()]).then(function(a){ixPreview(ixParse(a[1],a[0]))}).catch(function(err){if(m)m.innerHTML='<div class="qbox">'+esc(err.message||"No pudimos leer el archivo.")+'</div>'});t.value=""});
 
+function invEstado(x){var st=+x.st||0,mn=+x.mn||0;return st<=0?'<span class="st vencida">Sin stock</span>':mn>0&&st<mn?'<span class="st prueba">Bajo mínimo</span>':'<span class="st pagando">OK</span>'}
+function vInv(){
+  var top=head("Inventario",'<input type="search" id="invq" placeholder="Buscar ingrediente" aria-label="Buscar ingrediente" style="max-width:240px"><button class="btn" data-v="com">Ver qué comprar</button>');
+  if(window.NO_P2)return top+'<div class="card empty">Falta un paso en la base de datos para usar el inventario. Avísale a soporte.</div>';
+  if(!ings.length)return top+'<div class="card empty">Primero crea tus ingredientes en <button class="lnk" data-v="ing">Ingredientes</button>.</div>';
+  var l=ings.filter(function(x){return x.g!==M}),bajo=l.filter(function(x){return (+x.mn||0)>0&&(+x.st||0)<(+x.mn||0)}).length,sin=l.filter(function(x){return (+x.st||0)<=0}).length,val=l.reduce(function(a,x){return a+Math.max(0,+x.st||0)*(+x.c||0)},0);
+  var cats=ingCats().filter(function(g){return g!==M});
+  var html=cats.map(function(g){var lg=l.filter(function(x){return x.g===g}).sort(function(a,b){return a.n.localeCompare(b.n,"es")});if(!lg.length)return "";
+    return '<section class="card invcard"><h2 style="font-size:1.3rem;margin-bottom:6px">'+esc(g)+'</h2><div class="scroll"><table class="itab"><thead><tr><th>Ingrediente</th><th class="r">Tengo</th><th class="r">Stock mínimo</th><th class="r">Merma %</th><th class="r">Valor</th><th>Estado</th></tr></thead><tbody>'+
+    lg.map(function(x){return '<tr data-invn="'+esc(xNorm(x.n))+'"><td><b>'+esc(x.n)+'</b><div class="note" style="margin:0">'+(+x.c?$$u(x.c)+' / '+esc(x.u):'sin precio')+'</div></td>'+
+      '<td class="r"><span class="iu"><input type="number" step="any" inputmode="decimal" data-ist="'+x.id+'" value="'+(Math.round((+x.st||0)*100)/100)+'" aria-label="Stock de '+esc(x.n)+'"><i>'+esc(x.u)+'</i></span></td>'+
+      '<td class="r"><span class="iu"><input type="number" min="0" step="any" inputmode="decimal" data-imn="'+x.id+'" value="'+(+x.mn||"")+'" placeholder="0" aria-label="Mínimo de '+esc(x.n)+'"><i>'+esc(x.u)+'</i></span></td>'+
+      '<td class="r"><span class="iu"><input type="number" min="0" max="90" step="any" inputmode="decimal" data-imm="'+x.id+'" value="'+(+x.mm||"")+'" placeholder="0" aria-label="Merma de '+esc(x.n)+'"><i>%</i></span></td>'+
+      '<td class="r" id="iv'+x.id+'">'+$$(Math.max(0,+x.st||0)*(+x.c||0))+'</td><td id="ie'+x.id+'">'+invEstado(x)+'</td></tr>'}).join("")+'</tbody></table></div></section>'}).join("");
+  return top+'<div class="grid kpis k3" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">'+kpi("Bajo el mínimo",bajo,"van solos a la lista de Compras")+kpi("Sin stock",sin,"de "+l.length+" ingredientes")+kpi("Valor del inventario",$$(val),"según el costo de cada ingrediente")+'</div>'+
+  '<div class="rtip"><span class="rtipi" aria-hidden="true">📦</span><div><b>Se actualiza solo:</b> se descuenta cuando marcas un pedido como <b>Listo</b> en Producción (y se devuelve si lo desmarcas) y se suma cuando tocas <b>Comprado</b> en Compras. Si cuentas tu bodega, corrige aquí el número de “Tengo”.</div></div>'+html;
+}
+document.addEventListener("input",function(e){var t=e.target,d=t.dataset;if(!d)return;var id=d.ist||d.imn||d.imm;
+  if(t.id==="invq"){var q=xNorm(t.value);document.querySelectorAll("[data-invn]").forEach(function(r){r.hidden=!!q&&r.dataset.invn.indexOf(q)<0});return}
+  if(!id)return;var x=ings.find(function(i){return i.id===+id});if(!x)return;var v=t.value===""?0:+String(t.value).replace(",",".");if(isNaN(v))return;
+  if(d.ist)x.st=v;else if(d.imn)x.mn=Math.max(0,v);else x.mm=Math.min(90,Math.max(0,v));
+  var a=$("#iv"+x.id),b=$("#ie"+x.id);if(a)a.textContent=$$(Math.max(0,+x.st||0)*(+x.c||0));if(b)b.innerHTML=invEstado(x)});
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("button");if(!t)return;
+  if(t.dataset.cbuy){var x=ings.find(function(i){return i.id===+t.dataset.cbuy}),q=+t.dataset.cq;if(!x)return;x.st=(+x.st||0)+q;render();toast(x.n+": +"+fq(Math.round(q*100)/100)+" "+x.u+" al inventario",function(){x.st=(+x.st||0)-q;render()});return}
+  if(t.hasAttribute("data-cbuyall")){var c=compras(),mv=c.compra.filter(function(r){return r.x});mv.forEach(function(r){r.x.st=(+r.x.st||0)+r.buy});render();toast(mv.length+" ingrediente"+(mv.length===1?"":"s")+" sumado"+(mv.length===1?"":"s")+" al inventario",function(){mv.forEach(function(r){r.x.st=(+r.x.st||0)-r.buy});render()});return}
+  if(t.hasAttribute("data-crw")){CR=null;render();return}
+  if(t.dataset.gorec){selR(+t.dataset.gorec);view="cost";render();scrollTo(0,0);return}
+});
+document.addEventListener("change",function(e){var t=e.target;if(t.id!=="crd"&&t.id!=="crh")return;var d=$("#crd").value||crD(),h=$("#crh").value||crH();if(h<d){var z=d;d=h;h=z}CR={d:d,h:h};render()});
 function vIng(){
   var top=head("Ingredientes",'<input type="search" id="ingq" placeholder="Buscar ingrediente" aria-label="Buscar ingrediente" style="max-width:240px">'+(window.NO_ING?'':'<button class="btn ghost" data-ingx>Cargar o bajar Excel</button><button class="btn" data-ingnew>Nuevo ingrediente</button>'));
   if(window.NO_ING)return top+'<div class="card empty">Falta un paso en la base de datos para usar la lista de ingredientes. Avísale a soporte.</div>';
@@ -958,8 +1053,10 @@ async function genPdf(id){
 /* ---------- COMPRAS ---------- */
 function iso_(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function addDays(iso,n){var d=pd(iso);d.setDate(d.getDate()+n);return iso_(d)}
+var CR=null;
+function crD(){return CR?CR.d:wk}function crH(){return CR?CR.h:addDays(wk,6)}
 function compras(){
-  var to=addDays(wk,6), ords=real().filter(function(o){return o.fecha>=wk&&o.fecha<=to}).sort(function(a,b){return (a.fecha+a.hora)<(b.fecha+b.hora)?-1:1}), agg={}, sin=[], con=[];
+  var wk0=crD(),to=crH(), ords=real().filter(function(o){return o.fecha>=wk0&&o.fecha<=to}).sort(function(a,b){return (a.fecha+a.hora)<(b.fecha+b.hora)?-1:1}), agg={}, sin=[], con=[];
   ords.forEach(function(o){
     var ln=(o.items||[]).filter(function(l){return recipes.some(function(r){return r.id===l.rid})});
     if(!ln.length){sin.push(o);return}
@@ -969,28 +1066,34 @@ function compras(){
         var k=it.g+"|"+it.n.trim().toLowerCase()+"|"+it.u.trim().toLowerCase();
         var a=agg[k]=agg[k]||{g:it.g,n:it.n,u:it.u,q:0,c:it.c}; a.q+=it.q*l.q/(r.un||1)})})
   });
-  var rows=Object.keys(agg).map(function(k){return agg[k]}).sort(function(a,b){return a.g===b.g?(a.n<b.n?-1:1):(a.g<b.g?-1:1)}), total=0;
-  rows.forEach(function(r){total+=r.q*r.c});
-  return {ords:ords,rows:rows,sin:sin,con:con,total:total};
+  // unir por ingrediente y aplicar inventario: comprar = necesito (con merma) + mínimo − stock
+  var by={};Object.keys(agg).forEach(function(k){var a=agg[k],x=ingFind(a.n,a.u),kk=x?"i"+x.id:k,b=by[kk]=by[kk]||{g:x?x.g:a.g,n:x?x.n:a.n,u:x?x.u:a.u,q:0,c:x?(+x.c||0):a.c,x:x};b.q+=a.q});
+  if(!window.NO_P2)ings.forEach(function(x){if(x.g!==M&&(+x.mn||0)>0&&(+x.st||0)<(+x.mn||0)&&!by["i"+x.id])by["i"+x.id]={g:x.g,n:x.n,u:x.u,q:0,c:+x.c||0,x:x}});
+  var rows=Object.keys(by).map(function(k){var r=by[k],x=r.x;r.nec=r.q*(1+(x&&!window.NO_P2?(+x.mm||0)/100:0));r.st=x&&!window.NO_P2?(+x.st||0):0;r.mn=x&&!window.NO_P2?(+x.mn||0):0;r.buy=Math.max(0,r.nec+r.mn-Math.max(0,r.st));r.bajo=r.mn>0&&r.st<r.mn;return r})
+    .sort(function(a,b){return a.g===b.g?a.n.localeCompare(b.n,"es"):a.g.localeCompare(b.g,"es")}), total=0;
+  rows.forEach(function(r){total+=r.buy*r.c});
+  return {ords:ords,rows:rows,sin:sin,con:con,total:total,bajo:rows.filter(function(r){return r.bajo}).length,compra:rows.filter(function(r){return r.buy>0})};
 }
 function vCom(){
-  var c=compras(), a=pd(wk), b=pd(addDays(wk,6));
-  var bar='<div class="month"><button class="ib" data-w="-7" aria-label="Semana anterior">'+ICON.l+'</button><b style="min-width:11em;text-transform:none">'+a.getDate()+' al '+b.getDate()+' de '+MESES[b.getMonth()]+'</b><button class="ib" data-w="7" aria-label="Semana siguiente">'+ICON.r+'</button></div>';
-  var body="",lg="";
-  c.rows.forEach(function(r){ if(r.g!==lg){body+='<tr class="grp"><td colspan="4">'+esc(r.g)+'</td></tr>';lg=r.g}
-    body+='<tr><td>'+esc(r.n)+'</td><td class="r">'+fq(r.q)+'</td><td>'+esc(r.u)+'</td><td class="r">'+$$(r.q*r.c)+'</td></tr>'});
+  var c=compras(), a=pd(crD()), b=pd(crH()), P2=!window.NO_P2;
+  var bar='<div class="month"><button class="ib" data-w="-7" aria-label="Semana anterior">'+ICON.l+'</button><b style="min-width:11em;text-transform:none">'+a.getDate()+(a.getMonth()!==b.getMonth()?' de '+MESES[a.getMonth()]:'')+' al '+b.getDate()+' de '+MESES[b.getMonth()]+'</b><button class="ib" data-w="7" aria-label="Semana siguiente">'+ICON.r+'</button></div>';
+  var rango=P2?'<div class="crango"><label>Desde<input type="date" id="crd" value="'+crD()+'"></label><label>Hasta<input type="date" id="crh" value="'+crH()+'"></label>'+(CR?'<button class="btn ghost sm" data-crw>Semana completa</button>':'')+'</div>':'';
+  var body="",lg="",nc=P2?6:4;
+  c.rows.forEach(function(r){ if(r.g!==lg){body+='<tr class="grp"><td colspan="'+nc+'">'+esc(r.g)+'</td></tr>';lg=r.g}
+    body+=P2?'<tr'+(r.buy>0?'':' class="cok"')+'><td>'+esc(r.n)+(r.bajo?' <span class="st vencida">bajo mínimo</span>':'')+(r.x?'':'<div class="note" style="margin:0">No está en Ingredientes</div>')+'</td><td class="r">'+fq(Math.round(r.nec*100)/100)+' '+esc(r.u)+'</td><td class="r">'+(r.x?fq(Math.round(r.st*100)/100)+' '+esc(r.u):'—')+'</td><td class="r"><b>'+fq(Math.round(r.buy*100)/100)+' '+esc(r.u)+'</b></td><td class="r">'+$$(r.buy*r.c)+'</td><td class="r">'+(r.x&&r.buy>0?'<button class="btn ghost sm" data-cbuy="'+r.x.id+'" data-cq="'+r.buy+'">Comprado</button>':'')+'</td></tr>'
+      :'<tr><td>'+esc(r.n)+'</td><td class="r">'+fq(r.q)+'</td><td>'+esc(r.u)+'</td><td class="r">'+$$(r.q*r.c)+'</td></tr>'});
   var inc=c.con.map(function(z){return '<button class="ord" style="grid-template-columns:minmax(0,1fr)" data-o="'+z.o.id+'"><div style="min-width:0"><h3>'+esc(z.o.cliente)+'</h3><p>'+fechaLarga(z.o.fecha)+' · '+z.ln.map(function(l){var r=recipes.find(function(q){return q.id===l.rid});return esc(r.nombre)+' × '+fq(l.q)}).join(", ")+'</p></div></button>'}).join("");
   var sin=c.sin.map(function(o){return '<button class="chip s-anticipo" style="border:0" data-o="'+o.id+'">'+esc(o.cliente)+' · '+pd(o.fecha).getDate()+'/'+(pd(o.fecha).getMonth()+1)+'</button>'}).join(" ");
-  return head("Compras",bar+(c.rows.length?'<button class="btn" data-copyc>Copiar lista</button>':''))+
-  '<div class="grid kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">'+kpi("Pedidos de la semana",c.ords.length,c.con.length+" con receta")+kpi("Compra estimada",$$(c.total),"Ingredientes y materia prima")+kpi("Productos distintos",c.rows.length,"En la lista de compras")+'</div>'+
-  '<div class="grid two"><section class="card"><h2 style="font-size:1.38rem">Qué comprar</h2>'+
-  (c.rows.length?'<div class="scroll"><table><thead><tr><th>Ingrediente o materia prima</th><th class="r">Cantidad</th><th>Unidad</th><th class="r">Costo estimado</th></tr></thead><tbody>'+body+'<tr class="tot"><td colspan="3">Total estimado</td><td class="r">'+$$(c.total)+'</td></tr></tbody></table></div>':'<div class="empty">No hay pedidos con receta esta semana. Asigna una receta a tus pedidos para ver qué comprar.</div>')+
-  '<p class="note">Los precios salen de tus recetas. Descuenta lo que ya tienes en bodega: el módulo de Inventario lo hará solo.</p></section>'+
+  return head("Compras",bar+(c.rows.length?'<button class="btn" data-copyc>Copiar lista</button>':''))+rango+
+  '<div class="grid kpis k3" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">'+kpi(CR?"Pedidos en esos días":"Pedidos de la semana",c.ords.length,c.con.length+" con receta")+kpi("Compra estimada",$$(c.total),P2?"Descontando tu inventario":"Ingredientes y materia prima")+(P2?kpi("Por comprar",c.compra.length,c.bajo?c.bajo+" bajo el mínimo":"de "+c.rows.length+" ingredientes"):kpi("Productos distintos",c.rows.length,"En la lista de compras"))+'</div>'+
+  '<div class="grid'+(P2?' cgrid':' two')+'"><section class="card"><h2 style="font-size:1.38rem">Qué comprar</h2>'+
+  (c.rows.length?'<div class="scroll"><table class="ctab"><thead><tr>'+(P2?'<th>Ingrediente</th><th class="r">Necesito</th><th class="r">Tengo</th><th class="r">Comprar</th><th class="r">Costo</th><th></th>':'<th>Ingrediente o materia prima</th><th class="r">Cantidad</th><th>Unidad</th><th class="r">Costo estimado</th>')+'</tr></thead><tbody>'+body+'<tr class="tot"><td colspan="'+(P2?4:3)+'">Total estimado</td><td class="r">'+$$(c.total)+'</td>'+(P2?'<td></td>':'')+'</tr></tbody></table></div>'+(P2&&c.compra.some(function(r){return r.x})?'<div style="margin-top:10px"><button class="btn sm" data-cbuyall>Marcar todo como comprado</button></div>':''):'<div class="empty">No hay pedidos con receta en estos días. Asigna una receta a tus pedidos para ver qué comprar.</div>')+
+  '<p class="note">'+(P2?'Necesito incluye la merma de cada ingrediente. Comprar = necesito + stock mínimo − lo que tienes. Al tocar “Comprado”, esa cantidad se suma a tu <button class="lnk" data-v="inv">Inventario</button>.':'Los precios salen de tus recetas.')+'</p></section>'+
   '<div class="grid" style="align-content:start"><section class="card"><h2 style="font-size:1.38rem;margin-bottom:10px">Pedidos incluidos</h2><div class="grid" style="gap:8px">'+(inc||'<div class="empty">Sin pedidos con receta.</div>')+'</div></section>'+
   (c.sin.length?'<section class="card"><h2 style="font-size:1.26rem">Sin receta asignada</h2><p class="note" style="margin-top:2px">Estos pedidos no suman a la lista. Toca uno para asignarle una receta.</p><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'+sin+'</div></section>':'')+'</div></div>';
 }
 function copiarLista(){
-  var c=compras(), tx="Compras del "+pd(wk).getDate()+" al "+pd(addDays(wk,6)).getDate()+" de "+MESES[pd(addDays(wk,6)).getMonth()]+"\n"+c.rows.map(function(r){return "- "+r.n+": "+fq(r.q)+" "+r.u}).join("\n")+"\nTotal estimado: "+$$(c.total);
+  var c=compras(), P2=!window.NO_P2, tx="Compras del "+pd(crD()).getDate()+" al "+pd(crH()).getDate()+" de "+MESES[pd(crH()).getMonth()]+"\n"+(P2?c.compra:c.rows).map(function(r){return "- "+r.n+": "+fq(Math.round((P2?r.buy:r.q)*100)/100)+" "+r.u}).join("\n")+"\nTotal estimado: "+$$(c.total);
   function fb(){var d=$("#dlg");d.innerHTML='<div class="dlg"><header><h2 style="font-size:1.44rem">Lista de compras</h2><button class="ib" data-close aria-label="Cerrar">✕</button></header><textarea id="cpt" rows="12" readonly></textarea><p class="note" style="margin:0">Selecciona el texto y cópialo.</p></div>';$("#cpt").value=tx;d.showModal();$("#cpt").select()}
   try{navigator.clipboard.writeText(tx).then(function(){toast("Lista copiada")},fb)}catch(e){fb()}
 }
@@ -1039,7 +1142,7 @@ function gprev(){var g={monto:mnum($("#g_m").value),iva:gmode()};$("#g_prev").in
 function openGrp(){
   var d=$("#dlg");
   d.innerHTML='<form class="dlg" id="grpf"><header><h2 style="font-size:1.62rem">Nueva categoría de costo</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
-  '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft)">Nombre<input type="text" id="grp_n" required placeholder="Ej.: Transporte, Decoración extra, Moldes"></label><label class="chk" style="font-size:.9rem;color:var(--ink)"><input type="checkbox" id="grp_b" checked> Se compra (aparece en Compras)</label>'+
+  '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft)">Nombre<input type="text" id="grp_n" required placeholder="Ej.: Transporte, Decoración extra, Moldes"></label><label class="chk" style="font-size:.9rem;color:var(--ink)"><input type="checkbox" id="grp_b" checked> Se incluye en Compras <span style="color:var(--soft);font-size:.85em">(desmárcalo para mano de obra o gastos fijos)</span></label>'+
   '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit">Crear categoría</button></div></form>';
   d.showModal();
 }
@@ -1052,6 +1155,10 @@ function vCfg(){
   '<section class="card"><h2 style="font-size:1.38rem">Cómo calcular tu resultado</h2><p class="note" style="margin-top:2px">Así el Panel no cuenta dos veces lo que gastas en ingredientes.</p>'+
   '<div class="rad" role="radiogroup" aria-label="Cómo calcular tu resultado" style="margin-top:10px"><label><input type="radio" name="costeo" value="real"'+(cfg.costeo!=="estimado"?' checked':'')+'><span><b>Anoto todas mis compras en Gastos</b><br><span style="color:var(--soft)">Ingredientes, materiales y gastos fijos. Resultado = ventas netas − gastos.</span></span></label>'+
   '<label><input type="radio" name="costeo" value="estimado"'+(cfg.costeo==="estimado"?' checked':'')+'><span><b>En Gastos anoto solo gastos fijos</b><br><span style="color:var(--soft)">Arriendo, luz, sueldos. Los ingredientes se estiman con el margen de cada categoría.</span></span></label></div></section>'+
+  (window.NO_P2?'':'<section class="card"><h2 style="font-size:1.38rem">Venta mayorista</h2><p class="note" style="margin-top:2px">Costos de cada pedido mayorista. Con ellos, cada receta te dice cuántas unidades mínimas pedir para que convenga. Una receta puede usar su propio packaging o despacho.</p>'+
+  '<div class="f" style="margin-top:10px"><label>Despacho por pedido<input type="text" class="money" inputmode="numeric" id="myd" value="'+mfmt(MAY.desp)+'"></label><label>Packaging por unidad<input type="text" class="money" inputmode="numeric" id="myp" value="'+mfmt(MAY.pack)+'"></label>'+
+  '<label>Horas de coordinación por pedido<input type="number" id="myc" min="0" step="0.25" value="'+(+MAY.coord||0)+'"></label><label>% por factura o pago a 30 días<input type="number" id="myf" min="0" max="100" step="0.5" value="'+(+MAY.fact||0)+'"></label></div>'+
+  '<p class="note">La coordinación se valoriza con tu hora de trabajo (Recetas → Tu hora de trabajo: '+$$(vhora())+'/h).</p></section>')+
   '<section class="card"><h2 style="font-size:1.38rem">Capacidad diaria</h2><p class="note" style="margin-top:2px">Te avisamos cuando un día ya llegó a este número de pedidos y vas a agregar otro. Pon 0 para no recibir avisos.</p>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:10px;max-width:220px">Pedidos por día antes de avisar<input type="number" id="cp" min="0" value="'+cfg.cap+'"></label></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Cotizaciones</h2><p class="note" style="margin-top:2px">Estos datos y condiciones salen en el PDF. Cada cotización parte con estas condiciones y puedes cambiarlas en esa cotización.</p>'+
@@ -1096,7 +1203,7 @@ function extra(t){
   if(t.dataset.delgrp!==undefined){var gp=groups()[+t.dataset.delgrp],rm=[];recipe.forEach(function(r,i){if(r.g===gp)rm.push({i:i,r:r})});
     for(var k=rm.length-1;k>=0;k--)recipe.splice(rm[k].i,1);
     toast("Categoría de costo “"+gp+"” eliminada",function(){rm.forEach(function(z){recipe.splice(z.i,0,z.r)})});render();return true}
-  if(t.dataset.w){wk=addDays(wk,+t.dataset.w);render();return true}
+  if(t.dataset.w){wk=addDays(wk,+t.dataset.w);CR=null;render();return true}
   if(t.hasAttribute("data-copyc")){copiarLista();return true}
   if(t.hasAttribute("data-gselmode")){gSelMode=!gSelMode;gSel={};render();return true}
   if(t.hasAttribute("data-gselall")){var gv=window._gvis||[],ga=gv.length&&gv.every(function(i){return gSel[i]});gSel={};if(!ga)gv.forEach(function(i){gSel[i]=1});render();return true}
@@ -1117,7 +1224,8 @@ function extra(t){
     toast(gone.length+" pedido"+(gone.length===1?" eliminado":"s eliminados"),function(){gone.forEach(function(z){orders.splice(Math.min(z.i,orders.length),0,z.o)})});return true}
   if(t.dataset.delo){var oi=orders.findIndex(function(q){return q.id===+t.dataset.delo});var od=orders.splice(oi,1)[0];$("#dlg").close();
     toast("Pedido de “"+od.cliente+"” eliminado",function(){orders.splice(oi,0,od)});return true}
-  if(t.dataset.ladd){var xo=orders.find(function(q){return q.id===+t.dataset.ladd});xo.items=xo.items||[];xo.items.push({rid:recipes[0].id,q:1});openOrder(xo.id);return true}
+  if(t.dataset.ladd){var xo=orders.find(function(q){return q.id===+t.dataset.ladd});xo.items=xo.items||[];xo.items.push({rid:recipes[0].id,q:1,p:window.NO_PM?null:precioStd(recipes[0],xo.tc)});openOrder(xo.id);return true}
+  if(t.dataset.ltot){var xt=orders.find(function(q){return q.id===+t.dataset.ltot});xt.total=Math.round(lnTot(xt));if(xt.pagado>xt.total)xt.pagado=xt.total;openOrder(xt.id);render();toast("Total del pedido: "+$$(xt.total));return true}
   if(t.dataset.ldel){var pl=t.dataset.ldel.split(":"),xl=orders.find(function(q){return q.id===+pl[0]});xl.items.splice(+pl[1],1);openOrder(xl.id);return true}
   if(t.dataset.pdel){var pp=t.dataset.pdel.split(":"),xp=orders.find(function(q){return q.id===+pp[0]});xp.fotos.splice(+pp[1],1);openOrder(xp.id);return true}
   if(t.dataset.gedit){openGastoEdit(+t.dataset.gedit);return true}
@@ -1134,8 +1242,8 @@ function extraChange(t){
   if(t.id==="cl"){readFiles(t.files,function(u){cfg.logo=u;cfg.logoData=u;cfg.logoDirty=true;render()},400);return true}
   if(t.id==="g_k"){$("#g_nk").hidden=t.value!=="__new";return true}
   if(t.id==="n_k"){$("#n_nkw").hidden=t.value!=="__new";return true}
-  if(t.dataset&&t.dataset.gbuy!==undefined){gbuy[groups()[+t.dataset.gbuy]]=t.checked;return true}
-  if(t.dataset&&t.dataset.lr){var a=t.dataset.lr.split(":");orders.find(function(q){return q.id===+a[0]}).items[+a[1]].rid=+t.value;return true}
+  if(t.dataset&&t.dataset.gbuy!==undefined){gbuy[groups()[+t.dataset.gbuy]]=t.checked;var cx=t.closest("div")&&t.closest("div").querySelector(".chkx");if(cx)cx.textContent=t.checked?"Estos ítems suman a tu lista de compras de la semana.":"No va a Compras: úsalo para mano de obra, gas, luz u otros costos que no compras por pedido.";return true}
+  if(t.dataset&&t.dataset.lr){var a=t.dataset.lr.split(":"),ox=orders.find(function(q){return q.id===+a[0]}),li=ox.items[+a[1]];li.rid=+t.value;if(!window.NO_PM){li.p=precioStd(recipes.find(function(r){return r.id===li.rid}),ox.tc);openOrder(ox.id)}return true}
   if(t.name==="giva"){gprev();return true}
   return false;
 }
@@ -1153,7 +1261,8 @@ function extraInput(t){
   if(t.dataset&&t.dataset.vig){var qv=orders.find(function(q){return q.id===+t.dataset.vig});if(qv)qv.vig=Math.max(1,parseInt(t.value)||7);return true}
   if(t.id==="hs"||t.id==="hh"){hora[t.id==="hs"?"sueldo":"horas"]=t.id==="hs"?mnum(t.value):(parseFloat(t.value)||0);rsum();return true}
   if(t.id==="g_m"){gprev();return true}
-  if(t.dataset&&t.dataset.lq){var a=t.dataset.lq.split(":");orders.find(function(q){return q.id===+a[0]}).items[+a[1]].q=parseFloat(t.value)||0;return true}
+  if(t.dataset&&t.dataset.lq){var a=t.dataset.lq.split(":"),oq=orders.find(function(q){return q.id===+a[0]});oq.items[+a[1]].q=parseFloat(t.value)||0;lnSync(oq);return true}
+  if(t.dataset&&t.dataset.lp){var a2=t.dataset.lp.split(":"),op=orders.find(function(q){return q.id===+a2[0]});op.items[+a2[1]].p=mnum(t.value);lnSync(op);return true}
   if(t.dataset&&t.dataset.pcol!==undefined){var pci=+t.dataset.pcol;pcats[pci].col=t.value;var sw=document.getElementById("sw"+pci);if(sw)sw.className="sw cc-"+t.value;return true}
   if(t.dataset&&t.dataset.pm!==undefined){pcats[+t.dataset.pm].m=Math.min(100,Math.max(0,parseFloat(t.value)||0))/100;return true}
   if(t.id==="rn"){rp.nombre=t.value;var b=document.querySelector(".rc.on b");if(b)b.textContent=t.value;return true}
@@ -1185,6 +1294,12 @@ function extraSubmit(f){
 }
 
 /* ---------- DIALOGOS ---------- */
+var TCL={minorista:"Minorista (público)",mayorista:"Mayorista (cafetería, reventa)"};
+function precioStd(r,tc){if(!r)return 0;return tc==="mayorista"?(+r.pm?Math.round(+r.pm*IVA):0):(+r.precio||0)}
+function lnP(l,tc){return l.p==null||l.p===""?precioStd(recipes.find(function(r){return r.id===l.rid}),tc):+l.p}
+function lnTot(x){return (x.items||[]).reduce(function(a,l){return a+(+l.q||0)*lnP(l,x.tc)},0)}
+function lnSync(x){var tot=lnTot(x),e=$("#lntot");if(e)e.innerHTML=lnTotHtml(x);(x.items||[]).forEach(function(l,i){var s=$("#lsub"+i);if(s)s.textContent=$$((+l.q||0)*lnP(l,x.tc))})}
+function lnTotHtml(x){var t=Math.round(lnTot(x));return 'Total de las recetas: <b>'+$$(t)+'</b>'+(t&&Math.round(t)!==Math.round(+x.total||0)?' <button class="btn ghost sm" data-ltot="'+x.id+'">Usar como total del pedido</button>':(t?' <span class="note" style="margin:0">= total del pedido</span>':''))}
 function recOpts(sel){return recipes.map(function(r){return '<option value="'+r.id+'"'+(r.id===sel?' selected':'')+'>'+esc(r.nombre)+'</option>'}).join("")}
 function evTimes(x){var d=x.fecha.replace(/-/g,""),h=(x.hora||"12:00").split(":"),a=+h[0]||0,m=h[1]||"00",z=function(n){return String(n).padStart(2,"0")};
   return {s:d+"T"+z(a)+m+"00",e:d+"T"+z(Math.min(23,a+1))+m+"00"}}
@@ -1196,16 +1311,19 @@ function icsDownload(x){var t=evTimes(x),esc2=function(v){return String(v).repla
   var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([ics],{type:"text/calendar"}));a.download="pedido-"+x.cliente.replace(/[^a-z0-9]+/gi,"-")+".ics";document.body.appendChild(a);a.click();a.remove()}
 function openOrder(id){
   var x=orders.find(function(q){return q.id===id}); if(!x)return;
-  var d=$("#dlg"), ln=(x.items||[]).map(function(l,i){return '<div class="ln"><select data-lr="'+x.id+':'+i+'" aria-label="Receta">'+recOpts(l.rid)+'</select><input type="number" step="any" min="0" value="'+l.q+'" data-lq="'+x.id+':'+i+'" aria-label="Cantidad" title="Cantidad en '+esc(udPl(recipes.find(function(r){return r.id===l.rid}),2))+'"><button class="x" data-ldel="'+x.id+':'+i+'" aria-label="Quitar receta">✕</button></div>'}).join("");
+  var PM=!window.NO_PM, d=$("#dlg"), ln=(x.items||[]).map(function(l,i){return '<div class="ln'+(PM?' lnp':'')+'"><select data-lr="'+x.id+':'+i+'" aria-label="Receta">'+recOpts(l.rid)+'</select><input type="number" step="any" min="0" value="'+l.q+'" data-lq="'+x.id+':'+i+'" aria-label="Cantidad" title="Cantidad en '+esc(udPl(recipes.find(function(r){return r.id===l.rid}),2))+'">'+
+    (PM?'<input type="text" class="money" inputmode="numeric" data-lp="'+x.id+':'+i+'" value="'+mfmt(lnP(l,x.tc))+'" aria-label="Precio por unidad con IVA" title="Precio por unidad (con IVA)"><span class="lsub" id="lsub'+i+'">'+$$((+l.q||0)*lnP(l,x.tc))+'</span>':'')+
+    '<button class="x" data-ldel="'+x.id+':'+i+'" aria-label="Quitar receta">✕</button></div>'}).join("");
   d.innerHTML='<div class="dlg"><header><div><h2 style="font-size:1.62rem">'+esc(x.cliente)+'</h2><div class="note" style="margin:2px 0 0">'+fechaLarga(x.fecha)+' · '+x.hora+'</div></div><div style="display:flex;gap:8px;flex:none"><button class="ib" data-edito="'+x.id+'" aria-label="Editar pedido" title="Editar pedido"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ib" data-close aria-label="Cerrar">✕</button></div></header>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="'+gcalUrl(x)+'">Agregar a Google Calendar</a><button class="btn ghost sm" data-ics="'+x.id+'">Descargar para otro calendario</button></div>'+
-  '<dl class="kv"><dt>Categoría</dt><dd>'+esc(x.cat)+'</dd>'+(x.personas?'<dt>Personas</dt><dd>'+x.personas+'</dd>':'')+'<dt>Canal</dt><dd>'+esc(x.canal)+'</dd><dt>Total</dt><dd>'+$$(x.total)+'</dd><dt>Pagado</dt><dd>'+$$(x.pagado)+' '+chipS(x)+'</dd><dt>Saldo</dt><dd>'+$$(x.total-x.pagado)+'</dd></dl>'+
+  '<dl class="kv"><dt>Categoría</dt><dd>'+esc(x.cat)+'</dd>'+(PM?'<dt>Cliente</dt><dd>'+(x.tc==="mayorista"?'Mayorista':'Minorista')+'</dd>':'')+(x.personas?'<dt>Personas</dt><dd>'+x.personas+'</dd>':'')+'<dt>Canal</dt><dd>'+esc(x.canal)+'</dd><dt>Total</dt><dd>'+$$(x.total)+'</dd><dt>Pagado</dt><dd>'+$$(x.pagado)+' '+chipS(x)+'</dd><dt>Saldo</dt><dd>'+$$(x.total-x.pagado)+'</dd></dl>'+
   '<div class="contact"><b>Contacto</b>'+
   '<label>Instagram<span class="crow2"><input type="text" data-ig="'+x.id+'" value="'+esc(x.ig?"@"+x.ig:"")+'" placeholder="@usuario" autocapitalize="none" autocomplete="off"><a class="btn ghost sm" id="a_ig" target="_blank" rel="noopener" href="'+igUrl(x.ig)+'"'+(x.ig?'':' hidden')+'>Ver perfil</a></span></label>'+
   '<label>WhatsApp<span class="crow2"><input type="tel" inputmode="tel" data-wa="'+x.id+'" value="'+esc(waFmt(x.wa))+'" placeholder="+56 9 1234 5678" autocomplete="off"><a class="btn ghost sm" id="a_wa" target="_blank" rel="noopener" href="'+waUrl(x.wa)+'"'+(x.wa?'':' hidden')+'>Abrir chat</a></span></label></div>'+
   (x.cot?'<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-pdf="'+x.id+'">Descargar PDF</button><button class="btn ghost" data-confirm="'+x.id+'">Confirmar pedido</button></div>':(x.total>x.pagado?'<div><button class="btn sm" data-pay="'+x.id+'">Marcar saldo como pagado</button></div>':''))+
   '<label style="font-size:.85rem;color:var(--soft);font-weight:500;display:flex;flex-direction:column;gap:4px">Descripción<textarea id="odesc" rows="4" data-d="'+x.id+'">'+esc(x.desc)+'</textarea></label>'+
-  '<div><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Recetas del pedido</div>'+(ln||'<div class="note" style="margin:0 0 6px">Sin receta. Asígnala para que Compras sepa qué ingredientes necesitas.</div>')+
+  '<div><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Recetas del pedido'+(PM?' · cliente '+(x.tc==="mayorista"?'<b>mayorista</b>':'minorista'):'')+'</div>'+(PM&&ln?'<div class="ln lnp lnh"><span>Receta</span><span>Cantidad</span><span>Precio c/IVA</span><span>Subtotal</span><span></span></div>':'')+(ln||'<div class="note" style="margin:0 0 6px">Sin receta. Asígnala para que Compras sepa qué ingredientes necesitas.</div>')+
+  (PM&&ln?'<div class="lntot" id="lntot">'+lnTotHtml(x)+'</div>':'')+
   (recipes.length?'<button class="btn ghost sm" data-ladd="'+x.id+'">+ Agregar receta</button>':'<div class="note">Primero crea una receta en la sección Recetas.</div>')+'</div>'+
   '<div><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Fotos</div><div class="photos big">'+x.fotos.map(function(f,i){return '<div class="ph"><img src="'+f+'" alt="Foto del pedido"><button class="px" data-pdel="'+x.id+':'+i+'" aria-label="Quitar foto">✕</button></div>'}).join("")+
   (x.fotos.length<MAXF?'<label class="addp" tabindex="0">+ Agregar foto<small style="display:block;font-size:.72rem">máximo '+MAXF+'</small><input type="file" accept="image/*" multiple hidden data-addph="'+x.id+'"></label>':'')+'</div></div>'+
@@ -1232,11 +1350,19 @@ function openEdit(id){
   var a=$("#n_a"); if(![].some.call(a.options,function(o){return o.value===x.canal})){var o2=document.createElement("option");o2.textContent=x.canal;a.appendChild(o2)} a.value=x.canal;
   var pe=$("#n_pe"); if(x.personas&&![].some.call(pe.options,function(o){return +o.value===x.personas})){var o3=document.createElement("option");o3.value=x.personas;o3.textContent=x.personas+" personas";pe.appendChild(o3)} pe.value=x.personas?String(x.personas):"";
   $("#n_t").value=mfmt(x.total); $("#n_p").value=mfmt(x.pagado); $("#n_d").value=x.desc==="Sin descripción."?"":x.desc;
-  [$("#n_r"),$("#n_rq"),$("#n_ph")].forEach(function(el){var l=el&&el.closest("label,.w");if(l)l.hidden=true});
+  [$("#n_r"),$("#n_rq"),$("#n_rp"),$("#n_ph")].forEach(function(el){var l=el&&el.closest("label,.w");if(l)l.hidden=true});
+  if($("#n_tc"))$("#n_tc").value=x.tc||"minorista";
   var sc=fm.querySelector("[data-savecot]"); if(sc)sc.hidden=true;
   fm.querySelector("button[type=submit]").textContent="Guardar cambios";
   var nt=document.createElement("p");nt.className="note w";nt.style.margin="0";nt.textContent="Las recetas y las fotos se cambian en el detalle del pedido.";fm.querySelector(".f").appendChild(nt);
 }
+function nPrecio(precio){ // pedido nuevo: precio estándar según receta y tipo de cliente; total = cantidad × precio
+  var r=recipes.find(function(q){return q.id===+(($("#n_r")||{}).value)}),tc=($("#n_tc")||{}).value,pi=$("#n_rp"),nt=$("#n_rpn");if(!pi)return;
+  if(precio){var p=precioStd(r,tc);pi.value=mfmt(p);if(nt){nt.hidden=!r;nt.textContent=r?(tc==="mayorista"?(+r.pm?"Precio mayorista de “"+r.nombre+"”: "+$$(r.pm)+" + IVA. Puedes cambiarlo.":"“"+r.nombre+"” no tiene precio mayorista: anótalo en la receta o escríbelo aquí."):(+r.precio?"Precio a público de “"+r.nombre+"”. Puedes cambiarlo.":"“"+r.nombre+"” no tiene precio a público: anótalo en la receta o escríbelo aquí.")):""}}
+  if(r){var t=Math.round((parseFloat($("#n_rq").value)||0)*mnum(pi.value));$("#n_t").value=mfmt(t)}
+}
+document.addEventListener("change",function(e){var id=e.target.id;if(id==="n_r"||id==="n_tc")nPrecio(true)});
+document.addEventListener("input",function(e){var id=e.target.id;if(id==="n_rq"||id==="n_rp")nPrecio(false)});
 function openNew(fecha){
   var d=$("#dlg"), fdef=fecha||(TODAY.slice(0,7)===cur.y+'-'+String(cur.m+1).padStart(2,"0")?TODAY:cur.y+'-'+String(cur.m+1).padStart(2,"0")+'-15');
   d.innerHTML='<form class="dlg" id="nf"><header><h2 style="font-size:1.62rem">Nuevo pedido</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
@@ -1245,8 +1371,10 @@ function openNew(fecha){
   '<label>Fecha de entrega<input type="date" id="n_f" required value="'+fdef+'"></label><label>Hora<input type="time" id="n_h" value="12:00"></label>'+
   '<label>Categoría<select id="n_k">'+pcats.map(function(c){return '<option>'+esc(c.n)+'</option>'}).join("")+'<option value="__new">+ Crear categoría nueva</option></select></label>'+
   '<label>Canal<select id="n_a">'+CANALES.map(function(c){return '<option>'+c+'</option>'}).join("")+'</select></label>'+
+  (window.NO_PM?'':'<label>Tipo de cliente<select id="n_tc"><option value="minorista">'+TCL.minorista+'</option><option value="mayorista">'+TCL.mayorista+'</option></select></label>')+
   '<div class="w f" id="n_nkw" hidden><label>Nombre de la categoría<input type="text" id="n_nkn" placeholder="Ej.: Postres"></label><label>Margen %<input type="number" id="n_nkm" value="70" min="0" max="100"></label></div>'+
-  '<label>Receta (opcional)<select id="n_r"><option value="">Sin receta</option>'+recOpts(-1)+'</select></label><label>Cantidad de la receta<input type="number" id="n_rq" step="any" min="0" value="1"></label>'+
+  '<label>Receta (opcional)<select id="n_r"><option value="">Sin receta</option>'+recOpts(-1)+'</select></label><label>Cantidad<input type="number" id="n_rq" step="any" min="0" value="1"></label>'+
+  (window.NO_PM?'':'<label>Precio por unidad (con IVA)<input type="text" class="money" inputmode="numeric" id="n_rp" value="$ 0"></label><p class="note w" id="n_rpn" style="margin:-6px 0 0" hidden></p>')+
   '<label>Personas<select id="n_pe"><option value="">Sin indicar</option>'+PERS.map(function(n){return '<option value="'+n+'">'+n+' personas</option>'}).join("")+'</select></label>'+
   '<label>Total con IVA<input type="text" class="money" inputmode="numeric" id="n_t" required value="$ 0"></label><label>Anticipo pagado<input type="text" class="money" inputmode="numeric" id="n_p" value="$ 0"></label>'+
   '<label class="w">Descripción<textarea id="n_d" rows="4" placeholder="Sabores, tamaño, decoración, dirección de entrega…"></textarea></label>'+
@@ -1288,7 +1416,7 @@ function readFiles(files,cb,max){
 /* ---------- RENDER + EVENTOS ---------- */
 function render(){
   renderNav();
-  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,prod:vProd,cost:vCost,ing:vIng,com:vCom,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
+  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,prod:vProd,cost:vCost,ing:vIng,com:vCom,inv:vInv,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
   if(view==="cost"&&recipes.length)rsum();
 }
 document.addEventListener("input",function(e){var t=e.target;if(!t.classList||!t.classList.contains("money"))return;
@@ -1316,7 +1444,7 @@ document.addEventListener("change",function(e){
   if(extraChange(t)){}
   else if(t.id==="fcat"){filtro.cat=t.value;render()}
   else if(t.id==="fest"){filtro.est=t.value;render()}
-  else if(t.dataset&&t.dataset.l){var x=orders.find(function(q){return q.id===+t.dataset.l});x.listo=t.checked;render()}
+  else if(t.dataset&&t.dataset.l){var x=orders.find(function(q){return q.id===+t.dataset.l});x.listo=t.checked;var mv=invListo(x);render();if(mv)toast(mv)}
   else if(t.dataset&&t.dataset.addph){var x2=orders.find(function(q){return q.id===+t.dataset.addph});
     var lib=MAXF-x2.fotos.length;if(lib<=0){toast("Máximo "+MAXF+" fotos por pedido");return}if(t.files.length>lib)toast("Solo se agregan "+lib+" foto"+(lib===1?"":"s")+": el máximo es "+MAXF+" por pedido");
     readFiles([].slice.call(t.files,0,lib),function(u){if(x2.fotos.length>=MAXF)return;x2.fotos.push(u);openOrder(x2.id);render()})}
@@ -1344,15 +1472,15 @@ document.addEventListener("submit",function(e){
     if(!ox.cot&&ef!==ox.fecha&&!window._skipW&&dayWarn(ef,ox.id,function(){window._skipW=true;$("#nf").requestSubmit()},function(){var fi=$("#n_f");if(fi)fi.focus()}))return;
     window._skipW=false;
     ox.cliente=$("#n_c").value.trim();ox.ig=igUser($("#n_ig").value);ox.wa=waNum($("#n_wa").value);ox.fecha=ef;ox.hora=$("#n_h").value||"12:00";ox.cat=ek;ox.canal=$("#n_a").value;
-    ox.personas=+$("#n_pe").value||null;ox.desc=$("#n_d").value.trim()||"Sin descripción.";ox.total=et;ox.pagado=Math.min(et,mnum($("#n_p").value));
+    if($("#n_tc"))ox.tc=$("#n_tc").value;ox.personas=+$("#n_pe").value||null;ox.desc=$("#n_d").value.trim()||"Sin descripción.";ox.total=et;ox.pagado=Math.min(et,mnum($("#n_p").value));
     $("#dlg").close();var ep=pd(ef);cur={y:ep.getFullYear(),m:ep.getMonth()};render();openOrder(ox.id);toast("Cambios guardados");return}
   var f=$("#n_f").value, p=pd(f), tot=mnum($("#n_t").value), pg=Math.min(tot,mnum($("#n_p").value)), kc=$("#n_k").value;
   if(kc==="__new"){kc=$("#n_nkn").value.trim()||"Sin categoría";if(!pcats.some(function(q){return q.n===kc}))pcats.push({n:kc,m:Math.min(100,Math.max(0,parseFloat($("#n_nkm").value)||70))/100})}
-  var rv=$("#n_r").value, its=rv?[{rid:+rv,q:parseFloat($("#n_rq").value)||1}]:[];
+  var rv=$("#n_r").value, its=rv?[{rid:+rv,q:parseFloat($("#n_rq").value)||1,p:$("#n_rp")?mnum($("#n_rp").value):null}]:[];
   var isq=!!window._cot; window._cot=false;
   if(!isq&&!window._skipW&&dayWarn(f,0,function(){window._skipW=true;$("#nf").requestSubmit()},function(){var fi=$("#n_f");if(fi)fi.focus()}))return;
   window._skipW=false;
-  var n={id:nextId++,cot:isq,num:isq?nextQ():0,cond:cfg.cond,vig:cfg.vig,items:its,cliente:$("#n_c").value.trim(),ig:igUser($("#n_ig").value),wa:waNum($("#n_wa").value),fecha:f,hora:$("#n_h").value||"12:00",cat:kc,canal:$("#n_a").value,desc:$("#n_d").value.trim()||"Sin descripción.",personas:+$("#n_pe").value||null,total:tot,pagado:pg,fotos:pend.slice(),listo:false};
+  var n={id:nextId++,cot:isq,num:isq?nextQ():0,cond:cfg.cond,vig:cfg.vig,items:its,cliente:$("#n_c").value.trim(),ig:igUser($("#n_ig").value),wa:waNum($("#n_wa").value),fecha:f,hora:$("#n_h").value||"12:00",cat:kc,canal:$("#n_a").value,desc:$("#n_d").value.trim()||"Sin descripción.",personas:+$("#n_pe").value||null,total:tot,pagado:pg,fotos:pend.slice(),listo:false,tc:$("#n_tc")?$("#n_tc").value:"minorista"};
   orders.push(n);pend=[];cur={y:p.getFullYear(),m:p.getMonth()};view=isq?"ped":"cal";$("#dlg").close();render();
   if(isq){openOrder(n.id);toast("Cotización "+qn(n)+" guardada")}
 });

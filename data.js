@@ -42,21 +42,26 @@
     });
     var row = { id: ensure(rr), negocio_id: NEG, nombre: rr.nombre, rinde: rr.rinde || "", margen: +rr.margen || 0, precio: +rr.precio || 0 };
     if (!window.NO_UN) { row.unidades = Math.max(1, +rr.un || 1); row.unidad_venta = String(rr.ud || "").trim() || null; }
+    if (!window.NO_PM) row.precio_may = Math.round(+rr.pm || 0);
+    if (!window.NO_P2) { row.margen_may = rr.mm == null ? 45 : +rr.mm; row.may_pack = rr.mpk === "" || rr.mpk == null ? null : +rr.mpk; row.may_desp = rr.mds === "" || rr.mds == null ? null : +rr.mds; row.t_act = Math.max(0, Math.round(+rr.ta || 0)); row.t_esp = Math.max(0, Math.round(+rr.te || 0)); row.mano_obra = rr.mo == null ? null : !!rr.mo; }
     return { row: row, grupos: grupos, items: items };
   }
   function current() {
     var m = {};
     m["neg"] = { t: "neg", row: { nombre: cfg.nombre, telefono: cfg.tel, correo: cfg.mail, web: cfg.url, cond_cotizacion: cfg.cond, validez_dias: cfg.vig, abono_pct: cfg.abono, cap_diaria: cfg.cap, costeo: cfg.costeo === "estimado" ? "estimado" : "real", sueldo_mensual: hora.sueldo, horas_mes: hora.horas, siguiente_cotizacion: qnum, logo_path: cfg.logoPath || null } };
+    if (!window.NO_P2) m["neg"].row.mayorista = { desp: +MAY.desp || 0, pack: +MAY.pack || 0, coord: +MAY.coord || 0, fact: +MAY.fact || 0 };
     pcats.forEach(function (c) { m["pc:" + ensure(c)] = { t: "pc", row: { id: c.uid, negocio_id: NEG, nombre: c.n, margen: c.m, color: c.col || null } }; });
     gcats.forEach(function (n) { m["gc:" + n] = { t: "gc", row: { negocio_id: NEG, nombre: n } }; });
     gastos.forEach(function (g) { m["g:" + ensure(g)] = { t: "g", row: { id: g.uid, negocio_id: NEG, fecha: g.fecha, nombre: g.nombre, categoria: g.cat, monto: +g.monto || 0, iva_modo: g.iva } }; });
     recipes.forEach(function (rr) { var x = receta(rr); m["r:" + x.row.id] = { t: "r", row: x.row, grupos: x.grupos, items: x.items }; });
-    if (!window.NO_ING) ings.forEach(function (x) { m["i:" + ensure(x)] = { t: "i", row: { id: x.uid, negocio_id: NEG, nombre: x.n, unidad: x.u || "", costo: +x.c || 0, envase: +x.e || 0, precio_envase: +x.pe || 0, categoria: x.g || "Ingredientes" } }; });
+    if (!window.NO_ING) ings.forEach(function (x) { m["i:" + ensure(x)] = { t: "i", row: { id: x.uid, negocio_id: NEG, nombre: x.n, unidad: x.u || "", costo: +x.c || 0, envase: +x.e || 0, precio_envase: +x.pe || 0, categoria: x.g || "Ingredientes" } }; if (!window.NO_P2) { var ir = m["i:" + x.uid].row; ir.stock = Math.round((+x.st || 0) * 1000) / 1000; ir.stock_min = +x.mn || 0; ir.merma = +x.mm || 0; } });
     orders.forEach(function (o) {
       var id = ensure(o);
       m["p:" + id] = { t: "p", row: { id: id, negocio_id: NEG, es_cotizacion: !!o.cot, numero_cotizacion: o.num || null, cliente: o.cliente, instagram: o.ig || "", whatsapp: o.wa || "", fecha: o.fecha, hora: t5(o.hora), categoria: o.cat, canal: o.canal, descripcion: o.desc || "", personas: o.personas || null, total: +o.total || 0, pagado: +o.pagado || 0, listo: !!o.listo, condiciones: o.cond == null ? null : o.cond, validez_dias: o.vig == null ? null : o.vig, origen: o.origen || "app" } };
+      if (!window.NO_P2) m["p:" + id].row.descontado = o.desc_st || null;
+      if (!window.NO_PM) m["p:" + id].row.tipo_cliente = o.tc === "mayorista" ? "mayorista" : "minorista";
       var its = [];
-      (o.items || []).forEach(function (l) { var r = recipes.find(function (q) { return q.id === l.rid; }); if (r) its.push({ negocio_id: NEG, pedido_id: id, receta_id: r.uid, cantidad: +l.q || 0 }); });
+      (o.items || []).forEach(function (l) { var r = recipes.find(function (q) { return q.id === l.rid; }); if (r) { var pi = { negocio_id: NEG, pedido_id: id, receta_id: r.uid, cantidad: +l.q || 0 }; if (!window.NO_PM) pi.precio = l.p == null || l.p === "" ? null : +l.p; its.push(pi); } });
       m["pr:" + id] = { t: "pr", pid: id, rows: its };
       var fs = (o.fotos || []).map(function (f) { return fotoPath[f] ? { negocio_id: NEG, pedido_id: id, path: fotoPath[f] } : null; }).filter(Boolean);
       m["pf:" + id] = { t: "pf", pid: id, rows: fs };
@@ -239,12 +244,15 @@
     var R = await Promise.all([
       sel("negocios", function (q) { return q.eq("id", NEG).single(); }), sel("categorias_pedido"), sel("categorias_gasto"), sel("recetas"), sel("receta_grupos"), sel("receta_items"),
       sel("pedidos"), sel("pedido_recetas"), sel("pedido_fotos"), sel("gastos"), sel("ingredientes"),
-      Promise.resolve().then(function () { return sb.from("recetas").select("unidades").limit(1); }).catch(function (e) { return { error: e }; })
+      Promise.resolve().then(function () { return sb.from("recetas").select("unidades").limit(1); }).catch(function (e) { return { error: e }; }),
+      Promise.resolve().then(function () { return sb.from("recetas").select("margen_may").limit(1); }).catch(function (e) { return { error: e }; }),
+      Promise.resolve().then(function () { return sb.from("recetas").select("precio_may").limit(1); }).catch(function (e) { return { error: e }; })
     ]);
-    window.NO_ING = !!R[10].error; window.NO_UN = !!R[11].error; R.slice(0, 10).forEach(function (r) { chk(r); });
+    window.NO_PM = !!R[13].error;
+    window.NO_ING = !!R[10].error; window.NO_UN = !!R[11].error; window.NO_P2 = !!R[12].error || window.NO_ING; R.slice(0, 10).forEach(function (r) { chk(r); });
     var neg = R[0].data;
     cfg.nombre = neg.nombre; cfg.tel = neg.telefono || ""; cfg.mail = neg.correo || ""; cfg.url = neg.web || ""; cfg.cond = neg.cond_cotizacion;
-    cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; qnum = neg.siguiente_cotizacion;
+    cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; var my = neg.mayorista || {}; MAY.desp = +my.desp || 0; MAY.pack = +my.pack || 0; MAY.coord = +my.coord || 0; MAY.fact = +my.fact || 0; qnum = neg.siguiente_cotizacion;
     window.CALT = neg.cal_token || null; cfg.logoPath = neg.logo_path; cfg.logo = null; cfg.logoData = null; cfg.logoDirty = false;
     if (neg.logo_path) {
       var ls = await signed([neg.logo_path]);
@@ -255,7 +263,7 @@
     recipes.length = 0; var rmap = {}, gmap = {};
     R[4].data.forEach(function (g) { gmap[g.id] = g; gbuy[g.nombre] = g.se_compra; });
     R[3].data.forEach(function (r) {
-      var rr = { id: rid++, uid: r.id, nombre: r.nombre, rinde: r.rinde || "", margen: +r.margen, precio: +r.precio, un: Math.max(1, +r.unidades || 1), ud: r.unidad_venta || "", items: [] };
+      var rr = { id: rid++, uid: r.id, nombre: r.nombre, rinde: r.rinde || "", margen: +r.margen, precio: +r.precio, un: Math.max(1, +r.unidades || 1), ud: r.unidad_venta || "", mm: r.margen_may == null ? 45 : +r.margen_may, mpk: r.may_pack == null ? "" : +r.may_pack, mds: r.may_desp == null ? "" : +r.may_desp, ta: +r.t_act || 0, te: +r.t_esp || 0, mo: r.mano_obra == null ? null : !!r.mano_obra, pm: +r.precio_may || 0, items: [] };
       var its = R[5].data.filter(function (i) { return i.receta_id === r.id; }).map(function (i) { return { i: i, g: gmap[i.grupo_id] || { nombre: "Ingredientes", orden: 0 } }; });
       its.sort(function (a, b) { return a.g.orden - b.g.orden || a.i.orden - b.i.orden; });
       its.forEach(function (x) { rr.items.push({ g: x.g.nombre, n: x.i.nombre, q: +x.i.cantidad, u: x.i.unidad, c: +x.i.costo_unidad }); });
@@ -266,14 +274,14 @@
     R[8].data.forEach(function (f) { if (urls[f.path]) { fotoPath[urls[f.path]] = f.path; if (urls[tpath(f.path)]) window.THUMB[urls[f.path]] = urls[tpath(f.path)]; } });
     orders.length = 0;
     R[6].data.forEach(function (p) {
-      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", personas: p.personas || null, total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, items: [], fotos: [] };
+      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", personas: p.personas || null, total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, desc_st: p.descontado || null, tc: p.tipo_cliente === "mayorista" ? "mayorista" : "minorista", items: [], fotos: [] };
       if (o.cond == null) delete o.cond; if (o.vig == null) delete o.vig;
-      R[7].data.filter(function (x) { return x.pedido_id === p.id; }).forEach(function (x) { if (rmap[x.receta_id]) o.items.push({ rid: rmap[x.receta_id], q: +x.cantidad }); });
+      R[7].data.filter(function (x) { return x.pedido_id === p.id; }).forEach(function (x) { if (rmap[x.receta_id]) o.items.push({ rid: rmap[x.receta_id], q: +x.cantidad, p: x.precio == null ? null : +x.precio }); });
       R[8].data.filter(function (x) { return x.pedido_id === p.id && urls[x.path]; }).forEach(function (x) { o.fotos.push(urls[x.path]); });
       orders.push(o);
     });
     gastos.length = 0; R[9].data.forEach(function (g) { gastos.push({ id: gid++, uid: g.id, fecha: g.fecha, cat: g.categoria, nombre: g.nombre, monto: +g.monto, iva: g.iva_modo }); });
-    ings.length = 0; if (!window.NO_ING) (R[10].data || []).forEach(function (x) { var e0 = x.envase == null ? 1 : +x.envase, pe0 = x.precio_envase == null ? (+x.costo || 0) * e0 : +x.precio_envase; ings.push({ id: iid++, uid: x.id, n: x.nombre, u: x.unidad || "", c: +x.costo || 0, e: e0, pe: pe0, g: x.categoria || "Ingredientes" }); });
+    ings.length = 0; if (!window.NO_ING) (R[10].data || []).forEach(function (x) { var e0 = x.envase == null ? 1 : +x.envase, pe0 = x.precio_envase == null ? (+x.costo || 0) * e0 : +x.precio_envase; ings.push({ id: iid++, uid: x.id, n: x.nombre, u: x.unidad || "", c: +x.costo || 0, e: e0, pe: pe0, g: x.categoria || "Ingredientes", st: +x.stock || 0, mn: +x.stock_min || 0, mm: +x.merma || 0 }); });
     if (recipes.length) selR(recipes[0].id);
     snap = {}; var c = current(); Object.keys(c).forEach(function (k) { snap[k] = c[k].json; });
     loaded = true; setStatus("Todo guardado");

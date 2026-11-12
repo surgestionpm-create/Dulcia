@@ -572,3 +572,139 @@ td.ro{color:var(--soft)}
 .prodsum table{margin-top:8px}
 .daysum{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 10px}
 .daysum span{background:var(--accent-soft);border-radius:99px;padding:.2em .8em;font-size:.84rem;font-weight:500}
+
+/* Receta: columnas fijas para que títulos y casillas calcen exacto */
+@container receta (min-width:481px){
+  .cost table.rtab{table-layout:fixed;width:100%}
+  .cost table.rtab col.c-q{width:92px}.cost table.rtab col.c-u{width:58px}.cost table.rtab col.c-c{width:108px}.cost table.rtab col.c-s{width:100px}.cost table.rtab col.c-x{width:40px}
+  .cost table.rtab th,.cost table.rtab td{padding:4px 6px;vertical-align:middle}
+  .cost table.rtab th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cost table.rtab td:nth-child(2) input{width:100%}
+}
+.cost table.rtab td.ro .rov{min-height:40px}
+.cost table.rtab input[type=number]{text-align:right;-moz-appearance:textfield;appearance:textfield;padding-left:.5em;padding-right:.6em;font-variant-numeric:tabular-nums}
+.cost table.rtab input[type=number]::-webkit-inner-spin-button,.cost table.rtab input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.cost table.rtab td:last-child{text-align:center}
+
+/* La tabla de la receta se adapta al ancho de su tarjeta (notebooks y tablets) */
+.cost{container:receta/inline-size}
+@container receta (max-width:480px){
+  .cost table,.cost tbody{display:block;width:100%}
+  .cost thead{display:none}
+  .cost tbody tr{display:block}
+  .cost tbody tr.grp td{display:flex;justify-content:space-between;align-items:center;width:100%}
+  .cost tbody tr.grp td[colspan]{border-bottom:2px solid var(--ink)}
+  .cost tbody tr.grp td:not([colspan]){display:none}
+  .cost tbody tr.grp{display:flex;align-items:center;border-bottom:2px solid var(--ink);margin-top:10px}
+  .cost tbody tr.grp td[colspan]{border:0;flex:1}
+  .cost tbody tr.grp td:not([colspan]){display:block;border:0;width:auto!important}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot){display:grid;grid-template-columns:minmax(0,1fr) 46px minmax(0,1.25fr) minmax(0,1.1fr) 26px;grid-template-areas:"n n n n x" "q u c s s";gap:2px 6px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td{border:0;padding:0;width:auto!important}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(1){grid-area:n}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(2){grid-area:q}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(3){grid-area:u}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(4){grid-area:c}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(5){grid-area:s;align-self:end;padding-bottom:8px;text-align:right}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(6){grid-area:x;text-align:right}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(2)::before{content:"Cantidad"}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(3)::before{content:"Unidad"}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(4)::before{content:"Costo unidad"}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(5)::before{content:"Subtotal";display:block;text-align:right}
+  .cost tbody td::before{display:block;font-size:.68rem;color:var(--soft);margin-bottom:2px}
+  .cost input.t:not(.u){min-width:0;width:100%}
+  .cost input.u{width:100%}
+  .cost input{min-width:0;width:100%}
+  .cost .scroll{overflow-x:visible}
+  .cost .chk{white-space:nowrap}
+  .cost tbody tr.tot{display:flex;justify-content:space-between;border-top:2px solid var(--ink);margin-top:6px}
+  .cost tbody tr.tot td{border:0}
+  .cost tbody tr.tot td:empty{display:none}
+  .cost tbody tr:has(> td[colspan="6"]) td{display:block;border:0;padding:6px 0}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot){grid-template-columns:minmax(0,1fr) minmax(0,.7fr) minmax(0,1.2fr) minmax(0,1.2fr) 26px;grid-template-areas:"n n n n x" "q u c s s";gap:6px 8px;align-items:end}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(5){align-self:end;padding-bottom:0}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(6){align-self:center}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(4){text-align:left}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(4) .rov{justify-content:flex-start}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(5) .rov{justify-content:flex-end}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(2) input{text-align:left}
+  .cost tbody tr:has(> td:nth-child(6)):not(.tot) td:nth-child(2) input{height:36px}
+  .cost .ingsel{height:40px}
+}
+.cost table.rtab input[type=number]{height:40px;box-sizing:border-box}
+.ingpick span{flex:1;min-width:0;text-align:left}
+
+.chk b{font-weight:600;color:var(--ink)}
+.chkx{font-size:.78rem;color:var(--soft);font-family:var(--body);font-weight:400;flex-basis:100%;margin-top:-6px}
+.cost table.rtab td input[type=number]{height:40px!important;min-height:40px}
+.cost table.rtab td .rov{min-height:40px}
+
+/* Parte 2: precio mayorista, tiempos, inventario y compras */
+.rsec{font-size:1.2rem;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.mmin{background:var(--bg);border-radius:14px;padding:10px 12px;margin-top:10px;font-size:.88rem;line-height:1.5}
+.mmin .neg,.neg{color:var(--bad)}
+.ptime{margin:10px 0 0;font-size:.92rem}
+.daysum .dh{background:var(--butter)}
+.crango{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:-6px 0 14px}
+.crango label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--soft)}
+.crango input{width:auto}
+.ctab tr.cok td{color:var(--soft)}
+.ctab td .btn.sm{white-space:nowrap}
+.invcard{margin-bottom:14px}
+.itab td{vertical-align:middle}
+.itab .iu{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
+.itab .iu input{width:96px;text-align:right;height:38px;-moz-appearance:textfield;appearance:textfield}
+.itab .iu input::-webkit-inner-spin-button,.itab .iu input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.itab .iu i{font-style:normal;color:var(--soft);font-size:.85rem;min-width:22px;text-align:left}
+@media(max-width:560px){
+  .itab thead{display:none}
+  .itab,.itab tbody{display:block}
+  .itab tr{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 8px;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .itab td{display:block;padding:0!important;border:0!important;text-align:left!important}
+  .itab td:first-child{grid-column:1/3}.itab td:last-child{grid-column:3;grid-row:1;text-align:right!important}
+  .itab td:nth-child(5){display:none}
+  .itab td:nth-child(2)::before{content:"Tengo";display:block;font-size:.72rem;color:var(--soft)}
+  .itab td:nth-child(3)::before{content:"Mínimo";display:block;font-size:.72rem;color:var(--soft)}
+  .itab td:nth-child(4)::before{content:"Merma";display:block;font-size:.72rem;color:var(--soft)}
+  .itab .iu{justify-content:flex-start}.itab .iu input{width:64px}
+}
+
+.cgrid{grid-template-columns:minmax(0,1fr)}
+.cgrid>.grid{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.ctab td.r,.ctab th.r{white-space:nowrap}
+@media(max-width:560px){
+  .ctab thead{display:none}
+  .ctab,.ctab tbody{display:block}
+  .ctab tr:not(.grp):not(.tot){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 8px;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .ctab tr.grp,.ctab tr.tot{display:flex;justify-content:space-between}
+  .ctab td{display:block;padding:0!important;border:0!important;text-align:left!important}
+  .ctab tr:not(.grp):not(.tot) td:first-child{grid-column:1/4;font-weight:600}
+  .ctab tr:not(.grp):not(.tot) td:nth-child(2)::before{content:"Necesito";display:block;font-size:.72rem;color:var(--soft);font-weight:400}
+  .ctab tr:not(.grp):not(.tot) td:nth-child(3)::before{content:"Tengo";display:block;font-size:.72rem;color:var(--soft)}
+  .ctab tr:not(.grp):not(.tot) td:nth-child(4)::before{content:"Comprar";display:block;font-size:.72rem;color:var(--soft)}
+  .ctab tr:not(.grp):not(.tot) td:nth-child(5){grid-column:1/3;align-self:center}
+  .ctab tr:not(.grp):not(.tot) td:nth-child(6){grid-column:3;text-align:right!important}
+}
+
+.st{display:inline-block;border-radius:99px;padding:.12em .7em;font-size:.74rem;font-weight:600;white-space:nowrap;vertical-align:middle}
+.st.prueba{background:var(--butter);color:#6B4E00}.st.pagando{background:var(--ok-bg);color:var(--ok)}.st.vencida{background:var(--bad-bg);color:var(--bad)}
+@media(max-width:560px){.kpis.k3{grid-template-columns:repeat(2,minmax(0,1fr))!important}.kpis.k3>:last-child{grid-column:1/3}}
+@media(min-width:561px){
+  .itab{table-layout:fixed;width:100%}
+  .itab th:nth-child(2),.itab th:nth-child(3){width:150px}.itab th:nth-child(4){width:120px}.itab th:nth-child(5){width:100px}.itab th:nth-child(6){width:104px}
+  .itab .iu input{width:88px}
+}
+
+/* Pedido: precio por receta */
+.ln.lnp{grid-template-columns:minmax(0,1fr) 70px 104px 84px 34px}
+.ln.lnh{font-size:.74rem;color:var(--soft);margin-bottom:2px}
+.ln.lnh span:nth-child(n+2){text-align:right}
+.ln .lsub{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:.92rem}
+.ln input.money{text-align:right}
+.lntot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 10px;font-size:.92rem}
+@media(max-width:560px){
+  .ln.lnp{grid-template-columns:minmax(0,1fr) 64px 34px;grid-template-areas:"r r x" "q p s"}
+  .ln.lnp>select{grid-area:r}.ln.lnp>input[data-lq]{grid-area:q}.ln.lnp>input[data-lp]{grid-area:p;grid-column:2/3}.ln.lnp>.lsub{grid-area:s}.ln.lnp>.x{grid-area:x}
+  .ln.lnp{grid-template-columns:70px minmax(0,1fr) 84px 34px;grid-template-areas:"r r r x" "q p s s"}
+  .ln.lnp>input[data-lp]{grid-column:auto}
+  .ln.lnh{display:none}
+}
