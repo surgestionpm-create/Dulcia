@@ -780,3 +780,18 @@ td.ro{color:var(--soft)}
   .ln.lnp{grid-template-columns:60px minmax(0,1fr) auto;grid-template-areas:"r r x" "q p s"}
   .ln.lnp>.x{justify-self:end}
 }
+
+/* Pedido: tipo de cliente primero */
+.ntcw{display:flex;flex-direction:column;gap:6px}
+.ntcl{font-size:.85rem;color:var(--soft);font-weight:500}
+.seg2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg2 button{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:.6em .8em;font:inherit;font-weight:600;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.seg2 button small{font-weight:400;color:var(--soft);font-size:.78rem}
+.seg2 button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.seg2 button.on small{color:var(--accent)}
+/* Documento tributario */
+.docb{border:1.5px solid var(--line);border-radius:16px;padding:12px}
+.docbh{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.docr{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+.docr label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);font-weight:500}
+.docr input,.docr select{width:100%;box-sizing:border-box}
