@@ -1,5 +1,7 @@
 /* Google Analytics 4 de Dulcia. Solo mide visitas y clics del sitio; en la app, solo "cuenta creada" y "clic en pagar". */
 (function () {
+  // Código de influencer en el link (ej.: dulcia.cl/?ref=UFATRUFA): se recuerda para el registro
+  try { var rf = /[?&]ref=([A-Za-z0-9_-]{3,30})/.exec(location.search); if (rf) localStorage.setItem("dulcia_ref", rf[1].toUpperCase()); } catch (e) {}
   var ID = "G-0KBE96B2E9";
   var app = /\/app(\.html)?\/?$/.test(location.pathname);
   window.dataLayer = window.dataLayer || [];

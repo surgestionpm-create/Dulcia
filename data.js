@@ -40,7 +40,9 @@
       if (gi < 0) { grupos.push({ nombre: it.g, se_compra: gbuy[it.g] !== false, orden: grupos.length }); gi = grupos.length - 1; }
       items.push({ grupo: it.g, nombre: it.n, cantidad: +it.q || 0, unidad: it.u, costo_unidad: +it.c || 0, orden: i });
     });
-    return { row: { id: ensure(rr), negocio_id: NEG, nombre: rr.nombre, rinde: rr.rinde || "", margen: +rr.margen || 0, precio: +rr.precio || 0 }, grupos: grupos, items: items };
+    var row = { id: ensure(rr), negocio_id: NEG, nombre: rr.nombre, rinde: rr.rinde || "", margen: +rr.margen || 0, precio: +rr.precio || 0 };
+    if (!window.NO_UN) { row.unidades = Math.max(1, +rr.un || 1); row.unidad_venta = String(rr.ud || "").trim() || null; }
+    return { row: row, grupos: grupos, items: items };
   }
   function current() {
     var m = {};
@@ -236,9 +238,10 @@
   async function loadAll() {
     var R = await Promise.all([
       sel("negocios", function (q) { return q.eq("id", NEG).single(); }), sel("categorias_pedido"), sel("categorias_gasto"), sel("recetas"), sel("receta_grupos"), sel("receta_items"),
-      sel("pedidos"), sel("pedido_recetas"), sel("pedido_fotos"), sel("gastos"), sel("ingredientes")
+      sel("pedidos"), sel("pedido_recetas"), sel("pedido_fotos"), sel("gastos"), sel("ingredientes"),
+      Promise.resolve().then(function () { return sb.from("recetas").select("unidades").limit(1); }).catch(function (e) { return { error: e }; })
     ]);
-    window.NO_ING = !!R[10].error; R.slice(0, 10).forEach(function (r) { chk(r); });
+    window.NO_ING = !!R[10].error; window.NO_UN = !!R[11].error; R.slice(0, 10).forEach(function (r) { chk(r); });
     var neg = R[0].data;
     cfg.nombre = neg.nombre; cfg.tel = neg.telefono || ""; cfg.mail = neg.correo || ""; cfg.url = neg.web || ""; cfg.cond = neg.cond_cotizacion;
     cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; qnum = neg.siguiente_cotizacion;
@@ -252,7 +255,7 @@
     recipes.length = 0; var rmap = {}, gmap = {};
     R[4].data.forEach(function (g) { gmap[g.id] = g; gbuy[g.nombre] = g.se_compra; });
     R[3].data.forEach(function (r) {
-      var rr = { id: rid++, uid: r.id, nombre: r.nombre, rinde: r.rinde || "", margen: +r.margen, precio: +r.precio, items: [] };
+      var rr = { id: rid++, uid: r.id, nombre: r.nombre, rinde: r.rinde || "", margen: +r.margen, precio: +r.precio, un: Math.max(1, +r.unidades || 1), ud: r.unidad_venta || "", items: [] };
       var its = R[5].data.filter(function (i) { return i.receta_id === r.id; }).map(function (i) { return { i: i, g: gmap[i.grupo_id] || { nombre: "Ingredientes", orden: 0 } }; });
       its.sort(function (a, b) { return a.g.orden - b.g.orden || a.i.orden - b.i.orden; });
       its.forEach(function (x) { rr.items.push({ g: x.g.nombre, n: x.i.nombre, q: +x.i.cantidad, u: x.i.unidad, c: +x.i.costo_unidad }); });
@@ -283,12 +286,18 @@
   function show(html) { document.getElementById("boot").hidden = true; document.getElementById("appwrap").hidden = true; A.hidden = false; A.innerHTML = '<div class="box">' + html + "</div>"; }
   function note(t, ok) { var m = A.querySelector(".msg"); if (m) { m.textContent = t; m.className = "msg" + (ok ? " ok" : ""); m.hidden = false; } }
   function busy(b, on) { if (b) { b.disabled = on; } }
+  /* Código de invitación (influencer): llega por ?ref=CODIGO o se escribe al crear la cuenta */
+  function refGet() { try { return localStorage.getItem("dulcia_ref") || ""; } catch (e) { return ""; } }
+  (function () { var m = /[?&]ref=([A-Za-z0-9_-]{3,30})/.exec(location.search); if (m) try { localStorage.setItem("dulcia_ref", m[1].toUpperCase()); } catch (e) {} })();
+  function refCampo(v) { return '<label><span>Código de invitación <span style="font-weight:400;opacity:.8">(opcional)</span></span><input type="text" id="aref" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Si alguien te recomendó Dulcia" value="' + String(v || "").replace(/[^A-Za-z0-9_-]/g, "") + '"></label>'; }
+  function refLeer() { var i = document.getElementById("aref"); return i ? i.value.trim().toUpperCase() : ""; }
   function showAuth(mode) {
     mode = mode || "in";
     show('<h1 style="margin:0">' + (window.DULCIA_LOGO || "Dulcia") + '<span style="position:absolute;left:-9999px">Dulcia</span></h1><p class="tag">Tu pastelería, en orden.</p>' +
       '<div class="tabs"><button data-mode="in" aria-pressed="' + (mode === "in") + '">Ingresar</button><button data-mode="up" aria-pressed="' + (mode === "up") + '">Crear cuenta</button></div>' +
       '<form id="af"><label>Correo<input type="email" id="ae" required autocomplete="email"></label>' +
       '<label>Clave<input type="password" id="ap" required minlength="8" autocomplete="' + (mode === "in" ? "current-password" : "new-password") + '" placeholder="Mínimo 8 caracteres"></label>' +
+      (mode === "up" ? refCampo(refGet()) : "") +
       (mode === "up" ? '<p class="note" style="margin:0">7 días gratis, sin tarjeta. Después eliges tu plan desde $ 4.583 al mes.</p>' : "") +
       '<div class="msg" hidden></div><button class="btn" type="submit">' + (mode === "in" ? "Ingresar" : "Crear cuenta") + '</button>' +
       (mode === "in" ? '<button type="button" class="lnk" id="forgot">Olvidé mi clave</button>' : "") + '</form>');
@@ -299,7 +308,10 @@
       try {
         if (mode === "in") { var r = await sb.auth.signInWithPassword({ email: em, password: pw }); if (r.error) throw r.error; await afterLogin(r.data.session); }
         else {
-          var s = await sb.auth.signUp({ email: em, password: pw, options: { emailRedirectTo: location.origin + "/app/" } }); if (s.error) throw s.error;
+          var ref = refLeer();
+          if (ref) { var cv = await sb.rpc("codigo_valido", { p_codigo: ref }); if (!cv.error && !cv.data) { note("El código " + ref + " no existe. Revísalo o déjalo en blanco."); busy(btn, false); return; } }
+          try { if (ref) localStorage.setItem("dulcia_ref", ref); else localStorage.removeItem("dulcia_ref"); } catch (e2) {}
+          var s = await sb.auth.signUp({ email: em, password: pw, options: { emailRedirectTo: location.origin + "/app/", data: ref ? { ref: ref } : {} } }); if (s.error) throw s.error;
           if (s.data.session) await afterLogin(s.data.session);
           else { note("Te enviamos un correo para confirmar tu cuenta. Abre el enlace y después vuelve a ingresar.", true); }
         }
@@ -508,11 +520,11 @@
   });
   function alert_msg(e) { var b = document.getElementById("adm"); if (b) b.insertAdjacentHTML("afterbegin", '<p class="note">' + esc2(msg(e)) + "</p>"); }
   function showOnboard() {
-    show('<h1>Bienvenida a Dulcia</h1><p>Un último paso: ¿cómo se llama tu pastelería? Tus 7 días gratis parten al tocar Empezar.</p><form id="af"><label>Nombre de tu pastelería<input type="text" id="an" required maxlength="80" placeholder="Ej.: Ufa Trufa"></label><div class="msg" hidden></div><button class="btn" type="submit">Empezar</button><button type="button" class="lnk" id="lo">Cerrar sesión</button></form>');
+    show('<h1>Bienvenida a Dulcia</h1><p>Un último paso: ¿cómo se llama tu pastelería? Tus 7 días gratis parten al tocar Empezar.</p><form id="af"><label>Nombre de tu pastelería<input type="text" id="an" required maxlength="80" placeholder="Ej.: Ufa Trufa"></label>' + refCampo(window.__refMeta || refGet()) + '<div class="msg" hidden></div><button class="btn" type="submit">Empezar</button><button type="button" class="lnk" id="lo">Cerrar sesión</button></form>');
     document.getElementById("lo").onclick = doLogout;
     document.getElementById("af").onsubmit = async function (e) {
       e.preventDefault(); var b = e.target.querySelector(".btn"); busy(b, true);
-      try { var r = await sb.rpc("crear_negocio", { p_nombre: document.getElementById("an").value.trim() }); if (r.error) throw r.error; if (window.dulciaEvent) dulciaEvent("sign_up", { method: "correo" }); if (window.dulciaPixel) dulciaPixel("CompleteRegistration", { content_name: "Cuenta Dulcia", status: true }); var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session); }
+      try { var r = await sb.rpc("crear_negocio", { p_nombre: document.getElementById("an").value.trim(), p_codigo: refLeer() || null }); if (r.error) throw r.error; try { localStorage.removeItem("dulcia_ref"); } catch (e3) {} if (window.dulciaEvent) dulciaEvent("sign_up", { method: "correo" }); if (window.dulciaPixel) dulciaPixel("CompleteRegistration", { content_name: "Cuenta Dulcia", status: true }); var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session); }
       catch (err) { note(msg(err)); busy(b, false); }
     };
   }
@@ -544,7 +556,7 @@
     try { var ad = await sb.rpc("es_admin"); window.IS_ADMIN = !!(ad && ad.data); } catch (e) { window.IS_ADMIN = false; }
     var r = await sb.rpc("mi_cuenta");
     if (r.error) { show('<h1>Error</h1><p>' + msg(r.error) + '</p><button class="btn" onclick="location.reload()">Reintentar</button>'); return; }
-    if (!r.data || !r.data.length) { showOnboard(); return; }
+    if (!r.data || !r.data.length) { window.__refMeta = (session && session.user && session.user.user_metadata && session.user.user_metadata.ref) || ""; showOnboard(); return; }
     window.CUENTA = r.data[0]; pxRevisar();
     if (!r.data[0].activo) { showPending(r.data[0]); return; }
     if (window.__pv) { clearInterval(window.__pv); window.__pv = 0; }

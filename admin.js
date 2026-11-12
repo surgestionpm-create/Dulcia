@@ -4,7 +4,7 @@
   var sb = window.__FAKE_SB__ || supabase.createClient(C.url, C.key);
   var $ = function (s) { return document.querySelector(s); };
   var root = $("#root"), dlg = $("#dlg");
-  var S = { cuentas: [], sin: [], inv: [], hist: [], tab: "cuentas", q: "", f: "todas", ord: "creado", me: "", invRes: null };
+  var S = { cuentas: [], sin: [], inv: [], hist: [], cod: [], com: null, mes: "", tab: "cuentas", q: "", f: "todas", ord: "creado", me: "", invRes: null };
   var PRECIO = { mensual: 5990, semestral: 29990, anual: 54990 };
   var PLN = { prueba: "Prueba", mensual: "Mensual", semestral: "Semestral", anual: "Anual", vitalicio: "De por vida", regalo: "Regalo" };
   var fmN = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });
@@ -56,8 +56,8 @@
 
   async function load() {
     try {
-      var R = await Promise.all([rpc("admin_cuentas"), rpc("admin_sin_terminar"), rpc("admin_invitaciones"), rpc("admin_historial")]);
-      S.cuentas = R[0] || []; S.sin = R[1] || []; S.inv = R[2] || []; S.hist = R[3] || [];
+      var R = await Promise.all([rpc("admin_cuentas"), rpc("admin_sin_terminar"), rpc("admin_invitaciones"), rpc("admin_historial"), rpc("admin_codigos").catch(function () { return null; })]);
+      S.cuentas = R[0] || []; S.sin = R[1] || []; S.inv = R[2] || []; S.hist = R[3] || []; S.cod = R[4] || []; S.sinCod = R[4] === null;
       render();
       if (!S.revisado && S.sin.some(function (u) { return u.rescate_estado === "enviado"; })) {
         S.revisado = 1;
@@ -89,9 +89,9 @@
       kpi("Invitaciones", pend, "pendientes de usar") +
       kpi("Conversión", (cs.length ? Math.round(cs.filter(function (c) { return +c.total_pagado > 0; }).length / cs.length * 100) : 0) + "%", "cuentas que pagaron alguna vez") +
       '</div>' +
-      '<div class="tabs" role="tablist">' + [["cuentas", "Cuentas", cs.length], ["invitar", "Crear cuenta o regalar", pend], ["sin", "Registros sin terminar", S.sin.length], ["hist", "Historial", S.hist.length]].map(function (t) {
+      '<div class="tabs" role="tablist">' + [["cuentas", "Cuentas", cs.length], ["invitar", "Crear cuenta o regalar", pend], ["sin", "Registros sin terminar", S.sin.length], ["cod", "Códigos", S.cod.length], ["hist", "Historial", S.hist.length]].map(function (t) {
         return '<button role="tab" aria-selected="' + (S.tab === t[0]) + '" data-tab="' + t[0] + '">' + t[1] + '<span class="cnt">' + t[2] + '</span></button>'; }).join("") + '</div>' +
-      ({ cuentas: vCuentas, invitar: vInvitar, sin: vSin, hist: vHist })[S.tab]() + '</div>';
+      ({ cuentas: vCuentas, invitar: vInvitar, sin: vSin, cod: vCod, hist: vHist })[S.tab]() + '</div>';
     root.innerHTML = h;
     var q = $("#aq"); if (q && S._focus) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); S._focus = false; }
   }
@@ -101,7 +101,7 @@
       var e = estado(c);
       if (S.f === "pronto") { if (!(c.vigente && c.dias_restantes != null && c.dias_restantes <= 7 && c.plan !== "vitalicio")) return false; }
       else if (S.f !== "todas" && e !== S.f) return false;
-      return !q || (c.nombre + " " + c.correo + " " + (c.telefono || "") + " " + (c.nota || "")).toLowerCase().indexOf(q) >= 0;
+      return !q || (c.nombre + " " + c.correo + " " + (c.telefono || "") + " " + (c.nota || "") + " " + (c.codigo || "") + " " + (c.influencer || "")).toLowerCase().indexOf(q) >= 0;
     });
     var o = S.ord;
     l.sort(function (a, b) {
@@ -117,7 +117,7 @@
     var l = lista(), fs = [["todas", "Todas"], ["prueba", "En prueba"], ["pagando", "Pagando"], ["regalo", "Regalo"], ["vitalicio", "De por vida"], ["vencida", "Vencidas"], ["pausada", "Pausadas"], ["pronto", "Vencen en 7 días"]];
     var rows = l.map(function (c) {
       var e = estado(c), d = c.dias_restantes, dc = d == null ? "" : d < 0 ? "bad" : d <= 3 ? "warn" : "";
-      return '<tr class="row" data-open="' + c.negocio_id + '"><td class="c-nm nm"><b>' + esc(c.nombre) + (c.es_admin ? ' <span class="st vitalicio">admin</span>' : '') + '</b><span>' + esc(c.correo || "sin correo") + '</span></td>' +
+      return '<tr class="row" data-open="' + c.negocio_id + '"><td class="c-nm nm"><b>' + esc(c.nombre) + (c.es_admin ? ' <span class="st vitalicio">admin</span>' : '') + '</b><span>' + esc(c.correo || "sin correo") + (c.codigo ? ' · <span class="st regalo" title="' + esc(c.influencer || "") + '">' + esc(c.codigo) + '</span>' : '') + '</span></td>' +
         '<td class="c-plan">' + esc(PLN[c.plan] || c.plan || "—") + (c.suscripcion_estado === "authorized" ? ' · auto' : '') + '</td>' +
         '<td class="c-st"><span class="st ' + e + '">' + ESTL[e] + '</span></td>' +
         '<td class="c-dias r"><span class="dias ' + dc + '">' + (d == null ? "∞" : d < 0 ? "venció hace " + (-d) + (d === -1 ? " día" : " días") : d) + '</span></td>' +
@@ -159,6 +159,63 @@
           '<td>' + (u.rescate_en ? '<span class="st ' + (u.rescate_estado === "enviado" ? "prueba" : "pagando") + '">' + ({ enviado: "Enviado", entregado: "Entregado", abierto: "Lo abrió" }[u.rescate_estado] || "Enviado") + '</span> <span class="note" style="margin:0">' + hace(u.rescate_en) + (u.rescate_veces > 1 ? ' · ' + u.rescate_veces + ' veces' : '') + '</span>' : '<span class="note" style="margin:0">No enviado</span>') + '</td>' +
           '<td class="r"><button class="btn sm" data-resc="' + u.user_id + '">' + (u.rescate_en ? "Reenviar" : "Enviar correo") + '</button> <button class="btn ghost sm danger" data-udel="' + u.user_id + '" data-mail="' + esc(u.correo) + '">Eliminar</button></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">No hay registros sin terminar.</p>') + '</section>';
   }
+  function mesTxt(m) { var p = String(m || "").split("-"); return p.length === 2 ? ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"][+p[1] - 1] + " " + p[0] : ""; }
+  function mesAct() { if (!S.mes) { var d = new Date(); S.mes = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); } return S.mes; }
+  function comResumen() {
+    var g = {}; (S.com || []).forEach(function (r) { var k = r.codigo, x = g[k] = g[k] || { codigo: k, influencer: r.influencer, comision: +r.comision, clientes: {}, pagos: 0, devol: 0, neto: 0, monto: 0 };
+      x.clientes[r.correo || r.pasteleria] = 1; if (r.movimiento === "Pago") x.pagos += +r.monto; else x.devol += -r.monto; x.neto += +r.monto; x.monto += +r.monto_comision; });
+    return Object.keys(g).sort().map(function (k) { var x = g[k]; x.n = Object.keys(x.clientes).length; return x; });
+  }
+  function vCod() {
+    if (S.sinCod) return '<section class="card"><p class="errmsg">Falta ejecutar en Supabase el SQL de los códigos (codigos.sql).</p></section>';
+    var link = function (k) { return "https://www.dulcia.cl/?ref=" + k; };
+    var form = '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem">Nuevo código</h2><p class="note" style="margin:4px 0 10px">La persona lo escribe al crear su cuenta, o entra con el link del código y se completa solo. El código no da beneficios: los meses gratis se regalan desde cada cuenta.</p>' +
+      '<form id="codf" class="row2"><input type="text" id="cc" required maxlength="30" placeholder="Código (ej.: UFATRUFA)" style="text-transform:uppercase"><input type="text" id="ci" required maxlength="80" placeholder="Nombre del influencer"><input id="cp" type="number" min="0" max="100" step="0.5" value="20" style="max-width:110px" title="% de comisión"><span class="note" style="margin:0">% de cada pago</span><input type="text" id="ct" maxlength="120" placeholder="Contacto (opcional)"><button class="btn sm" type="submit">Crear código</button></form></section>';
+    var tabla = '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem;margin-bottom:8px">Códigos</h2>' + (S.cod.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Código</th><th>Influencer</th><th class="r">Comisión</th><th class="r">Clientes</th><th class="r">Pagando hoy</th><th class="r">Total pagado</th><th>Link para compartir</th><th></th></tr></thead><tbody>' +
+      S.cod.map(function (k) { return '<tr><td><b>' + esc(k.codigo) + '</b>' + (k.activo ? '' : ' <span class="st pausada">inactivo</span>') + '</td><td>' + esc(k.influencer) + (k.contacto ? '<div class="note" style="margin:0">' + esc(k.contacto) + '</div>' : '') + '</td><td class="r">' + (+k.comision) + '%</td><td class="r">' + k.clientes + '</td><td class="r">' + k.pagando + '</td><td class="r">' + $$(k.pagado_total) + '</td>' +
+        '<td><button class="btn ghost sm" data-clink="' + esc(link(k.codigo)) + '">Copiar link</button></td><td class="r"><button class="btn ghost sm" data-cedit="' + esc(k.codigo) + '">Editar</button></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">Todavía no hay códigos.</p>') + '</section>';
+    var res = S.com ? comResumen() : [], tot = res.reduce(function (a, x) { return a + x.monto; }, 0);
+    var com = '<section class="card"><h2 style="font-size:1.4rem">Comisiones del mes</h2><p class="note" style="margin:4px 0 10px">Suma los pagos del mes de los clientes de cada código (los planes semestral y anual cuentan completos el mes en que se pagan) y resta las devoluciones hechas ese mes.</p>' +
+      '<div class="row2" style="margin-bottom:12px"><input type="month" id="cmes" value="' + mesAct() + '" style="max-width:200px"><button class="btn ghost sm" data-cver>Ver mes</button><button class="btn sm" data-cxls>Descargar Excel del mes</button></div>' +
+      (!S.com ? '<p class="note">Cargando…</p>' : res.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Código</th><th>Influencer</th><th class="r">Clientes que pagaron</th><th class="r">Pagos</th><th class="r">Devoluciones</th><th class="r">Neto</th><th class="r">%</th><th class="r">A pagar</th></tr></thead><tbody>' +
+        res.map(function (x) { return '<tr><td><b>' + esc(x.codigo) + '</b></td><td>' + esc(x.influencer) + '</td><td class="r">' + x.n + '</td><td class="r">' + $$(x.pagos) + '</td><td class="r">' + (x.devol ? "−" + $$(x.devol) : "—") + '</td><td class="r">' + $$(x.neto) + '</td><td class="r">' + x.comision + '%</td><td class="r"><b>' + $$(x.monto) + '</b></td></tr>'; }).join("") +
+        '<tr><td colspan="7"><b>Total a pagar en ' + mesTxt(S.mes) + '</b></td><td class="r"><b>' + $$(tot) + '</b></td></tr></tbody></table></div>' : '<p class="empty">Sin pagos de clientes con código en ' + mesTxt(S.mes) + '.</p>') + '</section>';
+    if (!S.com && !S.comCargando) cargarCom();
+    return form + tabla + com;
+  }
+  async function cargarCom() {
+    S.comCargando = 1;
+    try { S.com = await rpc("admin_comisiones", { p_mes: mesAct() + "-01" }) || []; } catch (e) { S.com = []; toast(errTxt(e), true); }
+    S.comCargando = 0; if (S.tab === "cod") render();
+  }
+  function editCod(k) {
+    var c = S.cod.find(function (x) { return x.codigo === k; }); if (!c) return;
+    dlg.innerHTML = '<div class="dlg"><header><div><h2 style="font-size:1.6rem">Código ' + esc(c.codigo) + '</h2><div class="note" style="margin:2px 0 0">' + c.clientes + ' cliente' + (c.clientes === 1 ? '' : 's') + ' · creado el ' + fd(c.creado_en) + '</div></div><button class="ib" data-close aria-label="Cerrar">✕</button></header>' +
+      '<form id="cedf" style="display:flex;flex-direction:column;gap:10px"><label>Influencer<input type="text" id="ei" required maxlength="80" value="' + esc(c.influencer) + '"></label><label>% de comisión de cada pago<input id="ep" type="number" min="0" max="100" step="0.5" value="' + (+c.comision) + '"></label>' +
+      '<label>Contacto<input type="text" id="et" maxlength="120" value="' + esc(c.contacto || "") + '"></label><label>Nota<textarea id="en" rows="2">' + esc(c.nota || "") + '</textarea></label>' +
+      '<label class="row2" style="gap:8px"><input type="checkbox" id="ea"' + (c.activo ? ' checked' : '') + ' style="width:auto;flex:0"> Código activo (si lo desactivas, nadie nuevo puede usarlo; sus clientes actuales siguen sumando comisión)</label>' +
+      '<p class="note" style="margin:0">Cambiar el % afecta el cálculo de todos los meses, también los anteriores.</p><div class="row2"><button class="btn sm" type="submit">Guardar</button></div></form></div>';
+    dlg.dataset.id = ""; dlg.dataset.cod = k; if (!dlg.open) dlg.showModal();
+  }
+  function excelCom() {
+    xlsxLib().then(function (X) {
+      var res = comResumen(), wb = X.utils.book_new();
+      var r1 = [["Comisiones de " + mesTxt(S.mes)], [], ["Código", "Influencer", "Contacto", "Clientes que pagaron", "Pagos", "Devoluciones", "Neto", "% comisión", "Monto a pagar"]].concat(res.map(function (x) { var k = S.cod.find(function (c) { return c.codigo === x.codigo; }) || {}; return [x.codigo, x.influencer, k.contacto || "", x.n, Math.round(x.pagos), -Math.round(x.devol), Math.round(x.neto), x.comision / 100, Math.round(x.monto)]; }));
+      r1.push(["Total", "", "", "", "", "", "", "", res.reduce(function (a, x) { return a + Math.round(x.monto); }, 0)]);
+      var w1 = X.utils.aoa_to_sheet(r1); w1["!cols"] = [14, 22, 22, 12, 12, 12, 12, 10, 14].map(function (w) { return { wch: w }; });
+      for (var i = 3; i < r1.length - 1; i++) { var cel = w1[X.utils.encode_cell({ r: i, c: 7 })]; if (cel) cel.z = "0%"; }
+      X.utils.book_append_sheet(wb, w1, "Resumen");
+      var r2 = [["Código", "Influencer", "Pastelería", "Correo", "Fecha", "Movimiento", "N° pago", "Monto", "% comisión", "Comisión"]].concat((S.com || []).map(function (r) { return [r.codigo, r.influencer, r.pasteleria, r.correo || "", fd(r.fecha), r.movimiento, r.pago_id, Math.round(+r.monto), +r.comision / 100, Math.round(+r.monto_comision)]; }));
+      var w2 = X.utils.aoa_to_sheet(r2); w2["!cols"] = [14, 20, 24, 28, 12, 12, 16, 12, 10, 12].map(function (w) { return { wch: w }; });
+      for (var j = 1; j < r2.length; j++) { var c2 = w2[X.utils.encode_cell({ r: j, c: 8 })]; if (c2) c2.z = "0%"; }
+      X.utils.book_append_sheet(wb, w2, "Detalle de pagos");
+      var cl = S.cuentas.filter(function (c) { return c.codigo; });
+      var r3 = [["Código", "Influencer", "Pastelería", "Correo", "Teléfono", "Plan", "Estado", "Total pagado", "Creada"]].concat(cl.map(function (c) { return [c.codigo, c.influencer || "", c.nombre, c.correo || "", c.telefono || "", PLN[c.plan] || c.plan || "", ESTL[estado(c)], Math.round(+c.total_pagado || 0), fd(c.creado_en)]; }));
+      var w3 = X.utils.aoa_to_sheet(r3); w3["!cols"] = [14, 20, 24, 28, 14, 12, 12, 12, 12].map(function (w) { return { wch: w }; });
+      X.utils.book_append_sheet(wb, w3, "Clientes con código");
+      X.writeFile(wb, "Dulcia_comisiones_" + S.mes + ".xlsx"); toast("Excel de " + mesTxt(S.mes) + " descargado");
+    }).catch(function (e) { toast(errTxt(e), true); });
+  }
   function vHist() {
     return '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem">Correos automáticos</h2><p class="note" style="margin:4px 0 10px">Todos los días a las 10:00 Dulcia envía solo: “quedan 2 días de prueba”, “tu prueba termina hoy”, “tu prueba terminó”, “tu plan vence en 7 días” y “tu plan venció”. Cada correo llega una sola vez por cuenta y queda anotado aquí abajo.</p>' +
       '<div class="row2"><button class="btn sm" data-avprueba>Enviarme los 5 correos de ejemplo</button><button class="btn ghost sm" data-avahora>Enviar los avisos pendientes ahora</button></div></section>' +
@@ -181,6 +238,7 @@
       '<div class="row2" style="margin-top:8px"><input type="date" id="gfecha" value="' + (c.vence_en ? iso(c.vence_en) : "") + '"><button class="btn ghost sm" data-fecha>Fijar vencimiento</button></div><p class="note" style="margin:6px 0 0">Útil para corregir una fecha: la cuenta queda activa hasta las 23:59 de ese día.</p></div>' +
       '<div class="blk"><h3>Estado de la cuenta</h3><div class="row2"><button class="btn ghost sm" data-pausa="' + (c.activo ? 1 : 0) + '">' + (c.activo ? 'Pausar cuenta' : 'Reactivar cuenta') + '</button>' +
       (sub ? '<button class="btn ghost sm danger" data-subx>Cancelar suscripción mensual</button>' : '') + '</div><p class="note" style="margin:6px 0 0">Pausar bloquea el acceso sin borrar nada. Reactivar no cambia la fecha de vencimiento.</p></div>' +
+      (S.sinCod ? '' : '<div class="blk"><h3>Código de invitación</h3><p class="note" style="margin:0 0 8px">De qué influencer viene esta cuenta. Sus pagos generan comisión para ese código.</p><div class="row2"><select id="gcod"><option value="">Sin código</option>' + S.cod.map(function (k) { return '<option value="' + esc(k.codigo) + '"' + (k.codigo === c.codigo ? ' selected' : '') + '>' + esc(k.codigo + " · " + k.influencer) + (k.activo ? '' : ' (inactivo)') + '</option>'; }).join("") + '</select><button class="btn ghost sm" data-gcod>Guardar código</button></div></div>') +
       '<div class="blk"><h3>Nota interna</h3><textarea id="gn" rows="3" placeholder="Solo la ves tú">' + esc(c.nota || "") + '</textarea><div style="margin-top:8px"><button class="btn ghost sm" data-nota>Guardar nota</button></div></div>' +
       '<div class="blk"><h3>Pagos</h3><div id="gpagos" class="note">Cargando…</div></div>' +
       '<div class="blk"><h3>Correos de aviso enviados</h3><div id="gavisos" class="note">Cargando…</div></div>' +
@@ -254,9 +312,9 @@
   function xlsxLib() { return window.XLSX ? Promise.resolve(window.XLSX) : new Promise(function (ok, no) { var s = document.createElement("script"); s.src = "xlsx.mini.min.js"; s.onload = function () { ok(window.XLSX); }; s.onerror = function () { no(new Error("No se pudo cargar Excel")); }; document.head.appendChild(s); }); }
   function excel() {
     xlsxLib().then(function (X) {
-      var H = ["Pastelería", "Correo", "Teléfono", "Plan", "Estado", "Días restantes", "Vence", "Suscripción mensual", "Total pagado", "Pagos", "Último pago", "Pedidos", "Recetas", "Última actividad", "Creada", "Nota"];
-      var rows = lista().map(function (c) { return [c.nombre, c.correo, c.telefono || "", PLN[c.plan] || c.plan || "", ESTL[estado(c)], c.dias_restantes == null ? "" : c.dias_restantes, c.vence_en ? fd(c.vence_en) : "", c.suscripcion_estado || "", Math.round(+c.total_pagado || 0), c.pagos, c.ultimo_pago ? fd(c.ultimo_pago) : "", c.pedidos, c.recetas, c.ultima_actividad ? fd(c.ultima_actividad) : "", fd(c.creado_en), c.nota || ""]; });
-      var ws = X.utils.aoa_to_sheet([H].concat(rows)); ws["!cols"] = [26, 28, 14, 12, 12, 10, 12, 14, 12, 8, 12, 9, 9, 14, 12, 40].map(function (w) { return { wch: w }; });
+      var H = ["Pastelería", "Correo", "Teléfono", "Código", "Influencer", "Plan", "Estado", "Días restantes", "Vence", "Suscripción mensual", "Total pagado", "Pagos", "Último pago", "Pedidos", "Recetas", "Última actividad", "Creada", "Nota"];
+      var rows = lista().map(function (c) { return [c.nombre, c.correo, c.telefono || "", c.codigo || "", c.influencer || "", PLN[c.plan] || c.plan || "", ESTL[estado(c)], c.dias_restantes == null ? "" : c.dias_restantes, c.vence_en ? fd(c.vence_en) : "", c.suscripcion_estado || "", Math.round(+c.total_pagado || 0), c.pagos, c.ultimo_pago ? fd(c.ultimo_pago) : "", c.pedidos, c.recetas, c.ultima_actividad ? fd(c.ultima_actividad) : "", fd(c.creado_en), c.nota || ""]; });
+      var ws = X.utils.aoa_to_sheet([H].concat(rows)); ws["!cols"] = [26, 28, 14, 14, 18, 12, 12, 10, 12, 14, 12, 8, 12, 9, 9, 14, 12, 40].map(function (w) { return { wch: w }; });
       var wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, "Cuentas"); X.writeFile(wb, "Dulcia_cuentas_" + iso(new Date()) + ".xlsx");
       toast(rows.length + " cuentas descargadas");
     }).catch(function (e) { toast(errTxt(e), true); });
@@ -271,6 +329,11 @@
     if (t.hasAttribute("data-reload")) { t.disabled = true; await load(); toast("Datos actualizados"); return; }
     if (t.hasAttribute("data-out")) { logout(); return; }
     if (t.hasAttribute("data-xls")) { excel(); return; }
+    if (t.dataset.clink) { try { await navigator.clipboard.writeText(t.dataset.clink); toast("Link copiado: " + t.dataset.clink); } catch (er) { toast("Copia este link: " + t.dataset.clink); } return; }
+    if (t.dataset.cedit) { editCod(t.dataset.cedit); return; }
+    if (t.hasAttribute("data-cver")) { S.mes = $("#cmes").value || mesAct(); S.com = null; render(); return; }
+    if (t.hasAttribute("data-cxls")) { var nm = $("#cmes").value || mesAct(); if (nm !== S.mes || !S.com) { S.mes = nm; S.com = null; render(); await cargarCom(); } excelCom(); return; }
+    if (t.hasAttribute("data-gcod")) { var gc = $("#gcod").value; return accion(t, function (id) { return rpc("admin_asignar_codigo", { p_negocio: id, p_codigo: gc || null }).then(function () { S.com = null; return gc ? "Código " + gc + " asignado" : "Código quitado"; }); }); }
     if (t.hasAttribute("data-devform")) { devForm(t.getAttribute("data-devform")); return; }
     if (t.hasAttribute("data-devno")) { document.querySelectorAll("[data-devrow]").forEach(function (r) { r.hidden = true; r.firstChild.innerHTML = ""; }); return; }
     if (t.hasAttribute("data-devok")) { devolver(t); return; }
@@ -312,6 +375,16 @@
   document.addEventListener("input", function (e) { if (e.target.id === "devm") devSync(); });
   document.addEventListener("change", function (e) { if (e.target.id === "ao") { S.ord = e.target.value; render(); } });
   document.addEventListener("submit", async function (e) {
+    if (e.target.id === "codf" || e.target.id === "cedf") {
+      e.preventDefault(); var nuevo = e.target.id === "codf", b = e.target.querySelector("button[type=submit]"); b.disabled = true;
+      var k = nuevo ? $("#cc").value.trim().toUpperCase() : dlg.dataset.cod, o = S.cod.find(function (x) { return x.codigo === k; }) || {};
+      try {
+        await rpc("admin_codigo_guardar", nuevo ? { p_codigo: k, p_influencer: $("#ci").value, p_comision: +$("#cp").value, p_activo: true, p_contacto: $("#ct").value.trim() || null, p_nota: null, p_nuevo: true }
+          : { p_codigo: k, p_influencer: $("#ei").value, p_comision: +$("#ep").value, p_activo: $("#ea").checked, p_contacto: $("#et").value.trim() || null, p_nota: $("#en").value.trim() || null, p_nuevo: false });
+        if (!nuevo) dlg.close(); S.com = null; await load(); toast(nuevo ? "Código " + k + " creado" : "Código " + k + " guardado");
+      } catch (er) { toast(errTxt(er), true); b.disabled = false; }
+      return;
+    }
     if (e.target.id !== "invf") return; e.preventDefault();
     var b = e.target.querySelector("button[type=submit]"); b.disabled = true;
     var em = $("#ie").value.trim().toLowerCase(), m = +$("#im").value, nom = $("#in").value.trim(), nota = $("#io").value.trim();
