@@ -56,7 +56,7 @@ function waUrl(d){return d?"https://wa.me/"+d:""}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 var fm=new Intl.NumberFormat("es-CL",{style:"currency",currency:"CLP",maximumFractionDigits:0});
 var fmN=new Intl.NumberFormat("es-CL",{maximumFractionDigits:0});
-function $$(n){n=Math.round(+n||0);return (n<0?"-":"")+"$ "+fmN.format(Math.abs(n))}
+function $$(n){n=Math.round(+n||0);return (n<0?"-":"")+"$\u00a0"+fmN.format(Math.abs(n))}
 function mnum(v){if(typeof v==="number")return v;var t=String(v==null?"":v).replace(/[^\d,\-]/g,"").replace(",",".");var n=parseFloat(t);return isNaN(n)?0:n}
 function mfmt(n){n=+n||0;var neg=n<0;n=Math.abs(n);var ip=Math.floor(n),dp=Math.round((n-ip)*100);return (neg?"-":"")+"$ "+fmN.format(ip)+(dp?","+String(dp).padStart(2,"0").replace(/0$/,""):"")}
 var MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -327,7 +327,7 @@ function groups(){var g=[];recipe.forEach(function(r){if(g.indexOf(r.g)<0)g.push
 function insertRow(gp){var last=-1;recipe.forEach(function(r,i){if(r.g===gp)last=i});recipe.splice(last+1,0,{g:gp,n:"",q:1,u:"",c:0})}
 var FQ=new Intl.NumberFormat("es-CL",{maximumFractionDigits:2});
 var FC=new Intl.NumberFormat("es-CL",{maximumFractionDigits:2,minimumFractionDigits:0});
-function $$u(n){n=+n||0;return "$ "+(Math.abs(n)<100&&Math.round(n)!==n?FC.format(n):fmN.format(Math.round(n)))}
+function $$u(n){n=+n||0;return "$\u00a0"+(Math.abs(n)<100&&Math.round(n)!==n?FC.format(n):fmN.format(Math.round(n)))}
 function fq(n){return FQ.format(n)}
 function vCost(){
   var lupa='<label class="rsearch"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" id="rq" placeholder="Buscar receta" aria-label="Buscar receta" value="'+esc(RQ)+'"></label>';

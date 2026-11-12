@@ -927,3 +927,5 @@ td.ro{color:var(--soft)}
 .kct td:nth-child(3),.kct th:nth-child(3){color:var(--ink);font-weight:600}
 .kct tr.kctt td{border-top:1.5px solid var(--line);color:var(--ink);font-weight:700}
 .kct tr.kctt td:nth-child(3){font-size:1.1rem;color:var(--accent)}
+/* montos: el $ nunca queda arriba del número */
+td.r{white-space:nowrap}
