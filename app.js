@@ -18,9 +18,15 @@ var wk=(function(){var d=pd(TODAY),k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);r
 var cfg={costeo:"real",cap:3,logo:null,logoData:null,logoPath:null,logoDirty:false,tel:"",mail:"",vig:7,abono:50,cond:"",nombre:"",gcal:false,asked:true,url:"",msg:""};
 var hora={sueldo:0,horas:160};
 var MAY={desp:0,pack:0,coord:0,fact:0};
-function vhora(){return hora.sueldo/Math.max(1,hora.horas)}
+var EQ=[];  // equipo: [{n:nombre, s:sueldo mensual, h:horas a la semana}]
+var SEM=52/12;  // semanas por mes (4,33)
+function eqS(){return EQ.reduce(function(a,p){return a+(+p.s||0)},0)}
+function eqHM(){return EQ.reduce(function(a,p){return a+(+p.h||0)},0)*SEM}
+function eqSync(){if(EQ.length){hora.sueldo=Math.round(eqS());hora.horas=Math.round(eqHM())}}
+function vhora(){if(EQ.length){var h=eqHM();return h?eqS()/h:0}return hora.horas?hora.sueldo/hora.horas:0}
+function hmin(min){min=Math.round(+min||0);var h=Math.floor(min/60),m=min%60;return h?(h+" h"+(m?" "+m+" min":"")):(m+" min")}
 function hasH(r){return (r.items||[]).some(function(it){return String(it.u||"").trim().toLowerCase()==="h"})}
-function moOn(r){return r.mo==null?!hasH(r):!!r.mo}
+function moOn(r){return !hasH(r)}
 function labor(r){return window.NO_P2||!moOn(r)?0:(+r.ta||0)/60*vhora()}
 function costTanda(r){return rcost(r)+labor(r)}
 function redon(n){return n<10000?Math.ceil(n/100)*100:Math.ceil(n/1000)*1000}
@@ -79,11 +85,12 @@ cli:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
  l:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
  r:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>'
 };
+ICON.pre='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>';
 ICON.gas='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.6 5 1.2 5 3.9 0 1.1-1.100 1.800-2.500 1.800-1.100 0-2.100-.5-2.600-1.400M12 6v2M12 16v2"/></svg>';
 ICON.cfg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>';
 ICON.mkt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6L6 10z"/><path d="M16 9a4 4 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11"/></svg>';
 ICON.com='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h10l2-8H6.5"/><circle cx="9" cy="19.500" r="1.200"/><circle cx="17" cy="19.500" r="1.200"/></svg>';
-var NAV=[["panel","Panel","panel"],["cal","Calendario","cal"],["ped","Pedidos","ped"],["cli","Clientes","cli"],["prod","Producción","prod"],["cost","Recetas","cost"],["ing","Ingredientes","ing"],["com","Compras","com"],["inv","Inventario","inv"],["gas","Gastos","gas"],["mkt","Marketing","mkt"],["cfg","Ajustes","cfg"]];
+var NAV=[["panel","Panel","panel"],["cal","Calendario","cal"],["ped","Pedidos","ped"],["cli","Clientes","cli"],["prod","Producción","prod"],["cost","Recetas","cost"],["pre","Precios","pre"],["ing","Ingredientes","ing"],["com","Compras","com"],["inv","Inventario","inv"],["gas","Gastos","gas"],["mkt","Marketing","mkt"],["cfg","Ajustes","cfg"]];
 function renderNav(){
   $("#side").innerHTML='<div class="brand"><img class="blogo" src="'+logoSrc()+'" alt=""><div><div class="bn">'+esc(cfg.nombre)+'</div><small>con Dulcia</small></div></div><div style="height:14px"></div>'+NAV.map(function(n){
     return '<button class="nav" data-v="'+n[0]+'"'+(view===n[0]?' aria-current="page"':'')+'>'+ICON[n[2]]+'<span>'+n[1]+'</span></button>'}).join("")+
@@ -281,7 +288,7 @@ function vProd(){
   var a0=pd(days[0]),a6=pd(days[6]),rng=a0.getDate()+(a0.getMonth()!==a6.getMonth()?' de '+MESES[a0.getMonth()]:'')+' al '+a6.getDate()+' de '+MESES[a6.getMonth()];
   var sm=prodSum(days),tot=!sm.rows.length?'<section class="card prodsum"><h2 style="font-size:1.35rem">Total a producir · '+rng+'</h2><p class="note" style="margin:6px 0 0">'+(total?'Ningún pedido de estos días tiene receta asignada. Abre cada pedido y agrégale su receta y cantidad: aquí se juntan por producto (ej.: “5 galletas chips en total”).':'No hay pedidos en estos días.')+'</p></section>':'<section class="card prodsum"><h2 style="font-size:1.35rem">Total a producir · '+rng+'</h2><p class="note" style="margin:2px 0 8px">Todos los pedidos de estos días juntos por producto.</p><div class="scroll"><table class="pg ptab"><thead><tr><th>Receta</th><th class="r">Cantidad</th>'+(window.NO_UN?'':'<th class="r">Tandas de receta</th>')+'<th class="r">Pedidos</th>'+(window.NO_P2?'':'<th class="r">Trabajo activo</th>')+'<th class="r">Listo</th></tr></thead><tbody>'+
     sm.rows.map(function(x){var un=x.r.un||1;return '<tr><td><b>'+esc(x.r.nombre)+'</b></td><td class="r"><b>'+fq(x.q)+'</b> '+esc(udPl(x.r,x.q))+'</td>'+(window.NO_UN?'':'<td class="r">'+(un>1?fq(x.tn)+' <span class="note" style="margin:0">(rinde '+un+(x.tn*un>x.q?', sobran '+fq(x.tn*un-x.q):'')+')</span>':fq(x.q))+'</td>')+'<td class="r">'+x.ped+'</td>'+(window.NO_P2?'':'<td class="r">'+(+x.r.ta?hTxt(x.ta):'<button class="lnk" data-gorec="'+x.r.id+'" title="Anota el tiempo en la receta">sin tiempo</button>')+'</td>')+'<td class="r">'+(x.listo>=x.q?'<span class="st pagando">Todo</span>':x.listo?fq(x.listo)+' de '+fq(x.q):'—')+'</td></tr>'}).join("")+
-    '</tbody></table></div>'+(window.NO_P2?'':!sm.ta?'<p class="ptime note">Anota el tiempo de trabajo de cada receta (Recetas → Tiempo de producción) para ver cuántas horas necesitas por día y por semana.</p>':'<p class="ptime"><b>'+hTxt(sm.ta)+' de trabajo activo</b> '+(PRODOFF?'en esos días':'en los próximos 7 días')+(sm.te?' · '+hTxt(sm.te)+' de horno o reposo':'')+(hora.sueldo?' · mano de obra '+$$(sm.ta/60*vhora()):'')+(sm.sinT?'. <span class="note" style="margin:0">'+sm.sinT+' receta'+(sm.sinT===1?'':'s')+' sin tiempo anotado.</span>':'')+'</p>')+(sm.sin?'<p class="note" style="margin:8px 0 0">'+sm.sin+' pedido'+(sm.sin===1?'':'s')+' sin receta no se cuenta'+(sm.sin===1?'':'n')+'. Asígnales una receta para incluirlos.</p>':'')+'</section>';
+    '</tbody></table></div>'+(window.NO_P2?'':!sm.ta?'<p class="ptime note">Anota el tiempo de trabajo de cada receta (Recetas → Tiempo de producción) para ver cuántas horas necesitas por día y por semana.</p>':'<p class="ptime"><b>'+hTxt(sm.ta)+' de trabajo activo</b> '+(PRODOFF?'en esos días':'en los próximos 7 días')+(sm.te?' · '+hTxt(sm.te)+' de horno o reposo':'')+(vhora()?' · mano de obra '+$$(sm.ta/60*vhora()):'')+(EQ.length&&EQ.some(function(p){return +p.h})?(function(){var cap=EQ.reduce(function(a,p){return a+(+p.h||0)},0);return ' · tu equipo tiene <b>'+fq(cap)+' h</b> a la semana'+(sm.ta/60>cap?' <span class="neg">(faltan '+hTxt(sm.ta-cap*60)+')</span>':'')})():'')+(sm.sinT?'. <span class="note" style="margin:0">'+sm.sinT+' receta'+(sm.sinT===1?'':'s')+' sin tiempo anotado.</span>':'')+'</p>')+(sm.sin?'<p class="note" style="margin:8px 0 0">'+sm.sin+' pedido'+(sm.sin===1?'':'s')+' sin receta no se cuenta'+(sm.sin===1?'':'n')+'. Asígnales una receta para incluirlos.</p>':'')+'</section>';
   var bar='<div class="month"><button class="ib" data-pw="-1" aria-label="Semana anterior">'+ICON.l+'</button><b style="min-width:11em;text-transform:none">'+(PRODOFF===0?'Próximos 7 días':rng)+'</b><button class="ib" data-pw="1" aria-label="Semana siguiente">'+ICON.r+'</button></div>'+(PRODOFF?'<button class="btn ghost sm" data-pw="0">Volver a hoy</button>':'')+'<span class="note" style="margin:0">'+total+' pedido'+(total===1?'':'s')+'</span>';
   return head("Producción",bar)+tot+html;
 }
@@ -303,7 +310,7 @@ function vCost(){
   var qn=xNorm(RQ),vis=0,chips=recipes.slice().sort(function(a,b){return String(a.nombre||"").localeCompare(String(b.nombre||""),"es",{sensitivity:"base",numeric:true})}).map(function(r){var rn=xNorm(r.nombre),hid=qn&&rn.indexOf(qn)<0&&r.id!==curR;if(!hid)vis++;return '<button class="rc'+(r.id===curR?' on':'')+'" data-sel="'+r.id+'" data-rn="'+esc(rn)+'"'+(hid?' hidden':'')+'><b>'+esc(r.nombre)+'</b><span>'+esc(r.rinde)+'</span><span>Costo '+$$(rcost(r))+'</span></button>'}).join("")+'<div class="rnone note" id="rnone"'+(vis?' hidden':'')+'>No hay recetas con ese nombre.</div>';
   var g="",gl=groups();
   gl.forEach(function(gp,gi){
-    g+='<tr class="grp"><td colspan="5"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span>'+esc(gp)+'</span><label class="chk"><input type="checkbox" data-gbuy="'+gi+'"'+(gbuy[gp]!==false?' checked':'')+'> <b>Se incluye en Compras</b></label><span class="chkx">'+(gbuy[gp]!==false?'Estos ítems suman a tu lista de compras de la semana.':'No va a Compras: úsalo para mano de obra, gas, luz u otros costos que no compras por pedido.')+'</span></div></td><td><button class="x" data-delgrp="'+gi+'" aria-label="Eliminar categoría de costo">✕</button></td></tr>';
+    g+='<tr class="grp"><td colspan="5"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span>'+esc(gp)+'</span><label class="chk"><input type="checkbox" data-gbuy="'+gi+'"'+(gbuy[gp]!==false?' checked':'')+'> <b>Se incluye en Compras</b></label><span class="chkx">'+(gbuy[gp]!==false?'Estos ítems suman a tu lista de compras de la semana.':'No va a Compras: úsalo para gas, luz u otros costos que no compras por pedido.')+'</span></div></td><td><button class="x" data-delgrp="'+gi+'" aria-label="Eliminar categoría de costo">✕</button></td></tr>';
     recipe.forEach(function(r,i){ if(r.g!==gp)return;
       if(window.NO_ING)g+='<tr><td><input class="t" type="text" value="'+esc(r.n)+'" data-r="'+i+'" data-k="n" aria-label="Nombre"></td><td><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td><input class="u t" type="text" value="'+esc(r.u)+'" data-r="'+i+'" data-k="u" aria-label="Unidad"></td><td><input type="text" class="money" inputmode="decimal" value="'+mfmt(r.c)+'" data-r="'+i+'" data-k="c" aria-label="Costo por unidad"></td>';
       else{var ix=r.n?ingFind(r.n,r.u):null;
@@ -317,61 +324,172 @@ function vCost(){
     (window.NO_UN?'':'<label>Unidades que rinde<input type="number" id="run" style="text-align:left" min="1" step="1" inputmode="numeric" value="'+(rp.un||1)+'"></label><label>Se vende por<input type="text" id="rud" style="text-align:left" maxlength="30" placeholder="Ej.: galleta, torta, caja" value="'+esc(rp.ud||"")+'"></label>')+'</div>'+
     (window.NO_UN?'':'<p class="note" style="margin:-4px 0 10px">En los pedidos, la cantidad es en <b>'+esc(udPl(rp,2))+'</b>. Ej.: si rinde 24 y piden 6, la app calcula ¼ de la receta.</p>')+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-addgrp>+ Nueva categoría de costo</button><button class="btn ghost sm" data-dupr>Duplicar receta</button><button class="btn ghost sm danger" data-delr>Eliminar receta</button></div>'+
-  '<p class="note">Marca “Se incluye en Compras” en las categorías que compras para cada pedido (ingredientes, cajas, decoración). Desmárcalo en mano de obra o gastos fijos: igual suman al costo de la receta, pero no aparecen en la lista de Compras.'+(window.NO_ING?'':' Los ingredientes se eligen de tu lista de <button class="lnk" data-v="ing">Ingredientes</button>; su unidad y precio se cambian allá.')+'</p>'+
+  '<p class="note">Marca “Se incluye en Compras” en las categorías que compras para cada pedido (ingredientes, cajas, decoración). Desmárcalo en gastos como gas o luz: igual suman al costo de la receta, pero no aparecen en la lista de Compras. La mano de obra no va aquí: se calcula sola con el tiempo de la receta.'+(window.NO_ING?'':' Los ingredientes se eligen de tu lista de <button class="lnk" data-v="ing">Ingredientes</button>; su unidad y precio se cambian allá.')+'</p>'+
   '<div class="scroll"><table class="rtab"><colgroup><col><col class="c-q"><col class="c-u"><col class="c-c"><col class="c-s"><col class="c-x"></colgroup><thead><tr><th>Ítem</th><th class="r">Cantidad</th><th>Unidad</th><th class="r">Costo unidad</th><th class="r">Subtotal</th><th></th></tr></thead><tbody>'+g+'<tr class="tot"><td colspan="4">Costo total</td><td class="r" id="rtot"></td><td></td></tr></tbody></table></div></section>'+
   '<div class="grid" style="align-content:start"><section class="card" id="rsum">'+rskel()+'</section></div></div>';
 }
 function rsum(){
-  var ci=rtot(), lab=labor(rp), c=ci+lab, un=rp.un||1, cu=c/un, m=rp.margen/100, netoU=cu/(1-m), sug=redon(netoU*IVA), u1=udPl(rp,1);
-  var pn=rp.precio/IVA, real=pn>0?(pn-cu)/pn*100:0;
-  $("#rtot").textContent=$$(ci);
-  $("#mgv").textContent=rp.margen+"%";
-  $("#sug").textContent=$$(sug); $("#sugn").textContent="con IVA, por "+u1+" · neto "+$$(netoU)+(un>1?" · tanda de "+un+": "+$$(sug*un):"");
-  $("#kc").textContent=$$(ci); $("#kg").textContent=$$(netoU-cu);
-  if($("#klab")){$("#klab").textContent=lab?$$(lab):"—";$("#ktot").textContent=$$(c);$("#kcu").textContent=$$(cu);$("#kcul").textContent="Costo por "+u1;$("#kgl").textContent="Ganancia por "+u1}
+  var ci=rtot(),lab=labor(rp),c=ci+lab,un=rp.un||1,cu=c/un,u1=udPl(rp,1),vh=vhora();
+  if($("#rtot"))$("#rtot").textContent=$$(ci);
+  if($("#kc"))$("#kc").textContent=$$(ci);
+  if($("#ktot")){$("#klab").textContent=$$(lab);$("#ktot").textContent=$$(c);$("#kcul").textContent="Costo por "+u1;$("#kcu").textContent=$$u(cu)}
+  var mc=$("#mocalc");if(mc){var t;
+    if(hasH(rp))t='<b>Esta receta tiene “Horas de trabajo” como ítem.</b> Ahora la mano de obra se calcula con el tiempo de trabajo con manos. Quita ese ítem para no contarla dos veces. <button class="btn ghost sm" data-qhoras>Quitar el ítem de horas</button>';
+    else if(!vh)t='Falta el valor de la hora de trabajo. <button class="lnk" data-equipo>Calcúlalo aquí</button> y la mano de obra se suma sola.';
+    else if(!rp.ta)t='Anota el <b>trabajo con manos</b> para sumar la mano de obra al costo.';
+    else t='<b>Mano de obra</b> = '+hmin(rp.ta)+' de trabajo con manos × '+$$(vh)+' por hora = <b>'+$$(lab)+'</b>'+(un>1?' ('+$$u(lab/un)+' por '+esc(u1)+')':'')+'.';
+    mc.innerHTML=t;mc.className="mocalc"+(hasH(rp)?" warn":"")}
+  var tp=$("#tpu");if(tp){var ta=+rp.ta||0,te=+rp.te||0;tp.innerHTML=un>1&&(ta||te)?'Por '+esc(u1)+': '+(ta?fq(Math.round(ta/un*10)/10)+' min de trabajo con manos':'')+(ta&&te?' · ':'')+(te?fq(Math.round(te/un*10)/10)+' min de horno o reposo':''):'';tp.hidden=!tp.innerHTML}
+  if($("#hv"))$("#hv").textContent=$$(vh);
+  if($("#psum"))psum();
+}
+function hmInputs(id,min,lbl,desc){min=Math.round(+min||0);
+  return '<div class="tblk"><div class="tbh"><b>'+lbl+'</b><span class="note" style="margin:0">'+desc+'</span></div><div class="thm"><label>Horas<input type="number" id="'+id+'_h" min="0" step="1" inputmode="numeric" value="'+(min?Math.floor(min/60):'')+'" placeholder="0"></label><label>Minutos<input type="number" id="'+id+'_m" min="0" max="59" step="5" inputmode="numeric" value="'+(min?min%60:'')+'" placeholder="0"></label></div></div>'}
+function rskel(){
+  if(window.NO_P2)return '<h2 style="font-size:1.38rem">Costo de la receta</h2><dl class="kv" style="margin-top:12px"><dt>Costo de la receta</dt><dd id="kc"></dd></dl><p class="note">Los precios de venta se definen en <button class="lnk" data-v="pre">Precios</button>.</p>';
+  return '<h2 style="font-size:1.38rem">Costo de la receta</h2><p class="note" style="margin-top:2px">Ingredientes + mano de obra, para la receta completa. Los precios de venta se definen en <button class="lnk" data-v="pre">Precios</button>.</p>'+
+   '<h3 class="rsec">Tiempo de producción</h3><p class="note" style="margin-top:2px">De la receta completa: una tanda'+((rp.un||1)>1?' de '+fq(rp.un)+' '+esc(udPl(rp,rp.un)):'')+'.</p>'+
+   hmInputs("ta",rp.ta,"Trabajo con manos","Preparar, armar, decorar y envasar. Es lo que se paga como mano de obra.")+
+   hmInputs("te",rp.te,"Horno o reposo","Horno, frío o levado. No suma mano de obra: sirve para planificar Producción.")+
+   '<p class="note" id="tpu" style="margin:8px 0 0"></p>'+
+   '<h3 class="rsec">Costo</h3><dl class="kv"><dt>Ingredientes y otros</dt><dd id="kc"></dd><dt>Mano de obra</dt><dd id="klab"></dd><dt><b>Costo de la receta</b></dt><dd><b id="ktot"></b></dd><dt id="kcul">Costo por unidad</dt><dd id="kcu"></dd></dl>'+
+   '<div class="mocalc" id="mocalc"></div>'+
+   '<div class="rcact"><button class="btn ghost sm" data-equipo>Valor de la hora: <b id="hv" style="margin-left:4px"></b></button><button class="btn sm" data-v="pre">Ver precios de venta</button></div>';
+}
+/* ---------- detalle de precio de un producto (desde Precios) ---------- */
+function openPre(id){selR(id);var d=$("#dlg"),u1=udPl(rp,1);
+  d.innerHTML='<div class="dlg" id="psum"><header><div><h2 style="font-size:1.62rem">'+esc(rp.nombre)+'</h2><div class="note" style="margin:2px 0 0">Precio por '+esc(u1)+' · costo por '+esc(u1)+' <b id="pcu"></b></div></div><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
+   '<section class="psec pmn"><h3>Minorista · a público <span class="tg">con IVA</span></h3>'+
+   '<label class="prg">Margen que quieres ganar: <b id="mgv"></b><input type="range" id="mg" min="0" max="90" value="'+(+rp.margen||0)+'"></label>'+
+   '<div class="kv2"><span>Precio sugerido</span><b id="sug"></b></div><div class="note" style="margin:0" id="sugn"></div>'+
+   '<label class="plab">Tu precio por '+esc(u1)+' (con IVA)<input type="text" class="money" inputmode="numeric" id="pa" value="'+mfmt(rp.precio)+'"></label>'+
+   '<p style="margin:8px 0 0;font-weight:600">Margen real: <span id="real"></span> · ganancia <span id="realg"></span> por '+esc(u1)+'</p><p style="margin:4px 0 0"><button class="lnk" data-usesug="min">Usar el precio sugerido</button></p></section>'+
+   (window.NO_P2?'':'<section class="psec pmy"><h3>Mayorista · cafeterías y reventa <span class="tg">neto + IVA</span></h3>'+
+   '<label class="prg">Margen mayorista: <b id="mgmv"></b><input type="range" id="mgm" min="0" max="75" value="'+(rp.mm==null?45:rp.mm)+'"></label>'+
+   '<div class="kv2"><span>Precio sugerido</span><b id="msug"></b></div><div class="note" style="margin:0" id="msugn"></div>'+
+   (window.NO_PM?'':'<label class="plab">Tu precio mayorista por '+esc(u1)+' (neto)<input type="text" class="money" inputmode="numeric" id="pmy" value="'+mfmt(rp.pm||0)+'"></label><p style="margin:8px 0 0;font-weight:600" id="mreal"></p><p style="margin:4px 0 0"><button class="lnk" data-usesug="may">Usar el precio sugerido</button></p>')+
+   '<dl class="kv" style="margin-top:10px"><dt>Costo con packaging</dt><dd id="mcu"></dd><dt>Ganancia por unidad (sugerido)</dt><dd id="mg1"></dd></dl><div class="mmin" id="mmin"></div>'+
+   '<div class="f" style="margin-top:10px"><label>Packaging mayorista por '+esc(u1)+'<input type="text" class="money" inputmode="numeric" id="mpk" placeholder="General: '+$$(MAY.pack)+'" value="'+(rp.mpk===""||rp.mpk==null?"":mfmt(rp.mpk))+'"></label><label>Despacho por pedido<input type="text" class="money" inputmode="numeric" id="mds" placeholder="General: '+$$(MAY.desp)+'" value="'+(rp.mds===""||rp.mds==null?"":mfmt(rp.mds))+'"></label></div>'+
+   '<p class="note" style="margin-top:4px">Vacío = usa el valor general de <button class="lnk" data-v="cfg">Ajustes</button>.</p></section>')+
+   '<div style="display:flex;justify-content:flex-end"><button type="button" class="btn" data-close>Listo</button></div></div>';
+  if(!d.open)d.showModal();psum();
+}
+function psum(){
+  var c=costTanda(rp),un=rp.un||1,cu=c/un,m=(+rp.margen||0)/100,netoU=m<1?cu/(1-m):0,sug=redon(netoU*IVA),u1=udPl(rp,1),pn=(+rp.precio||0)/IVA,real=pn>0?(pn-cu)/pn*100:0;
+  $("#pcu").textContent=$$u(cu);$("#mgv").textContent=(+rp.margen||0)+"%";
+  $("#sug").textContent=$$(sug);$("#sugn").textContent="con IVA · neto "+$$(netoU)+" · ganancia "+$$(netoU-cu)+" por "+u1;
+  var r=$("#real");r.textContent=pn>0?real.toFixed(1)+"%":"—";r.className=real>=(+rp.margen||0)?"pos":"neg";$("#realg").textContent=$$(pn-cu);
   if($("#msug")){var mc=mayCalc(rp);$("#mgmv").textContent=(rp.mm==null?45:rp.mm)+"%";
-    $("#msug").textContent=$$(mc.neto)+" + IVA";$("#msugn").textContent="por "+u1+" · "+$$(Math.round(mc.neto*IVA))+" con IVA"+(sug>0?(mc.neto*IVA<sug?" · "+Math.round((1-mc.neto*IVA/sug)*100)+"% menos que a público":" · ⚠ queda más caro que a público: baja el margen mayorista"):"");
-    $("#mcu").textContent=$$(mc.cuM);$("#mg1").textContent=$$(mc.g);
+    $("#msug").textContent=$$(mc.neto)+" neto";$("#msugn").textContent=$$(Math.round(mc.neto*IVA))+" con IVA"+(sug>0?(mc.neto*IVA<sug?" · "+Math.round((1-mc.neto*IVA/sug)*100)+"% menos que a público":" · ⚠ queda más caro que a público: baja el margen mayorista"):"");
+    $("#mcu").textContent=$$u(mc.cuM);$("#mg1").textContent=$$(mc.g);
     var t;if(mc.g<=0)t='<b class="neg">Con este margen pierdes plata en cada '+esc(u1)+'.</b> Sube el margen mayorista.';
     else if(!mc.F)t='No tienes costos por pedido mayorista. Configúralos en <button class="lnk" data-v="cfg">Ajustes</button> (despacho, coordinación, factura) para calcular el mínimo.';
     else t='Cada pedido mayorista te cuesta '+$$(mc.F)+' (despacho '+$$(mc.desp)+(MAY.coord?' + coordinación '+fq(MAY.coord)+' h':'')+').<br><b>Punto de equilibrio: '+fq(mc.eq)+' '+esc(udPl(rp,mc.eq))+'.</b> Bajo esa cantidad, el pedido no deja ganancia.<br><b>Mínimo recomendado: '+fq(mc.rec)+' '+esc(udPl(rp,mc.rec))+'</b>, así el despacho y la coordinación se comen menos del 20% de tu ganancia.';
     $("#mmin").innerHTML=t;
     var mr=$("#mreal");if(mr){var pm=+rp.pm||0;mr.innerHTML=pm?'Margen real mayorista: <span class="'+((pm-mc.cuM)/pm*100>=(rp.mm==null?45:rp.mm)?'pos':'neg')+'">'+((pm-mc.cuM)/pm*100).toFixed(1)+'%</span> · ganancia '+$$(pm*(1-(+MAY.fact||0)/100)-mc.cuM)+' por '+esc(u1):'<span class="note" style="margin:0">Sin precio mayorista: en los pedidos mayoristas el precio quedará en $ 0 hasta que lo anotes.</span>'}}
-  if($("#tlab")){var vh=vhora();$("#tlab").innerHTML=!rp.ta?'Anota el tiempo activo para calcular la mano de obra.':!vh?'Completa “Tu hora de trabajo” (abajo) para valorizar el tiempo.':'Mano de obra por tanda: <b>'+$$((+rp.ta||0)/60*vh)+'</b> ('+fq(rp.ta)+' min × '+$$(vh)+'/h)'+(moOn(rp)?'':' · <span class="note" style="margin:0">no se suma al costo</span>');
-    $("#thh").textContent=hasH(rp)?'Esta receta ya tiene horas de trabajo como ítem. Para no contarla dos veces, deja esto desmarcado o quita ese ítem.':''}
-  var r=$("#real"); r.textContent=real.toFixed(1)+"%"; r.className=real>=rp.margen?"pos":"neg";
-  $("#realg").textContent=$$(pn-cu);
-  $("#hv").textContent=$$(hora.sueldo/Math.max(1,hora.horas));
 }
-function rskel(){
-  return '<h2 style="font-size:1.38rem">Precio sugerido</h2>'+
-   '<label style="display:block;margin-top:10px;font-size:.85rem;color:var(--soft)">Margen que quieres ganar: <b style="color:var(--ink)" id="mgv"></b><input type="range" id="mg" min="40" max="90" value="'+rp.margen+'"></label>'+
-   '<div class="big" style="margin-top:8px" id="sug"></div><div class="note" style="margin-top:0" id="sugn"></div>'+
-   (window.NO_P2?'<dl class="kv" style="margin-top:14px"><dt>Costo de producción</dt><dd id="kc"></dd><dt>Ganancia por receta</dt><dd id="kg"></dd></dl>':
-   '<dl class="kv" style="margin-top:14px"><dt>Ingredientes y otros</dt><dd id="kc"></dd><dt>Mano de obra</dt><dd id="klab"></dd><dt>Costo por tanda</dt><dd id="ktot"></dd><dt id="kcul">Costo por unidad</dt><dd id="kcu"></dd><dt id="kgl">Ganancia</dt><dd id="kg"></dd></dl>')+
-   '<h3 style="font-size:1.2rem;margin-top:20px">'+(window.NO_PM?'Con tu precio actual':'Tu precio a público (minorista)')+'</h3>'+
-   '<label style="display:block;margin-top:6px;font-size:.85rem;color:var(--soft)">Precio que cobras por '+esc(udPl(rp,1))+' (con IVA)<input type="text" class="money" inputmode="numeric" id="pa" value="'+mfmt(rp.precio)+'"></label>'+
-   '<p style="margin:10px 0 0;font-weight:600">Margen real: <span id="real"></span> · ganancia <span id="realg"></span></p>'+(window.NO_PM?'':'<p style="margin:4px 0 0"><button class="lnk" data-usesug="min">Usar el precio sugerido</button></p>')+
-   (window.NO_P2?'':
-   '<h3 class="rsec">Precio mayorista</h3><p class="note" style="margin-top:2px">Para cafeterías, almacenes o reventa. Normalmente se trabaja con un margen de 40–55%.</p>'+
-   '<label style="display:block;margin-top:8px;font-size:.85rem;color:var(--soft)">Margen mayorista: <b style="color:var(--ink)" id="mgmv"></b><input type="range" id="mgm" min="15" max="75" value="'+(rp.mm==null?45:rp.mm)+'"></label>'+
-   '<div class="big" style="margin-top:6px;font-size:1.9rem" id="msug"></div><div class="note" style="margin-top:0" id="msugn"></div>'+
-   '<dl class="kv" style="margin-top:10px"><dt>Costo con packaging</dt><dd id="mcu"></dd><dt>Ganancia por unidad</dt><dd id="mg1"></dd></dl>'+
-   '<div class="mmin" id="mmin"></div>'+
-   (window.NO_PM?'':'<label style="display:block;margin-top:12px;font-size:.85rem;color:var(--soft)">Tu precio mayorista por '+esc(udPl(rp,1))+' (+ IVA)<input type="text" class="money" inputmode="numeric" id="pmy" value="'+mfmt(rp.pm||0)+'"></label>'+
-   '<p style="margin:8px 0 0;font-weight:600" id="mreal"></p><p style="margin:4px 0 0"><button class="lnk" data-usesug="may">Usar el precio sugerido</button></p>')+
-   '<div class="f" style="margin-top:10px"><label>Packaging mayorista por '+esc(udPl(rp,1))+'<input type="text" class="money" inputmode="numeric" id="mpk" placeholder="General: '+$$(MAY.pack)+'" value="'+(rp.mpk===""||rp.mpk==null?"":mfmt(rp.mpk))+'"></label><label>Despacho por pedido<input type="text" class="money" inputmode="numeric" id="mds" placeholder="General: '+$$(MAY.desp)+'" value="'+(rp.mds===""||rp.mds==null?"":mfmt(rp.mds))+'"></label></div>'+
-   '<p class="note" style="margin-top:4px">Vacío = usa el valor general de <button class="lnk" data-v="cfg">Ajustes</button>.</p>'+
-   '<h3 class="rsec">Tiempo de producción</h3><p class="note" style="margin-top:2px">Por tanda (la receta completa). Producción suma las horas de la semana.</p>'+
-   '<div class="f" style="margin-top:8px"><label>Trabajo activo (min)<input type="number" id="ta" min="0" step="5" inputmode="numeric" style="text-align:left" value="'+(+rp.ta||"")+'" placeholder="Ej.: 45"></label><label>Horno o reposo (min)<input type="number" id="te" min="0" step="5" inputmode="numeric" style="text-align:left" value="'+(+rp.te||"")+'" placeholder="Ej.: 35"></label></div>'+
-   '<label class="chk" style="margin-top:10px;font-size:.88rem"><input type="checkbox" id="moch"'+(moOn(rp)?' checked':'')+'> <b>Sumar la mano de obra al costo</b></label><p class="note" id="thh" style="margin:4px 0 0;color:var(--bad)"></p>'+
-   '<p class="note" id="tlab" style="margin-top:6px"></p>')+
-   '<h3 style="font-size:1.2rem;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">Tu hora de trabajo</h3>'+
-   '<p class="note" style="margin-top:2px">Cuánto cobrar por hora para ganar el sueldo que quieres.</p>'+
-   '<div class="f" style="margin-top:8px"><label>Sueldo mensual que quieres<input type="text" class="money" inputmode="numeric" id="hs" value="'+mfmt(hora.sueldo)+'"></label><label>Horas que trabajas al mes<input type="number" id="hh" value="'+hora.horas+'"></label></div>'+
-   '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap"><div><span class="big" style="font-size:1.5rem" id="hv"></span> <span class="note">por hora</span></div>'+(window.NO_P2?'<button class="btn sm" data-usehour>Usar en la receta</button>':'')+'</div>'+(window.NO_P2?'':'<p class="note">Este valor se usa para la mano de obra (tiempo activo de cada receta) y para la coordinación de los pedidos mayoristas.</p>')+
-   '<p class="note">Si ya anotaste tu sueldo en Gastos, cuéntalo en un solo lugar: aquí o allá. Si no, lo sumarías dos veces.</p>';
+/* ---------- PRECIOS ---------- */
+function preM(r){var un=r.un||1,cu=costTanda(r)/un,m=(+r.margen||0)/100,sug=m<1?redon(cu/(1-m)*IVA):0,pn=(+r.precio||0)/IVA,mc=mayCalc(r),pm=+r.pm||0;
+  return {cu:cu,sug:sug,real:pn>0?(pn-cu)/pn*100:null,mc:mc,mreal:pm>0?(pm-mc.cuM)/pm*100:null}}
+function realTxt(v,obj){return v==null?'<span class="note" style="margin:0">sin precio</span>':'margen real <span class="'+(v>=obj?'pos':'neg')+'">'+fq(Math.round(v*10)/10)+'%</span>'}
+var PQ="";
+function preRow(r){var k=preM(r),u1=udPl(r,1),mm=r.mm==null?45:+r.mm,hid=PQ&&xNorm(r.nombre).indexOf(xNorm(PQ))<0;
+  return '<tr data-prow="'+r.id+'"'+(hid?' hidden':'')+'><td data-l="Producto"><button type="button" class="prn" data-preopen="'+r.id+'"><b>'+esc(r.nombre)+'</b><span>por '+esc(u1)+'</span></button></td>'+
+  '<td class="r" data-l="Costo por '+esc(u1)+'">'+$$u(k.cu)+'</td>'+
+  '<td class="r pmn" data-l="Minorista · margen %"><span class="pin"><input type="number" min="0" max="95" step="1" inputmode="numeric" data-pmg="'+r.id+'" value="'+(+r.margen||0)+'" aria-label="Margen minorista de '+esc(r.nombre)+'"></span></td>'+
+  '<td class="r pmn" data-l="Minorista · sugerido"><span class="psv" id="psg'+r.id+'">'+$$(k.sug)+'</span><button type="button" class="lnk" data-puse="min:'+r.id+'">usar</button></td>'+
+  '<td class="r pmn" data-l="Minorista · tu precio con IVA"><input type="text" class="money" inputmode="numeric" data-ppa="'+r.id+'" value="'+mfmt(r.precio||0)+'" aria-label="Precio minorista con IVA de '+esc(r.nombre)+'"><small class="prl" id="prl'+r.id+'">'+realTxt(k.real,+r.margen||0)+'</small></td>'+
+  (window.NO_P2?'':'<td class="r pmy" data-l="Mayorista · margen %"><span class="pin"><input type="number" min="0" max="95" step="1" inputmode="numeric" data-pmm="'+r.id+'" value="'+mm+'" aria-label="Margen mayorista de '+esc(r.nombre)+'"></span></td>'+
+  '<td class="r pmy" data-l="Mayorista · sugerido neto"><span class="psv" id="psm'+r.id+'">'+$$(k.mc.neto)+'</span><button type="button" class="lnk" data-puse="may:'+r.id+'">usar</button></td>'+
+  (window.NO_PM?'':'<td class="r pmy" data-l="Mayorista · tu precio neto"><input type="text" class="money" inputmode="numeric" data-ppm="'+r.id+'" value="'+mfmt(r.pm||0)+'" aria-label="Precio mayorista neto de '+esc(r.nombre)+'"><small class="prl" id="prm'+r.id+'">'+realTxt(k.mreal,mm)+'</small></td>'))+'</tr>'}
+function preUpd(id){var r=recipes.find(function(q){return q.id===id});if(!r)return;var k=preM(r),e;
+  if(e=$("#psg"+id))e.textContent=$$(k.sug);if(e=$("#prl"+id))e.innerHTML=realTxt(k.real,+r.margen||0);
+  if(e=$("#psm"+id))e.textContent=$$(k.mc.neto);if(e=$("#prm"+id))e.innerHTML=realTxt(k.mreal,r.mm==null?45:+r.mm)}
+function vPre(){
+  var lupa='<label class="rsearch"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" id="pq" placeholder="Buscar producto" aria-label="Buscar producto" value="'+esc(PQ)+'"></label>';
+  var top=head("Precios",(recipes.length?lupa+'<button class="btn ghost" data-prex>Excel</button>':'')+'<button class="btn ghost" data-equipo>Valor hora '+$$(vhora())+'</button>');
+  if(!recipes.length)return top+'<div class="card empty">Primero crea tus productos en <button class="lnk" data-v="cost">Recetas</button>: ahí se calcula su costo. Después defines aquí sus precios de venta.</div>';
+  var info='<div class="card preinfo"><div><span class="tg tmin">Minorista</span> Precio a público: escríbelo <b>con IVA</b> (bruto), lo que paga tu cliente.</div>'+(window.NO_P2?'':'<div><span class="tg tmay">Mayorista</span> Cafeterías y reventa: escríbelo <b>neto</b>. El IVA se suma en el pedido.</div>')+
+   '<p class="note" style="margin:6px 0 0">El <b>costo por unidad</b> viene de Recetas (ingredientes + mano de obra). <b>Sugerido</b> = costo ÷ (1 − margen), redondeado. Cambia el margen y el sugerido se recalcula; toca <b>usar</b> para copiarlo a tu precio. Toca un producto para ver el detalle mayorista (packaging y pedido mínimo).</p></div>';
+  var rows=recipes.slice().sort(function(a,b){return String(a.nombre||"").localeCompare(String(b.nombre||""),"es",{sensitivity:"base",numeric:true})}).map(preRow).join("");
+  var th=function(g,t,sub,cl){return '<th class="r '+cl+'"><span class="tg '+(cl==="pmn"?'tmin':'tmay')+'">'+g+'</span>'+t+(sub?'<small>'+sub+'</small>':'')+'</th>'};
+  return top+info+'<section class="card prewrap"><div class="scroll"><table class="prtab"><thead><tr><th>Producto</th><th class="r">Costo por unidad</th>'+
+    th("Minorista","Margen %","","pmn")+th("Minorista","Sugerido","con IVA","pmn")+th("Minorista","Tu precio","con IVA","pmn")+
+    (window.NO_P2?'':th("Mayorista","Margen %","","pmy")+th("Mayorista","Sugerido","neto","pmy")+(window.NO_PM?'':th("Mayorista","Tu precio","neto","pmy")))+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div><p class="note" id="pnone" style="margin:8px 0 0"'+(recipes.some(function(r){return !PQ||xNorm(r.nombre).indexOf(xNorm(PQ))>=0})?' hidden':'')+'>No hay productos con ese nombre.</p></section>';
 }
+document.addEventListener("input",function(e){var t=e.target,d=t.dataset||{},id;
+  if(t.id==="pq"){PQ=t.value;var n=0;document.querySelectorAll("[data-prow]").forEach(function(tr){var r=recipes.find(function(q){return q.id===+tr.dataset.prow});var h=PQ&&r&&xNorm(r.nombre).indexOf(xNorm(PQ))<0;tr.hidden=!!h;if(!h)n++});var pn=$("#pnone");if(pn)pn.hidden=!!n;return}
+  id=+(d.pmg||d.pmm||d.ppa||d.ppm||0);if(!id)return;var r=recipes.find(function(q){return q.id===id});if(!r)return;
+  if(d.pmg)r.margen=Math.min(95,Math.max(0,parseFloat(t.value)||0));else if(d.pmm)r.mm=Math.min(95,Math.max(0,parseFloat(t.value)||0));else if(d.ppa)r.precio=mnum(t.value);else if(d.ppm)r.pm=mnum(t.value);
+  preUpd(id)});
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-puse],[data-preopen],[data-prex],[data-equipo],[data-qhoras]");if(!t)return;
+  if(t.dataset.preopen){openPre(+t.dataset.preopen);return}
+  if(t.hasAttribute("data-prex")){openPreX();return}
+  if(t.hasAttribute("data-equipo")){openEq();return}
+  if(t.hasAttribute("data-qhoras")){var n=rp.items.length;rp.items=rp.items.filter(function(it){return String(it.u||"").trim().toLowerCase()!=="h"});recipe=rp.items;render();toast("Ítem de horas quitado ("+(n-rp.items.length)+")");return}
+  var a=t.dataset.puse.split(":"),r=recipes.find(function(q){return q.id===+a[1]});if(!r)return;var k=preM(r);
+  if(a[0]==="min"){r.precio=k.sug;var i=document.querySelector('[data-ppa="'+r.id+'"]');if(i)i.value=mfmt(r.precio)}else{r.pm=k.mc.neto;var j=document.querySelector('[data-ppm="'+r.id+'"]');if(j)j.value=mfmt(r.pm)}
+  preUpd(r.id);toast("Precio de “"+r.nombre+"” actualizado")});
+/* ---------- valor de la hora (equipo) ---------- */
+function openEq(){var d=$("#dlg");if(!EQ.length)EQ.push({n:"Tú",s:Math.round(hora.sueldo||0),h:hora.horas?Math.round(hora.horas/SEM):45});
+  d.innerHTML='<div class="dlg eqdlg"><header><h2 style="font-size:1.62rem">Valor de la hora de trabajo</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
+   '<p style="margin:0">Anota a cada persona que trabaja en la producción, <b>incluido tú</b>: lo que gana al mes y las horas que trabaja a la semana. Dulcia calcula cuánto cuesta, en promedio, <b>1 hora de trabajo</b> de tu equipo.</p>'+
+   '<div class="scroll"><table class="eqtab"><thead><tr><th>Persona</th><th class="r">Sueldo al mes</th><th class="r">Horas a la semana</th><th class="r">Valor de su hora</th><th></th></tr></thead><tbody id="eqrows"></tbody></table></div>'+
+   '<div><button type="button" class="btn ghost sm" data-eqadd>+ Agregar persona</button></div><div class="eqres" id="eqres"></div>'+
+   '<p class="note" style="margin:0">Este valor se usa para la mano de obra de cada receta (trabajo con manos × valor de la hora) y para la coordinación de los pedidos mayoristas. No cambia tus Gastos: los sueldos los sigues anotando allá.</p>'+
+   '<div style="display:flex;justify-content:flex-end"><button type="button" class="btn" data-close>Listo</button></div></div>';
+  eqRender();if(!d.open)d.showModal()}
+function eqRender(){var b=$("#eqrows");if(!b)return;
+  b.innerHTML=EQ.map(function(p,i){return '<tr><td data-l="Persona"><input type="text" data-eqn="'+i+'" value="'+esc(p.n||"")+'" placeholder="Nombre" aria-label="Nombre"></td><td class="r" data-l="Sueldo al mes"><input type="text" class="money" inputmode="numeric" data-eqs="'+i+'" value="'+mfmt(p.s||0)+'" aria-label="Sueldo al mes"></td><td class="r" data-l="Horas a la semana"><input type="number" min="0" max="80" step="1" inputmode="numeric" data-eqh="'+i+'" value="'+(+p.h||"")+'" placeholder="45" aria-label="Horas a la semana"></td><td class="r" data-l="Valor de su hora"><span id="eqv'+i+'"></span></td><td><button type="button" class="x" data-eqdel="'+i+'" aria-label="Quitar persona"'+(EQ.length<2?' hidden':'')+'>✕</button></td></tr>'}).join("");eqRes()}
+function eqRes(){eqSync();EQ.forEach(function(p,i){var e=$("#eqv"+i);if(e)e.textContent=+p.h?$$(p.s/(p.h*SEM)):"—"});
+  var r=$("#eqres");if(!r)return;var S=eqS(),H=eqHM(),v=vhora();
+  r.innerHTML='<div class="eqbig"><span>1 hora de trabajo cuesta</span><b>'+$$(v)+'</b></div>'+
+   '<p class="note" style="margin:6px 0 0">Sueldos al mes: <b>'+$$(S)+'</b> · Horas al mes: <b>'+fq(Math.round(H))+' h</b> (horas a la semana × 4,33)<br>Cálculo: '+$$(S)+' ÷ '+fq(Math.round(H))+' h = <b>'+$$(v)+' por hora</b>.</p>'+
+   (v?'<div class="ej" style="margin-top:8px">Ejemplo: una receta con 1 h 30 min de trabajo con manos suma 1,5 × '+$$(v)+' = <b>'+$$(1.5*v)+'</b> de mano de obra.</div>':'')}
+document.addEventListener("input",function(e){var t=e.target,d=t.dataset||{};
+  if(d.eqn!=null){EQ[+d.eqn].n=t.value;return}
+  if(d.eqs!=null){EQ[+d.eqs].s=mnum(t.value);eqRes();return}
+  if(d.eqh!=null){EQ[+d.eqh].h=Math.max(0,parseFloat(t.value)||0);eqRes();return}
+  var m=/^(ta|te)_(h|m)$/.exec(t.id||"");if(m&&rp){var h=Math.max(0,parseFloat($("#"+m[1]+"_h").value)||0),mi=Math.max(0,parseFloat($("#"+m[1]+"_m").value)||0);rp[m[1]]=Math.round(h*60+mi);rsum()}});
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-eqadd],[data-eqdel]");if(!t)return;
+  if(t.hasAttribute("data-eqadd")){EQ.push({n:"",s:0,h:45});eqRender();var l=document.querySelectorAll("[data-eqn]");if(l.length)l[l.length-1].focus();return}
+  EQ.splice(+t.dataset.eqdel,1);eqRender()});
+/* ---------- PRECIOS EN EXCEL ---------- */
+var PRH=["Producto","Se vende por","Costo por unidad","Margen minorista %","Precio sugerido minorista (con IVA)","Precio minorista (con IVA)","Margen mayorista %","Precio sugerido mayorista (neto)","Precio mayorista (neto)"];
+function openPreX(){var d=$("#dlg");
+  d.innerHTML='<div class="dlg"><header><h2 style="font-size:1.62rem">Precios en Excel</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
+  '<ol style="margin:0;padding-left:20px;line-height:1.6"><li>Descarga tus precios y ábrelos en Excel o Google Sheets.</li><li>Cambia los márgenes o los precios: <b>minorista con IVA</b> y <b>mayorista neto</b>. Para usar un sugerido, cópialo a la columna de precio.</li><li>Súbelo aquí. Antes de cargar te mostramos qué cambia.</li></ol>'+
+  '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" data-prexls>Descargar mis precios ('+recipes.length+')</button><label class="btn" style="cursor:pointer">Subir mi Excel<input type="file" id="preimp" accept=".xlsx,.xls,.csv" hidden></label></div>'+
+  '<p class="note" style="margin:0">Cada fila se busca por el nombre del producto (como está en Recetas). <b>Las celdas vacías no cambian nada.</b> El costo y los sugeridos son solo de referencia: se calculan en Dulcia.</p><div id="premsg"></div></div>';
+  if(!d.open)d.showModal()}
+function preExcel(){xlsxLib().then(function(X){
+  var rows=recipes.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,"es")}).map(function(r){var k=preM(r);return [r.nombre,udPl(r,1),Math.round(k.cu),+r.margen||0,k.sug,Math.round(+r.precio||0),r.mm==null?45:+r.mm,k.mc.neto,Math.round(+r.pm||0)]});
+  var ws=X.utils.aoa_to_sheet([PRH].concat(rows));ws["!cols"]=[28,14,14,12,18,18,12,18,18].map(function(w){return {wch:w}});
+  var wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Precios");X.writeFile(wb,"Precios_Dulcia.xlsx");toast(rows.length+" precios descargados")}).catch(function(e){toast(e.message||"No se pudo crear el Excel")})}
+function preParse(buf,X){
+  var wb=X.read(buf,{type:"array",raw:true}),ws=wb.Sheets["Precios"]||wb.Sheets[wb.SheetNames[0]],aoa=X.utils.sheet_to_json(ws,{header:1,defval:"",raw:true}),hi=-1,col={};
+  for(var i=0;i<Math.min(aoa.length,15)&&hi<0;i++){if(aoa[i].map(xNorm).indexOf("producto")>=0)hi=i}
+  if(hi<0)throw new Error("No encontramos la columna “Producto”. Usa el Excel que descargas aquí.");
+  aoa[hi].forEach(function(h,j){var k=xNorm(h);var m={producto:"n",margenminorista:"mg",preciominoristaconiva:"pa",margenmayorista:"mm",preciomayoristaneto:"pm"}[k];if(m&&col[m]==null)col[m]=j});
+  var out=[],err=[];
+  for(var r=hi+1;r<aoa.length;r++){var row=aoa[r],g=function(k){return col[k]==null?"":row[col[k]]};var n=String(g("n")||"").trim();if(!n)continue;
+    var rc=recipes.find(function(q){return xNorm(q.nombre)===xNorm(n)});if(!rc){err.push("Fila "+(r+1)+": “"+n+"” no existe en Recetas.");continue}
+    var ch={},f=function(k,v,max){if(String(v).trim()==="")return;var x=xNum(v);if(isNaN(x)||x<0||(max&&x>max)){err.push("Fila "+(r+1)+" ("+n+"): valor “"+v+"” no válido.");return}ch[k]=k==="mg"||k==="mm"?Math.round(x*10)/10:Math.round(x)};
+    f("mg",g("mg"),95);f("pa",g("pa"));f("mm",g("mm"),95);f("pm",g("pm"));
+    var dif=[];if(ch.mg!=null&&ch.mg!==(+rc.margen||0))dif.push("margen min. "+fq(ch.mg)+"%");if(ch.pa!=null&&ch.pa!==Math.round(+rc.precio||0))dif.push("minorista "+$$(ch.pa));if(ch.mm!=null&&ch.mm!==(rc.mm==null?45:+rc.mm))dif.push("margen may. "+fq(ch.mm)+"%");if(ch.pm!=null&&ch.pm!==Math.round(+rc.pm||0))dif.push("mayorista "+$$(ch.pm)+" neto");
+    if(dif.length)out.push({r:rc,ch:ch,dif:dif})}
+  return {rows:out,err:err}}
+function prePreview(res){window._preres=res;var m=$("#premsg");
+  m.innerHTML='<div class="card" style="padding:12px 14px;margin-top:6px"><b>'+(res.rows.length?res.rows.length+' producto'+(res.rows.length===1?'':'s')+' con cambios':'No hay cambios')+'</b>'+
+  (res.rows.length?'<div class="scroll" style="max-height:220px;margin-top:6px"><table class="pg"><tbody>'+res.rows.map(function(x){return '<tr><td>'+esc(x.r.nombre)+'</td><td>'+esc(x.dif.join(" · "))+'</td></tr>'}).join("")+'</tbody></table></div>':'')+
+  (res.err.length?'<div class="qbox" style="margin-top:8px">'+res.err.slice(0,12).map(esc).join("<br>")+(res.err.length>12?'<br>…y '+(res.err.length-12)+' más':'')+'</div>':'')+
+  (res.rows.length?'<button class="btn" style="margin-top:10px" data-preimport>Cargar</button>':'')+'</div>'}
+function preImport(){var res=window._preres;if(!res)return;res.rows.forEach(function(x){var c=x.ch;if(c.mg!=null)x.r.margen=c.mg;if(c.pa!=null)x.r.precio=c.pa;if(c.mm!=null)x.r.mm=c.mm;if(c.pm!=null)x.r.pm=c.pm});
+  window._preres=null;$("#dlg").close();render();toast(res.rows.length+" producto"+(res.rows.length===1?"":"s")+" actualizado"+(res.rows.length===1?"":"s"))}
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-prexls],[data-preimport]");if(!t)return;if(t.hasAttribute("data-prexls"))preExcel();else preImport()});
+document.addEventListener("change",function(e){var t=e.target;if(t.id!=="preimp"||!t.files||!t.files[0])return;var f=t.files[0],m=$("#premsg");if(m)m.innerHTML='<p class="note">Leyendo '+esc(f.name)+'…</p>';
+  Promise.all([xlsxLib(),f.arrayBuffer()]).then(function(a){prePreview(preParse(a[1],a[0]))}).catch(function(err){if(m)m.innerHTML='<div class="qbox">'+esc(err.message||"No pudimos leer el archivo.")+'</div>'});t.value=""});
 function openNewR(){
   var d=$("#dlg");
   d.innerHTML='<form class="dlg" id="newrf"><header><h2 style="font-size:1.62rem">Nueva receta</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
@@ -395,7 +513,7 @@ var XCOLS=["Receta","Rinde","Margen %","Categoría de costo","Ítem","Cantidad",
 function openXlsx(){
   var d=$("#dlg");
   d.innerHTML='<div class="dlg"><header><h2 style="font-size:1.62rem">Cargar recetas desde Excel</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
-  '<ol style="margin:0;padding-left:20px;line-height:1.6"><li>Descarga la plantilla y ábrela en Excel o Google Sheets.</li><li>Escribe una fila por cada ingrediente, caja u hora de trabajo. Repite el nombre de la receta en cada fila.</li><li>Guárdala y súbela aquí. Antes de cargar te mostramos lo que vamos a importar.</li></ol>'+
+  '<ol style="margin:0;padding-left:20px;line-height:1.6"><li>Descarga la plantilla y ábrela en Excel o Google Sheets.</li><li>Escribe una fila por cada ingrediente, caja o decoración. Repite el nombre de la receta en cada fila.</li><li>Guárdala y súbela aquí. Antes de cargar te mostramos lo que vamos a importar.</li></ol>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" data-xtpl>Descargar plantilla</button><label class="btn" style="cursor:pointer">Subir mi Excel<input type="file" id="ximp" accept=".xlsx,.xls,.csv" hidden></label></div>'+
   (recipes.length?'<div style="border-top:1px dashed var(--line);padding-top:12px"><button type="button" class="btn ghost sm" data-xexp>Descargar mis recetas ('+recipes.length+')</button><p class="note" style="margin:6px 0 0">Bajan en el mismo formato de la plantilla: puedes corregirlas en Excel y volver a subirlas.</p></div>':'')+
   '<p class="note" style="margin:0">Si una receta ya existe con el mismo nombre, se reemplazan sus ítems. Se aceptan archivos .xlsx, .xls y .csv.</p><div id="xmsg"></div></div>';
@@ -410,19 +528,17 @@ function xTemplate(){
       [E1,"","","Ingredientes","Leche condensada",1,"un",2800,"Sí"],
       [E1,"","","Ingredientes","Crema",0.5,"L",7000,"Sí"],
       [E1,"","","Empaque y decoración","Caja",1,"un",1500,"Sí"],
-      [E1,"","","Mano de obra y gastos","Horas de trabajo",2,"h",3750,"No"],
       [E2,"20 porciones",50,"Ingredientes","Chocolate 54%",0.3,"kg",9000,"Sí"],
       [E2,"","","Ingredientes","Mantequilla",0.2,"kg",9500,"Sí"],
-      [E2,"","","Ingredientes","Huevos",4,"un",250,"Sí"],
-      [E2,"","","Mano de obra y gastos","Horas de trabajo",1,"h",3750,"No"]];
+      [E2,"","","Ingredientes","Huevos",4,"un",250,"Sí"]];
     var ws=X.utils.aoa_to_sheet(rows); ws["!cols"]=[{wch:28},{wch:22},{wch:10},{wch:24},{wch:22},{wch:10},{wch:8},{wch:16},{wch:10}];
     var ins=[["Cómo llenar la plantilla de recetas de Dulcia"],[""],
-      ["1. Una fila por cada ítem de la receta: ingredientes, caja, decoración, horas de trabajo."],
+      ["1. Una fila por cada ítem de la receta: ingredientes, caja, decoración. La mano de obra NO va aquí: se calcula sola con el tiempo de trabajo de cada receta y el valor de la hora."],
       ["2. Repite el nombre de la receta en todas sus filas. Rinde y Margen % basta con ponerlos en la primera fila de cada receta."],
-      ["3. Margen %: lo que quieres ganar sobre el precio, por ejemplo 40. Si lo dejas vacío, queda en 70."],
-      ["4. Categoría de costo: por ejemplo Ingredientes, Empaque y decoración, Mano de obra y gastos. Si la dejas vacía, queda en Ingredientes."],
+      ["3. Margen %: margen minorista que quieres ganar, por ejemplo 40. Si lo dejas vacío, queda en 70. También se cambia en Precios."],
+      ["4. Categoría de costo: por ejemplo Ingredientes, Empaque y decoración, Gas y luz. Si la dejas vacía, queda en Ingredientes."],
       ["5. Cantidad y Costo por unidad: solo números. El costo es lo que pagas por cada unidad; por ejemplo, el precio de 1 kg."],
-      ["6. Se compra: Sí o No. Se aplica a toda la categoría: si un ítem de la categoría dice Sí, esa categoría va a la lista de Compras. Para horas de trabajo usa No."],
+      ["6. Se compra: Sí o No. Se aplica a toda la categoría: si un ítem de la categoría dice Sí, esa categoría va a la lista de Compras. Para gas, luz u otros costos que no compras por pedido usa No."],
       ["7. Si una receta ya existe en Dulcia con el mismo nombre, se reemplazan sus ítems."],
       ["8. Borra las filas de ejemplo antes de subir tus recetas."]];
     var wi=X.utils.aoa_to_sheet(ins); wi["!cols"]=[{wch:120}];
@@ -653,7 +769,7 @@ function ventasExcel(alcance){
     if(rows.length)rows.push(["Total","","","","","","","","","","",tt(11),tt(12),tt(13),tt(14),tt(15),tt(16),tt(17),tt(18),"","","","","",""]);
     var ws=X.utils.aoa_to_sheet([H].concat(rows));ws["!cols"]=[12,7,24,12,24,13,15,16,16,12,40,14,10,10,13,12,11,12,11,12,12,12,7,9,40].map(function(w){return {wch:w}});ws["!autofilter"]={ref:"A1:Y"+(l.length+1)};
     var D=[["Fecha de entrega","Cliente","Tipo de cliente","Documento","N° documento","Producto","Cantidad","Unidad","Precio unitario con IVA","Subtotal con IVA","Costo estimado","Ganancia estimada (neta)"]];
-    l.forEach(function(o){(o.items||[]).forEach(function(it){var r=recipes.find(function(q){return q.id===it.rid});if(!r)return;var p=lnP(it,o.tc),sb=Math.round((+it.q||0)*p),cst=Math.round(costTanda(r)/(r.un||1)*(+it.q||0));
+    l.forEach(function(o){(o.items||[]).forEach(function(it){var r=recipes.find(function(q){return q.id===it.rid});if(!r)return;var p=Math.round(lnP(it,o.tc)),sb=Math.round((+it.q||0)*p),cst=Math.round(costTanda(r)/(r.un||1)*(+it.q||0));
       D.push([dmy(o.fecha),o.cliente,o.tc==="mayorista"?"Mayorista":"Minorista",DOCL[o.doct||""],o.docn||"",r.nombre,+it.q||0,udPl(r,it.q),p,sb,cst,Math.round(sb/IVA)-cst])})});
     var w2=X.utils.aoa_to_sheet(D);w2["!cols"]=[12,24,12,12,12,24,9,10,14,14,13,16].map(function(w){return {wch:w}});w2["!autofilter"]={ref:"A1:L"+D.length};
     var wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Ventas");X.utils.book_append_sheet(wb,w2,"Detalle de productos");
@@ -849,15 +965,14 @@ addEventListener("resize",pickPlace);if(window.visualViewport)visualViewport.add
 document.addEventListener("scroll",function(e){if(!(e.target&&e.target.closest&&e.target.closest("#ipk")))pickPlace()},true);
 document.addEventListener("input",function(e){var t=e.target,id=t.id;if(!id)return;
   var num=function(v){return Math.round(+String(v).replace(/[^\d,.-]/g,"").replace(/\./g,"").replace(",",".")||0)};
-  if(id==="mgm"){rp.mm=+t.value;rsum()}else if(id==="mpk"){rp.mpk=t.value.trim()===""?"":num(t.value);rsum()}else if(id==="mds"){rp.mds=t.value.trim()===""?"":num(t.value);rsum()}
+  if(id==="mgm"){rp.mm=+t.value;psum()}else if(id==="mpk"){rp.mpk=t.value.trim()===""?"":num(t.value);psum()}else if(id==="mds"){rp.mds=t.value.trim()===""?"":num(t.value);psum()}
   else if(id==="ta"){rp.ta=Math.max(0,+t.value||0);rsum()}else if(id==="te"){rp.te=Math.max(0,+t.value||0)}
   else if(id==="myd"){MAY.desp=num(t.value)}else if(id==="myp"){MAY.pack=num(t.value)}else if(id==="myc"){MAY.coord=Math.max(0,+t.value||0)}else if(id==="myf"){MAY.fact=Math.min(100,Math.max(0,+t.value||0))}
 });
-document.addEventListener("change",function(e){if(e.target.id==="moch"){rp.mo=e.target.checked;rsum()}});
-document.addEventListener("input",function(e){if(e.target.id==="pmy"){rp.pm=mnum(e.target.value);rsum()}});
+document.addEventListener("input",function(e){if(e.target.id==="pmy"){rp.pm=mnum(e.target.value);psum()}});
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-usesug]");if(!t)return;
   if(t.dataset.usesug==="min"){var c=costTanda(rp)/(rp.un||1);rp.precio=redon(c/(1-rp.margen/100)*IVA);var a=$("#pa");if(a)a.value=mfmt(rp.precio)}
-  else{rp.pm=mayCalc(rp).neto;var b=$("#pmy");if(b)b.value=mfmt(rp.pm)}rsum();toast("Precio actualizado")});
+  else{rp.pm=mayCalc(rp).neto;var b=$("#pmy");if(b)b.value=mfmt(rp.pm)}psum();toast("Precio actualizado")});
 function unitOpts(u){var l=UNITS.slice();if(u&&l.indexOf(u)<0)l.push(u);return l.map(function(x){return '<option'+(x===u?' selected':'')+'>'+esc(x)+'</option>'}).join("")}
 function openIngNew(row,cat){
   var d=$("#dlg");
@@ -1182,10 +1297,11 @@ function vCfg(){
   '<section class="card"><h2 style="font-size:1.38rem">Cómo calcular tu resultado</h2><p class="note" style="margin-top:2px">Así el Panel no cuenta dos veces lo que gastas en ingredientes.</p>'+
   '<div class="rad" role="radiogroup" aria-label="Cómo calcular tu resultado" style="margin-top:10px"><label><input type="radio" name="costeo" value="real"'+(cfg.costeo!=="estimado"?' checked':'')+'><span><b>Anoto todas mis compras en Gastos</b><br><span style="color:var(--soft)">Ingredientes, materiales y gastos fijos. Resultado = ventas netas − gastos.</span></span></label>'+
   '<label><input type="radio" name="costeo" value="estimado"'+(cfg.costeo==="estimado"?' checked':'')+'><span><b>En Gastos anoto solo gastos fijos</b><br><span style="color:var(--soft)">Arriendo, luz, sueldos. Los ingredientes se estiman con el margen de cada categoría.</span></span></label></div></section>'+
+  (window.NO_P2?'':'<section class="card"><h2 style="font-size:1.38rem">Mano de obra</h2><p class="note" style="margin-top:2px">Cuánto cuesta 1 hora de trabajo de tu equipo. Se usa para el costo de cada receta.</p><div class="eqsum"><div><span class="big" style="font-size:1.6rem">'+$$(vhora())+'</span> <span class="note">por hora</span><div class="note" style="margin:2px 0 0">'+(EQ.length?EQ.length+' persona'+(EQ.length===1?'':'s')+' · '+$$(eqS())+' al mes · '+fq(EQ.reduce(function(a,p){return a+(+p.h||0)},0))+' h a la semana':'Aún no anotas a tu equipo.')+'</div></div><button class="btn ghost sm" data-equipo>'+(EQ.length?'Editar equipo':'Calcular valor hora')+'</button></div></section>')+
   (window.NO_P2?'':'<section class="card"><h2 style="font-size:1.38rem">Venta mayorista</h2><p class="note" style="margin-top:2px">Costos de cada pedido mayorista. Con ellos, cada receta te dice cuántas unidades mínimas pedir para que convenga. Una receta puede usar su propio packaging o despacho.</p>'+
   '<div class="f" style="margin-top:10px"><label>Despacho por pedido<input type="text" class="money" inputmode="numeric" id="myd" value="'+mfmt(MAY.desp)+'"></label><label>Packaging por unidad<input type="text" class="money" inputmode="numeric" id="myp" value="'+mfmt(MAY.pack)+'"></label>'+
   '<label>Horas de coordinación por pedido<input type="number" id="myc" min="0" step="0.25" value="'+(+MAY.coord||0)+'"></label><label>% por factura o pago a 30 días<input type="number" id="myf" min="0" max="100" step="0.5" value="'+(+MAY.fact||0)+'"></label></div>'+
-  '<p class="note">La coordinación se valoriza con tu hora de trabajo (Recetas → Tu hora de trabajo: '+$$(vhora())+'/h).</p></section>')+
+  '<p class="note">La coordinación se valoriza con el valor de la hora de trabajo ('+$$(vhora())+'/h, en Mano de obra).</p></section>')+
   '<section class="card"><h2 style="font-size:1.38rem">Capacidad diaria</h2><p class="note" style="margin-top:2px">Te avisamos cuando un día ya llegó a este número de pedidos y vas a agregar otro. Pon 0 para no recibir avisos.</p>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:10px;max-width:220px">Pedidos por día antes de avisar<input type="number" id="cp" min="0" value="'+cfg.cap+'"></label></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Cotizaciones</h2><p class="note" style="margin-top:2px">Estos datos y condiciones salen en el PDF. Cada cotización parte con estas condiciones y puedes cambiarlas en esa cotización.</p>'+
@@ -1269,7 +1385,7 @@ function extraChange(t){
   if(t.id==="cl"){readFiles(t.files,function(u){cfg.logo=u;cfg.logoData=u;cfg.logoDirty=true;render()},400);return true}
   if(t.id==="g_k"){$("#g_nk").hidden=t.value!=="__new";return true}
   if(t.id==="n_k"){$("#n_nkw").hidden=t.value!=="__new";return true}
-  if(t.dataset&&t.dataset.gbuy!==undefined){gbuy[groups()[+t.dataset.gbuy]]=t.checked;var cx=t.closest("div")&&t.closest("div").querySelector(".chkx");if(cx)cx.textContent=t.checked?"Estos ítems suman a tu lista de compras de la semana.":"No va a Compras: úsalo para mano de obra, gas, luz u otros costos que no compras por pedido.";return true}
+  if(t.dataset&&t.dataset.gbuy!==undefined){gbuy[groups()[+t.dataset.gbuy]]=t.checked;var cx=t.closest("div")&&t.closest("div").querySelector(".chkx");if(cx)cx.textContent=t.checked?"Estos ítems suman a tu lista de compras de la semana.":"No va a Compras: úsalo para gas, luz u otros costos que no compras por pedido.";return true}
   if(t.dataset&&t.dataset.lr){var a=t.dataset.lr.split(":"),ox=orders.find(function(q){return q.id===+a[0]}),li=ox.items[+a[1]];li.rid=+t.value;if(!window.NO_PM){li.p=precioStd(recipes.find(function(r){return r.id===li.rid}),ox.tc);openOrder(ox.id)}return true}
   if(t.name==="giva"){gprev();return true}
   return false;
@@ -1289,7 +1405,7 @@ function extraInput(t){
   if(t.id==="hs"||t.id==="hh"){hora[t.id==="hs"?"sueldo":"horas"]=t.id==="hs"?mnum(t.value):(parseFloat(t.value)||0);rsum();return true}
   if(t.id==="g_m"){gprev();return true}
   if(t.dataset&&t.dataset.lq){var a=t.dataset.lq.split(":"),oq=orders.find(function(q){return q.id===+a[0]});oq.items[+a[1]].q=parseFloat(t.value)||0;lnSync(oq);return true}
-  if(t.dataset&&t.dataset.lp){var a2=t.dataset.lp.split(":"),op=orders.find(function(q){return q.id===+a2[0]});op.items[+a2[1]].p=mnum(t.value);lnSync(op);return true}
+  if(t.dataset&&t.dataset.lp){var a2=t.dataset.lp.split(":"),op=orders.find(function(q){return q.id===+a2[0]});op.items[+a2[1]].p=pIn(mnum(t.value),op.tc);lnSync(op);return true}
   if(t.dataset&&t.dataset.pcol!==undefined){var pci=+t.dataset.pcol;pcats[pci].col=t.value;var sw=document.getElementById("sw"+pci);if(sw)sw.className="sw cc-"+t.value;return true}
   if(t.dataset&&t.dataset.pm!==undefined){pcats[+t.dataset.pm].m=Math.min(100,Math.max(0,parseFloat(t.value)||0))/100;return true}
   if(t.id==="rn"){rp.nombre=t.value;var b=document.querySelector(".rc.on b");if(b)b.textContent=t.value;return true}
@@ -1325,7 +1441,7 @@ var TCL={minorista:"Minorista (público)",mayorista:"Mayorista (cafetería, reve
 var clis=[],cid=1,CLQ="",CLF="";
 function cliPrecio(c,r,tc){if(c&&c.pr&&c.pr[r.id]!=null&&c.pr[r.id]!=="")return +c.pr[r.id];return precioStd(r,tc)}
 function oSub(x){return (x.items||[]).reduce(function(a,l){return a+(+l.q||0)*lnP(l,x.tc)},0)}
-function oDsc(x,sub){return x.dsct==="porcentaje"?Math.round(sub*(+x.dsc||0)/100):(+x.dsc||0)}
+function oDsc(x,sub){return x.dsct==="porcentaje"?Math.round(sub*(+x.dsc||0)/100):Math.round((+x.dsc||0)*(x.tc==="mayorista"?IVA:1))}
 function oTot(x){var s0=oSub(x);return Math.round(s0+(+x.desp||0)-oDsc(x,s0))}
 function cliStats(c){var l=real().filter(function(o){return o.cid===c.id}),t=l.reduce(function(a,o){return a+(+o.total||0)},0),u=l.reduce(function(a,o){return o.fecha>a?o.fecha:a},"");return {n:l.length,t:t,u:u}}
 function cliFind(nm){var k=xNorm(nm);return k?clis.find(function(c){return xNorm(c.n)===k}):null}
@@ -1400,23 +1516,24 @@ function cliExcel(){
     var ws=X.utils.aoa_to_sheet([H].concat(rows));ws["!cols"]=[26,11,16,18,26,26,14,18,28,16,9,15,15,13,13,10,40].map(function(w){return {wch:w}});ws["!autofilter"]={ref:"A1:Q"+(rows.length+1)};
     var wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Clientes");
     var pr=[["Cliente","Producto","Precio especial (con IVA)","Unidad","Precio normal (con IVA)","Tipo"]];
-    l.forEach(function(c){Object.keys(c.pr||{}).forEach(function(k){var r=recipes.find(function(q){return q.id===+k});if(r)pr.push([c.n,r.nombre,+c.pr[k],udPl(r,1),precioStd(r,c.tipo),c.tipo==="mayorista"?"Mayorista":"Minorista"])})});
+    l.forEach(function(c){Object.keys(c.pr||{}).forEach(function(k){var r=recipes.find(function(q){return q.id===+k});if(r)pr.push([c.n,r.nombre,Math.round(+c.pr[k]),udPl(r,1),precioStd(r,c.tipo),c.tipo==="mayorista"?"Mayorista":"Minorista"])})});
     var w2=X.utils.aoa_to_sheet(pr);w2["!cols"]=[26,26,22,12,20,11].map(function(w){return {wch:w}});X.utils.book_append_sheet(wb,w2,"Precios especiales");
     X.writeFile(wb,"Clientes_Dulcia_"+TODAY+".xlsx");toast(l.length+" cliente"+(l.length===1?"":"s")+" descargado"+(l.length===1?"":"s"));
   }).catch(function(e){toast(e.message||"No se pudo crear el Excel")});
 }
+function cprNota(tc){return 'por unidad, '+(tc==="mayorista"?'netos (+ IVA)':'con IVA')+'. Vacío = usa su precio normal.'}
 function openCli(id,alGuardar){
   var c=id?clis.find(function(z){return z.id===id}):{tipo:"minorista",pr:{}};if(!c)return;var nuevo=!id,d=$("#dlg");
   var f=function(lb,idf,v,ph,ty){return '<label>'+lb+'<input type="'+(ty||"text")+'" id="'+idf+'" value="'+esc(v||"")+'"'+(ph?' placeholder="'+ph+'"':'')+'></label>'};
-  var precios=recipes.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,"es")}).map(function(r){var v=c.pr&&c.pr[r.id]!=null&&c.pr[r.id]!==""?mfmt(c.pr[r.id]):"";
-    return '<div class="cpr"><span>'+esc(r.nombre)+' <span class="note" style="margin:0">por '+esc(udPl(r,1))+'</span></span><span class="cpn" data-cpn="'+r.id+'">'+$$(precioStd(r,c.tipo))+'</span><input type="text" class="money" inputmode="numeric" data-cpr="'+r.id+'" value="'+v+'" placeholder="—" aria-label="Precio especial de '+esc(r.nombre)+'"></div>'}).join("");
+  var precios=recipes.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,"es")}).map(function(r){var v=c.pr&&c.pr[r.id]!=null&&c.pr[r.id]!==""?mfmt(pVer(c.pr[r.id],c.tipo)):"";
+    return '<div class="cpr"><span>'+esc(r.nombre)+' <span class="note" style="margin:0">por '+esc(udPl(r,1))+'</span></span><span class="cpn" data-cpn="'+r.id+'">'+$$(pVer(precioStd(r,c.tipo),c.tipo))+'</span><input type="text" class="money" inputmode="numeric" data-cpr="'+r.id+'" value="'+v+'" placeholder="—" aria-label="Precio especial de '+esc(r.nombre)+'"></div>'}).join("");
   d.innerHTML='<form class="dlg" id="clf"><header><h2 style="font-size:1.62rem">'+(nuevo?'Nuevo cliente':esc(c.n))+'</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
     '<div class="f"><label class="w">Nombre o razón comercial<input type="text" id="cl_n" required value="'+esc(c.n||"")+'" placeholder="Ej.: Café del Puerto"></label>'+
     '<label>Tipo de cliente<select id="cl_t"><option value="minorista"'+(c.tipo!=="mayorista"?' selected':'')+'>'+TCL.minorista+'</option><option value="mayorista"'+(c.tipo==="mayorista"?' selected':'')+'>'+TCL.mayorista+'</option></select></label>'+
     f("WhatsApp","cl_wa",c.wa?waFmt(c.wa):"","+56 9 1234 5678","tel")+f("Instagram","cl_ig",c.ig?"@"+c.ig:"","@usuario")+f("Correo","cl_m",c.mail,"contacto@cliente.cl","email")+
     '<div class="w fsec">Facturación</div>'+f("Razón social","cl_rs",c.rs,"Ej.: Café del Puerto SpA")+f("RUT","cl_rut",c.rut,"76.123.456-7")+'<label class="w">Giro<input type="text" id="cl_g" value="'+esc(c.giro||"")+'" placeholder="Ej.: Cafetería"></label>'+
     '<div class="w fsec">Despacho</div>'+f("Dirección","cl_dir",c.dir,"Calle y número")+f("Comuna","cl_com",c.com,"Ej.: Puerto Montt")+
-    (recipes.length?'<div class="w fsec">Precios especiales <span class="note" style="margin:0;font-weight:400">por unidad, con IVA. Vacío = usa su precio normal.</span></div><div class="w cprs"><div class="cpr cph"><span>Producto</span><span>Precio normal</span><span>Precio especial</span></div>'+precios+'</div>':'')+
+    (recipes.length?'<div class="w fsec">Precios especiales <span class="note" style="margin:0;font-weight:400" id="cl_prn">'+cprNota(c.tipo)+'</span></div><div class="w cprs"><div class="cpr cph"><span>Producto</span><span>Precio normal</span><span>Precio especial</span></div>'+precios+'</div>':'')+
     '<label class="w">Notas<textarea id="cl_no" rows="3" placeholder="Horario de entrega, preferencias, forma de pago…">'+esc(c.notas||"")+'</textarea></label></div>'+
     '<div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">'+(nuevo?'<span></span>':'<button type="button" class="btn ghost sm danger" data-clidel="'+c.id+'">Eliminar cliente</button>')+'<div style="display:flex;gap:8px"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit">'+(nuevo?'Crear cliente':'Guardar')+'</button></div></div></form>';
   d.dataset.cli=id||"";window._cliCb=alGuardar||null;if(!d.open)d.showModal();
@@ -1426,11 +1543,14 @@ function cliGuardar(){
   var nm=$("#cl_n").value.trim().replace(/\s+/g," ");if(!nm){$("#cl_n").focus();return}
   var otro=cliFind(nm);if(otro&&otro.id!==c.id){toast("Ya existe un cliente llamado “"+otro.n+"”");$("#cl_n").focus();return}
   c.n=nm;c.tipo=$("#cl_t").value;c.wa=waNum($("#cl_wa").value);c.ig=igUser($("#cl_ig").value);c.mail=$("#cl_m").value.trim();c.rs=$("#cl_rs").value.trim();c.rut=$("#cl_rut").value.trim();c.giro=$("#cl_g").value.trim();c.dir=$("#cl_dir").value.trim();c.com=$("#cl_com").value.trim();c.notas=$("#cl_no").value.trim();
-  c.pr={};document.querySelectorAll("[data-cpr]").forEach(function(i){if(i.value.trim()&&mnum(i.value)>0)c.pr[+i.dataset.cpr]=mnum(i.value)});
+  c.pr={};document.querySelectorAll("[data-cpr]").forEach(function(i){if(i.value.trim()&&mnum(i.value)>0)c.pr[+i.dataset.cpr]=pIn(mnum(i.value),c.tipo)});
   if(nuevo)clis.push(c);var cb=window._cliCb;window._cliCb=null;$("#dlg").close();render();toast(nuevo?"Cliente “"+c.n+"” creado":"Cliente guardado");if(cb)cb(c);
 }
 document.addEventListener("submit",function(e){if(e.target.id==="clf"){e.preventDefault();cliGuardar()}});
-document.addEventListener("change",function(e){if(e.target.id==="cl_t")document.querySelectorAll("[data-cpn]").forEach(function(s){var r=recipes.find(function(q){return q.id===+s.dataset.cpn});if(r)s.textContent=$$(precioStd(r,e.target.value))})});
+document.addEventListener("change",function(e){if(e.target.id!=="cl_t")return;var tc=e.target.value,old=tc==="mayorista"?"minorista":"mayorista";
+  document.querySelectorAll("[data-cpn]").forEach(function(s){var r=recipes.find(function(q){return q.id===+s.dataset.cpn});if(r)s.textContent=$$(pVer(precioStd(r,tc),tc))});
+  document.querySelectorAll("[data-cpr]").forEach(function(i){if(i.value.trim()&&mnum(i.value)>0)i.value=mfmt(Math.round(pVer(pIn(mnum(i.value),old),tc)))});
+  var n=$("#cl_prn");if(n)n.textContent=cprNota(tc)});
 document.addEventListener("input",function(e){if(e.target.id==="cliq"){CLQ=e.target.value;var p=e.target.selectionStart;render();var i=$("#cliq");if(i){i.focus();try{i.setSelectionRange(p,p)}catch(er){}}}});
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("button,tr[data-cliedit]");if(!t)return;
   if(t.hasAttribute("data-clinew")){openCli(0);return}
@@ -1445,11 +1565,16 @@ document.addEventListener("click",function(e){var t=e.target.closest&&e.target.c
     var i1=clis.indexOf(c1);clis.splice(i1,1);var os=orders.filter(function(o){return o.cid===c1.id});os.forEach(function(o){o.cid=null});$("#dlg").close();render();
     toast("Cliente eliminado (sus pedidos se mantienen)",function(){clis.splice(i1,0,c1);os.forEach(function(o){o.cid=c1.id});render()});return}
 });
-function precioStd(r,tc){if(!r)return 0;return tc==="mayorista"?(+r.pm?Math.round(+r.pm*IVA):0):(+r.precio||0)}
+function precioStd(r,tc){if(!r)return 0;return tc==="mayorista"?(+r.pm?+r.pm*IVA:0):(+r.precio||0)}
+/* Mayorista: los precios se ven y se escriben NETOS (el IVA se suma al final). Internamente se guardan con IVA. */
+function pVer(p,tc){return tc==="mayorista"?Math.round((+p||0)/IVA*100)/100:(+p||0)}
+function pIn(v,tc){return tc==="mayorista"?v*IVA:v}
+function pLbl(tc){return tc==="mayorista"?"Precio neto":"Precio c/IVA"}
+function ivaDe(t){t=Math.round(+t||0);var n=Math.round(t/IVA);return {neto:n,iva:t-n,tot:t}}
 function lnP(l,tc){return l.p==null||l.p===""?precioStd(recipes.find(function(r){return r.id===l.rid}),tc):+l.p}
 function lnTot(x){return (x.items||[]).reduce(function(a,l){return a+(+l.q||0)*lnP(l,x.tc)},0)}
-function lnSync(x){var tot=lnTot(x),e=$("#lntot");if(e)e.innerHTML=lnTotHtml(x);(x.items||[]).forEach(function(l,i){var s=$("#lsub"+i);if(s)s.textContent=$$((+l.q||0)*lnP(l,x.tc))})}
-function lnTotHtml(x){var t=oTot(x);return (+x.desp||+x.dsc?'Total calculado (productos + despacho − descuento): <b>':'Total de los productos: <b>')+''+$$(t)+'</b>'+(t&&Math.round(t)!==Math.round(+x.total||0)?' <button class="btn ghost sm" data-ltot="'+x.id+'">Usar como total del pedido</button>':(t?' <span class="note" style="margin:0">= total del pedido</span>':''))}
+function lnSync(x){var tot=lnTot(x),e=$("#lntot");if(e)e.innerHTML=lnTotHtml(x);(x.items||[]).forEach(function(l,i){var s=$("#lsub"+i);if(s)s.textContent=$$((+l.q||0)*pVer(lnP(l,x.tc),x.tc))})}
+function lnTotHtml(x){var t=oTot(x),v=ivaDe(t);return (+x.desp||+x.dsc?'Total calculado (productos + despacho − descuento): <b>':'Total de los productos: <b>')+''+$$(t)+'</b> <span class="note" style="margin:0">(neto '+$$(v.neto)+' + IVA '+$$(v.iva)+')</span>'+(t&&Math.round(t)!==Math.round(+x.total||0)?' <button class="btn ghost sm" data-ltot="'+x.id+'">Usar como total del pedido</button>':(t?' <span class="note" style="margin:0">= total del pedido</span>':''))}
 function recOpts(sel){return recipes.map(function(r){return '<option value="'+r.id+'"'+(r.id===sel?' selected':'')+'>'+esc(r.nombre)+'</option>'}).join("")}
 function evTimes(x){var d=x.fecha.replace(/-/g,""),h=(x.hora||"12:00").split(":"),a=+h[0]||0,m=h[1]||"00",z=function(n){return String(n).padStart(2,"0")};
   return {s:d+"T"+z(a)+m+"00",e:d+"T"+z(Math.min(23,a+1))+m+"00"}}
@@ -1462,18 +1587,18 @@ function icsDownload(x){var t=evTimes(x),esc2=function(v){return String(v).repla
 function openOrder(id){
   var x=orders.find(function(q){return q.id===id}); if(!x)return;
   var PM=!window.NO_PM, d=$("#dlg"), ln=(x.items||[]).map(function(l,i){return '<div class="ln'+(PM?' lnp':'')+'"><select data-lr="'+x.id+':'+i+'" aria-label="Receta">'+recOpts(l.rid)+'</select><input type="number" step="any" min="0" value="'+l.q+'" data-lq="'+x.id+':'+i+'" aria-label="Cantidad" title="Cantidad en '+esc(udPl(recipes.find(function(r){return r.id===l.rid}),2))+'">'+
-    (PM?'<input type="text" class="money" inputmode="numeric" data-lp="'+x.id+':'+i+'" value="'+mfmt(lnP(l,x.tc))+'" aria-label="Precio por unidad con IVA" title="Precio por unidad (con IVA)"><span class="lsub" id="lsub'+i+'">'+$$((+l.q||0)*lnP(l,x.tc))+'</span>':'')+
+    (PM?'<input type="text" class="money" inputmode="numeric" data-lp="'+x.id+':'+i+'" value="'+mfmt(pVer(lnP(l,x.tc),x.tc))+'" aria-label="'+(x.tc==="mayorista"?'Precio neto por unidad':'Precio por unidad con IVA')+'" title="'+(x.tc==="mayorista"?'Precio por unidad (neto, + IVA)':'Precio por unidad (con IVA)')+'"><span class="lsub" id="lsub'+i+'">'+$$((+l.q||0)*pVer(lnP(l,x.tc),x.tc))+'</span>':'')+
     '<button class="x" data-ldel="'+x.id+':'+i+'" aria-label="Quitar receta">✕</button></div>'}).join("");
   d.innerHTML='<div class="dlg"><header><div><h2 style="font-size:1.62rem">'+esc(x.cliente)+'</h2><div class="note" style="margin:2px 0 0">'+fechaLarga(x.fecha)+' · '+x.hora+'</div></div><div style="display:flex;gap:8px;flex:none"><button class="ib" data-edito="'+x.id+'" aria-label="Editar pedido" title="Editar pedido"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ib" data-close aria-label="Cerrar">✕</button></div></header>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="'+gcalUrl(x)+'">Agregar a Google Calendar</a><button class="btn ghost sm" data-ics="'+x.id+'">Descargar para otro calendario</button></div>'+
-  '<dl class="kv"><dt>Categoría</dt><dd>'+esc(x.cat)+'</dd>'+(!window.NO_DOC&&x.doct?'<dt>Documento</dt><dd>'+DOCL[x.doct]+(x.docn?' N° '+esc(x.docn):'')+'</dd>':'')+(PM?'<dt>Tipo de cliente</dt><dd>'+(x.tc==="mayorista"?'Mayorista':'Minorista')+'</dd>':'')+(x.personas?'<dt>Personas</dt><dd>'+x.personas+'</dd>':'')+'<dt>Canal</dt><dd>'+esc(x.canal)+'</dd>'+(+x.desp?'<dt>Despacho</dt><dd>'+$$(x.desp)+'</dd>':'')+(+x.dsc?'<dt>Descuento</dt><dd>'+(x.dsct==="porcentaje"?fq(x.dsc)+'% ('+$$(oDsc(x,oSub(x)))+')':$$(x.dsc))+'</dd>':'')+'<dt>Total</dt><dd>'+$$(x.total)+'</dd><dt>Pagado</dt><dd>'+$$(x.pagado)+' '+chipS(x)+'</dd><dt>Saldo</dt><dd>'+$$(x.total-x.pagado)+'</dd></dl>'+
+  '<dl class="kv"><dt>Categoría</dt><dd>'+esc(x.cat)+'</dd>'+(!window.NO_DOC&&x.doct?'<dt>Documento</dt><dd>'+DOCL[x.doct]+(x.docn?' N° '+esc(x.docn):'')+'</dd>':'')+(PM?'<dt>Tipo de cliente</dt><dd>'+(x.tc==="mayorista"?'Mayorista':'Minorista')+'</dd>':'')+(x.personas?'<dt>Personas</dt><dd>'+x.personas+'</dd>':'')+'<dt>Canal</dt><dd>'+esc(x.canal)+'</dd>'+(+x.desp?'<dt>Despacho</dt><dd>'+$$(x.desp)+' <span class="note" style="margin:0">'+(x.despi==="sin"?'(neto '+$$(x.desp/IVA)+' + IVA)':'(con IVA)')+'</span></dd>':'')+(+x.dsc?'<dt>Descuento</dt><dd>'+(x.dsct==="porcentaje"?fq(x.dsc)+'% ('+$$(oDsc(x,oSub(x)))+')':$$(oDsc(x,0))+(x.tc==="mayorista"?' <span class="note" style="margin:0">('+$$(x.dsc)+' neto + IVA)</span>':''))+'</dd>':'')+'<dt>Neto</dt><dd>'+$$(ivaDe(x.total).neto)+'</dd><dt>IVA 19%</dt><dd>'+$$(ivaDe(x.total).iva)+'</dd><dt>Total con IVA</dt><dd><b>'+$$(x.total)+'</b></dd><dt>Pagado</dt><dd>'+$$(x.pagado)+' '+chipS(x)+'</dd><dt>Saldo</dt><dd>'+$$(x.total-x.pagado)+'</dd></dl>'+
   '<div class="contact"><b>Contacto</b>'+
   '<label>Instagram<span class="crow2"><input type="text" data-ig="'+x.id+'" value="'+esc(x.ig?"@"+x.ig:"")+'" placeholder="@usuario" autocapitalize="none" autocomplete="off"><a class="btn ghost sm" id="a_ig" target="_blank" rel="noopener" href="'+igUrl(x.ig)+'"'+(x.ig?'':' hidden')+'>Ver perfil</a></span></label>'+
   '<label>WhatsApp<span class="crow2"><input type="tel" inputmode="tel" data-wa="'+x.id+'" value="'+esc(waFmt(x.wa))+'" placeholder="+56 9 1234 5678" autocomplete="off"><a class="btn ghost sm" id="a_wa" target="_blank" rel="noopener" href="'+waUrl(x.wa)+'"'+(x.wa?'':' hidden')+'>Abrir chat</a></span></label></div>'+
   (x.cot?'<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-pdf="'+x.id+'">Descargar PDF</button><button class="btn ghost" data-confirm="'+x.id+'">Confirmar pedido</button></div>':(x.total>x.pagado?'<div><button class="btn sm" data-pay="'+x.id+'">Marcar saldo como pagado</button></div>':''))+
   (window.NO_DOC||x.cot?'':docBox(x))+
   '<label style="font-size:.85rem;color:var(--soft);font-weight:500;display:flex;flex-direction:column;gap:4px">Descripción<textarea id="odesc" rows="4" data-d="'+x.id+'">'+esc(x.desc)+'</textarea></label>'+
-  '<div><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Recetas del pedido'+(PM?' · cliente '+(x.tc==="mayorista"?'<b>mayorista</b>':'minorista'):'')+'</div>'+(PM&&ln?'<div class="ln lnp lnh"><span>Receta</span><span>Cantidad</span><span>Precio c/IVA</span><span>Subtotal</span><span></span></div>':'')+(ln||'<div class="note" style="margin:0 0 6px">Sin receta. Asígnala para que Compras sepa qué ingredientes necesitas.</div>')+
+  '<div><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Recetas del pedido'+(PM?' · cliente '+(x.tc==="mayorista"?'<b>mayorista</b>':'minorista'):'')+'</div>'+(PM&&ln?'<div class="ln lnp lnh"><span>Receta</span><span>Cantidad</span><span>'+pLbl(x.tc)+'</span><span>Subtotal</span><span></span></div>':'')+(ln||'<div class="note" style="margin:0 0 6px">Sin receta. Asígnala para que Compras sepa qué ingredientes necesitas.</div>')+
   (PM&&ln?'<div class="lntot" id="lntot">'+lnTotHtml(x)+'</div>':'')+
   (recipes.length?'<button class="btn ghost sm" data-ladd="'+x.id+'">+ Agregar receta</button>':'<div class="note">Primero crea una receta en la sección Recetas.</div>')+'</div>'+
   '<div><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Fotos</div><div class="photos big">'+x.fotos.map(function(f,i){return '<div class="ph"><img src="'+f+'" alt="Foto del pedido"><button class="px" data-pdel="'+x.id+':'+i+'" aria-label="Quitar foto">✕</button></div>'}).join("")+
@@ -1512,7 +1637,7 @@ function openEdit(id){
   [$("#n_r"),$("#n_rq"),$("#n_ph")].forEach(function(el){var l=el&&el.closest("label,.w");if(l)l.hidden=true});
   if($("#n_tc"))nTcSet(x.tc||"minorista",true);
   if(!window.NO_CLI){fm.dataset.cid=x.cid||"";var cx=x.cid?clis.find(function(c){return c.id===x.cid}):null;if(cx)nCliente(cx);var bx=$("#n_cli");if(bx&&!cx)bx.innerHTML='';
-    if($("#n_desp"))$("#n_desp").value=mfmt(x.desp||0);if($("#n_dsc"))$("#n_dsc").value=String(x.dsc||0).replace(".",",");if($("#n_dsct"))$("#n_dsct").value=x.dsct||"monto"}
+    var di0=$("#n_despi");if(di0){di0.value=x.despi==="sin"?"sin":"con";di0.dataset.man=1}if($("#n_desp"))$("#n_desp").value=mfmt(x.despi==="sin"&&di0?Math.round((+x.desp||0)/IVA):(x.desp||0));if($("#n_dsc"))$("#n_dsc").value=String(x.dsc||0).replace(".",",");if($("#n_dsct"))$("#n_dsct").value=x.dsct||"monto"}
   if(!window.NO_PM){window._nl=(x.items||[]).map(function(l){return {rid:l.rid,q:l.q,p:lnP(l,x.tc),man:true}});nRender();window._ntman=Math.round(+x.total||0)!==window._ntcalc;$("#n_t").value=mfmt(x.total);var rb=$("#n_trec");if(rb)rb.hidden=!window._ntman}
   var sc=fm.querySelector("[data-savecot]"); if(sc)sc.hidden=true;
   fm.querySelector("button[type=submit]").textContent="Guardar cambios";
@@ -1538,10 +1663,12 @@ function openNew(fecha){
   '<div class="w f" id="n_nkw" hidden><label>Nombre de la categoría<input type="text" id="n_nkn" placeholder="Ej.: Postres"></label><label>Margen %<input type="number" id="n_nkm" value="70" min="0" max="100"></label></div>'+
   (window.NO_PM?'<label>Receta (opcional)<select id="n_r"><option value="">Sin receta</option>'+recOpts(-1)+'</select></label><label>Cantidad<input type="number" id="n_rq" step="any" min="0" value="1"></label>':
   '<div class="w nprod"><div class="nph">Productos del pedido</div><div id="n_lines"></div>'+(recipes.length?'<button type="button" class="btn ghost sm" data-naddl>+ Agregar producto</button>':'<p class="note" style="margin:0">Primero crea tus productos en Recetas.</p>')+
-  '<div class="ntot"><div class="ntr"><span>Subtotal productos</span><b id="n_sub">$ 0</b></div>'+(window.NO_CLI?'':'<div class="ntr"><span>Despacho</span><input type="text" class="money" inputmode="numeric" id="n_desp" value="$ 0" aria-label="Despacho"></div>'+
-  '<div class="ntr"><span>Descuento</span><span class="ndsc"><input type="text" inputmode="decimal" id="n_dsc" value="0" aria-label="Descuento"><select id="n_dsct" aria-label="Tipo de descuento"><option value="monto">$</option><option value="porcentaje">%</option></select></span></div>')+'</div></div>')+
+  '<div class="ntot"><div class="ntr"><span id="n_subl">Subtotal productos</span><b id="n_sub">$ 0</b></div>'+(window.NO_CLI?'':'<div class="ntr"><span>Despacho</span>'+(window.NO_DOC?'<input type="text" class="money" inputmode="numeric" id="n_desp" value="$ 0" aria-label="Despacho">':'<span class="ndsc ndesp"><input type="text" class="money" inputmode="numeric" id="n_desp" value="$ 0" aria-label="Despacho"><select id="n_despi" aria-label="IVA del despacho"><option value="con">Con IVA</option><option value="sin">Sin IVA</option></select></span>')+'</div>'+
+  '<div class="ntr"><span>Descuento</span><span class="ndsc"><input type="text" inputmode="decimal" id="n_dsc" value="0" aria-label="Descuento"><select id="n_dsct" aria-label="Tipo de descuento"><option value="monto">$</option><option value="porcentaje">%</option></select></span></div>')+
+  '<div class="ntr ntiv"><span>Neto</span><b id="n_neto">$ 0</b></div><div class="ntr ntiv"><span>IVA 19%</span><b id="n_iva">$ 0</b></div><div class="ntr ntb"><span>Total con IVA</span><b id="n_tb">$ 0</b></div><p class="note" id="n_ivn" style="margin:0"></p>'+
+  '</div></div>')+
   '<label>Personas<select id="n_pe"><option value="">Sin indicar</option>'+PERS.map(function(n){return '<option value="'+n+'">'+n+' personas</option>'}).join("")+'</select></label>'+
-  '<label>Total con IVA'+(window.NO_PM?'':' <button type="button" class="lnk" id="n_trec" hidden>recalcular</button>')+'<input type="text" class="money" inputmode="numeric" id="n_t" required value="$ 0"></label><label>Anticipo pagado<input type="text" class="money" inputmode="numeric" id="n_p" value="$ 0"></label>'+
+  '<label>'+(window.NO_PM?'Total con IVA':'Total del pedido (con IVA)')+(window.NO_PM?'':' <button type="button" class="lnk" id="n_trec" hidden>recalcular</button>')+'<input type="text" class="money" inputmode="numeric" id="n_t" required value="$ 0"></label><label>Anticipo pagado<input type="text" class="money" inputmode="numeric" id="n_p" value="$ 0"></label>'+
   '<label class="w">Descripción<textarea id="n_d" rows="4" placeholder="Sabores, tamaño, decoración, dirección de entrega…"></textarea></label>'+
   '<div class="w"><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Fotos</div><div class="photos" id="n_ph"><label class="addp">+ Agregar fotos<small style="display:block;font-size:.72rem">máximo 2</small><input type="file" accept="image/*" multiple hidden id="n_file"></label></div></div></div>'+
   '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn ghost" data-close>Cancelar</button><button type="button" class="btn ghost" data-savecot>Guardar como cotización</button><button class="btn" type="submit">Guardar pedido</button></div></form>';
@@ -1552,15 +1679,19 @@ function openNew(fecha){
 function nCli(){return window.NO_CLI?null:clis.find(function(c){return c.id===+(($("#nf")||{dataset:{}}).dataset.cid||0)})}
 function nTc(){return ($("#n_tc")||{}).value||"minorista"}
 function nDl(){var dl=$("#n_cl");if(!dl)return;var tc=nTc();dl.innerHTML=clis.filter(function(c){return c.tipo===tc}).sort(function(a,b){return a.n.localeCompare(b.n,"es")}).map(function(c){return '<option value="'+esc(c.n)+'">'+(c.rs?esc(c.rs):'')+(c.wa?(c.rs?' · ':'')+esc(waFmt(c.wa)):'')+'</option>'}).join("")}
-function nTcSet(v,silencioso){var h=$("#n_tc");if(!h)return;h.value=v==="mayorista"?"mayorista":"minorista";document.querySelectorAll("[data-ntc]").forEach(function(b){var on=b.dataset.ntc===h.value;b.classList.toggle("on",on);b.setAttribute("aria-checked",on)});nDl();if(!silencioso){var c=nCli();if(c&&c.tipo!==h.value){$("#nf").dataset.cid="";$("#n_c").value=""}nCliente(nCli())}}
+function nTcSet(v,silencioso){var h=$("#n_tc");if(!h)return;h.value=v==="mayorista"?"mayorista":"minorista";var di=$("#n_despi");if(di&&!di.dataset.man)di.value=h.value==="mayorista"?"sin":"con";document.querySelectorAll("[data-ntc]").forEach(function(b){var on=b.dataset.ntc===h.value;b.classList.toggle("on",on);b.setAttribute("aria-checked",on)});nDl();if(!silencioso){var c=nCli();if(c&&c.tipo!==h.value){$("#nf").dataset.cid="";$("#n_c").value=""}nCliente(nCli())}}
 function nAddLine(rid){var r=rid?recipes.find(function(q){return q.id===rid}):null;window._nl.push({rid:r?r.id:0,q:1,p:r?cliPrecio(nCli(),r,nTc()):0,man:false})}
 function nRender(){var box=$("#n_lines");if(!box)return;
-  box.innerHTML=(window._nl.length?'<div class="nln nlh"><span>Producto</span><span>Cantidad</span><span>Precio c/IVA</span><span>Subtotal</span><span></span></div>':'')+window._nl.map(function(l,i){var r=recipes.find(function(q){return q.id===l.rid});
-    return '<div class="nln"><select data-nlr="'+i+'" aria-label="Producto"><option value="">Elige un producto…</option>'+recOpts(l.rid)+'</select><input type="number" step="any" min="0" data-nlq="'+i+'" value="'+l.q+'" aria-label="Cantidad" title="'+(r?'Cantidad en '+esc(udPl(r,2)):'')+'"><input type="text" class="money" inputmode="numeric" data-nlp="'+i+'" value="'+mfmt(l.p)+'" aria-label="Precio por unidad con IVA"><span class="lsub" id="nls'+i+'">'+$$((+l.q||0)*(+l.p||0))+'</span><button type="button" class="x" data-nldel="'+i+'" aria-label="Quitar producto">✕</button></div>'}).join("");
+  box.innerHTML=(window._nl.length?'<div class="nln nlh"><span>Producto</span><span>Cantidad</span><span>'+pLbl(nTc())+'</span><span>Subtotal</span><span></span></div>':'')+window._nl.map(function(l,i){var r=recipes.find(function(q){return q.id===l.rid});
+    return '<div class="nln"><select data-nlr="'+i+'" aria-label="Producto"><option value="">Elige un producto…</option>'+recOpts(l.rid)+'</select><input type="number" step="any" min="0" data-nlq="'+i+'" value="'+l.q+'" aria-label="Cantidad" title="'+(r?'Cantidad en '+esc(udPl(r,2)):'')+'"><input type="text" class="money" inputmode="numeric" data-nlp="'+i+'" value="'+mfmt(pVer(l.p,nTc()))+'" aria-label="'+(nTc()==="mayorista"?'Precio neto por unidad':'Precio por unidad con IVA')+'"><span class="lsub" id="nls'+i+'">'+$$((+l.q||0)*pVer(l.p,nTc()))+'</span><button type="button" class="x" data-nldel="'+i+'" aria-label="Quitar producto">✕</button></div>'}).join("");
   nTotal();}
-function nTotal(){if(window.NO_PM)return;var sub=window._nl.reduce(function(a,l){return a+(l.rid?(+l.q||0)*(+l.p||0):0)},0);window._nl.forEach(function(l,i){var e=$("#nls"+i);if(e)e.textContent=$$((+l.q||0)*(+l.p||0))});
-  var desp=$("#n_desp")?mnum($("#n_desp").value):0,dv=$("#n_dsc")?parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0:0,dt=($("#n_dsct")||{}).value,dsc=dt==="porcentaje"?Math.round(sub*dv/100):dv,tot=Math.round(sub+desp-dsc);
-  $("#n_sub").textContent=$$(sub);var rb=$("#n_trec");if(rb)rb.hidden=!window._ntman;if(!window._ntman)$("#n_t").value=mfmt(Math.max(0,tot));window._ntcalc=Math.max(0,tot)}
+function nDespB(){var v=$("#n_desp")?mnum($("#n_desp").value):0;return ($("#n_despi")||{}).value==="sin"?Math.round(v*IVA):v}
+function nTotal(){if(window.NO_PM)return;var tc=nTc(),may=tc==="mayorista",sub=window._nl.reduce(function(a,l){return a+(l.rid?(+l.q||0)*(+l.p||0):0)},0);window._nl.forEach(function(l,i){var e=$("#nls"+i);if(e)e.textContent=$$((+l.q||0)*pVer(l.p,tc))});
+  var dI=$("#n_desp")?mnum($("#n_desp").value):0,sinI=($("#n_despi")||{}).value==="sin",desp=nDespB(),dv=$("#n_dsc")?parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0:0,dt=($("#n_dsct")||{}).value,dsc=dt==="porcentaje"?Math.round(sub*dv/100):Math.round(dv*(may?IVA:1)),tot=Math.max(0,Math.round(sub+desp-dsc));
+  $("#n_sub").textContent=$$(may?sub/IVA:sub);$("#n_subl").textContent="Subtotal productos ("+(may?"neto":"con IVA")+")";
+  var rb=$("#n_trec");if(rb)rb.hidden=!window._ntman;if(!window._ntman)$("#n_t").value=mfmt(tot);window._ntcalc=tot;nResumen();
+  var nv=$("#n_ivn");if(nv){var t=[];if(may)t.push("Mayorista: precios"+(dt==="porcentaje"?"":" y descuento")+" netos, el IVA se suma al final.");if(dI&&sinI)t.push("Despacho sin IVA: "+$$(dI)+" + IVA "+$$(desp-dI)+" = "+$$(desp)+".");else if(dI&&$("#n_despi"))t.push("Despacho con IVA incluido: neto "+$$(dI/IVA)+" + IVA "+$$(dI-Math.round(dI/IVA))+".");nv.textContent=t.join(" ");nv.hidden=!t.length}}
+function nResumen(){var b=$("#n_tb");if(!b)return;var v=ivaDe(mnum($("#n_t").value));$("#n_neto").textContent=$$(v.neto);$("#n_iva").textContent=$$(v.iva);b.textContent=$$(v.tot)}
 function nPrecios(){window._nl.forEach(function(l){if(l.man||!l.rid)return;var r=recipes.find(function(q){return q.id===l.rid});if(r)l.p=cliPrecio(nCli(),r,nTc())});nRender()}
 function nCliente(c){ // completa los datos desde un cliente guardado
   var fm=$("#nf");if(!fm)return;fm.dataset.cid=c?c.id:"";var box=$("#n_cli");
@@ -1573,14 +1704,15 @@ function nCliente(c){ // completa los datos desde un cliente guardado
 document.addEventListener("input",function(e){var t=e.target,d=t.dataset||{};if(!$("#nf"))return;
   if(t.id==="n_c"){if(window.NO_CLI)return;var c=cliFind(t.value);if(c){if(+($("#nf").dataset.cid)!==c.id)nCliente(c)}else{if($("#nf").dataset.cid){$("#nf").dataset.cid=""}nCliente(null)}return}
   if(d.nlq!=null){window._nl[+d.nlq].q=parseFloat(t.value)||0;nTotal();return}
-  if(d.nlp!=null){var l=window._nl[+d.nlp];l.p=mnum(t.value);l.man=true;nTotal();return}
+  if(d.nlp!=null){var l=window._nl[+d.nlp];l.p=pIn(mnum(t.value),nTc());l.man=true;nTotal();return}
   if(t.id==="n_desp"||t.id==="n_dsc"){nTotal();return}
-  if(t.id==="n_t"){window._ntman=mnum(t.value)!==window._ntcalc;var rb=$("#n_trec");if(rb)rb.hidden=!window._ntman}
+  if(t.id==="n_t"){window._ntman=mnum(t.value)!==window._ntcalc;var rb=$("#n_trec");if(rb)rb.hidden=!window._ntman;nResumen()}
 });
 document.addEventListener("change",function(e){var t=e.target,d=t.dataset||{};if(!$("#nf"))return;
   if(d.nlr!=null){var l=window._nl[+d.nlr],r=recipes.find(function(q){return q.id===+t.value});l.rid=r?r.id:0;l.man=false;l.p=r?cliPrecio(nCli(),r,nTc()):0;nRender();return}
   if(t.id==="n_tc"){nPrecios();return}
   if(t.id==="n_dsct"){nTotal();return}
+  if(t.id==="n_despi"){t.dataset.man=1;nTotal();return}
 });
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("button");if(!t||!$("#nf"))return;
   if(t.hasAttribute("data-naddl")){nAddLine();nRender();var s2=document.querySelectorAll("[data-nlr]");if(s2.length)s2[s2.length-1].focus();return}
@@ -1622,9 +1754,10 @@ function readFiles(files,cb,max){
 /* ---------- RENDER + EVENTOS ---------- */
 function render(){
   cliAutoImport();renderNav();
-  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,cli:vCli,prod:vProd,cost:vCost,ing:vIng,com:vCom,inv:vInv,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
+  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,cli:vCli,prod:vProd,cost:vCost,pre:vPre,ing:vIng,com:vCom,inv:vInv,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
   if(view==="cost"&&recipes.length)rsum();
 }
+/* tras cerrar el diálogo del equipo o de un precio, la vista se vuelve a dibujar (listener de close) */
 document.addEventListener("input",function(e){var t=e.target;if(!t.classList||!t.classList.contains("money"))return;
   var v=t.value,neg=/^\s*-/.test(v),c=v.replace(/[^\d,]/g,""),k=c.indexOf(","),ip=k<0?c:c.slice(0,k),dp=k<0?"":c.slice(k+1).replace(/,/g,"").slice(0,2);
   ip=ip.replace(/^0+(?=\d)/,"");var out="$ "+(neg?"-":"")+(ip?fmN.format(+ip):"0")+(k<0?"":","+dp);
@@ -1663,8 +1796,8 @@ document.addEventListener("input",function(e){
   if(extraInput(t)){}
   else if(t.dataset&&t.dataset.r!==undefined){var r=recipe[+t.dataset.r],k=t.dataset.k;
     r[k]=(k==="n"||k==="u")?t.value:(k==="c"?mnum(t.value):(parseFloat(t.value)||0));if(k==="q"||k==="c"){$("#sub"+t.dataset.r).textContent=$$(r.q*r.c);rsum()}}
-  else if(t.id==="mg"){rp.margen=+t.value;var f=t.selectionStart;rsum();$("#mg").focus()}
-  else if(t.id==="pa"){rp.precio=mnum(t.value);var a=rsum;a();var el=$("#pa");el.focus();try{el.setSelectionRange(el.value.length,el.value.length)}catch(e){}}
+  else if(t.id==="mg"){rp.margen=+t.value;psum()}
+  else if(t.id==="pa"){rp.precio=mnum(t.value);psum()}
   else if(t.dataset&&t.dataset.d){orders.find(function(q){return q.id===+t.dataset.d}).desc=t.value}
   else if(t.dataset&&t.dataset.ig){var qi=orders.find(function(q){return q.id===+t.dataset.ig});qi.ig=igUser(t.value);var ai=$("#a_ig");ai.href=igUrl(qi.ig);ai.hidden=!qi.ig}
   else if(t.dataset&&t.dataset.wa){var qw=orders.find(function(q){return q.id===+t.dataset.wa});qw.wa=waNum(t.value);var aw=$("#a_wa");aw.href=waUrl(qw.wa);aw.hidden=!qw.wa}
@@ -1682,7 +1815,7 @@ document.addEventListener("submit",function(e){
     window._skipW=false;
     ox.cliente=$("#n_c").value.trim();ox.ig=igUser($("#n_ig").value);ox.wa=waNum($("#n_wa").value);ox.fecha=ef;ox.hora=$("#n_h").value||"12:00";ox.cat=ek;ox.canal=$("#n_a").value;
     if(!window.NO_PM)ox.items=window._nl.filter(function(l){return l.rid}).map(function(l){return {rid:l.rid,q:+l.q||0,p:+l.p||0}});
-    if(!window.NO_CLI){ox.cid=nSaveCli()||null;ox.desp=mnum($("#n_desp").value);ox.dsc=parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0;ox.dsct=$("#n_dsct").value}
+    if(!window.NO_CLI){ox.cid=nSaveCli()||null;ox.desp=nDespB();ox.despi=($("#n_despi")||{}).value==="sin"?"sin":"con";ox.dsc=parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0;ox.dsct=$("#n_dsct").value}
     if($("#n_tc"))ox.tc=$("#n_tc").value;ox.personas=+$("#n_pe").value||null;ox.desc=$("#n_d").value.trim()||"Sin descripción.";ox.total=et;ox.pagado=Math.min(et,mnum($("#n_p").value));
     $("#dlg").close();var ep=pd(ef);cur={y:ep.getFullYear(),m:ep.getMonth()};render();openOrder(ox.id);toast("Cambios guardados");return}
   var f=$("#n_f").value, p=pd(f), tot=mnum($("#n_t").value), pg=Math.min(tot,mnum($("#n_p").value)), kc=$("#n_k").value;
@@ -1692,7 +1825,7 @@ document.addEventListener("submit",function(e){
   if(!isq&&!window._skipW&&dayWarn(f,0,function(){window._skipW=true;$("#nf").requestSubmit()},function(){var fi=$("#n_f");if(fi)fi.focus()}))return;
   window._skipW=false;
   var n={id:nextId++,cot:isq,num:isq?nextQ():0,cond:cfg.cond,vig:cfg.vig,items:its,cliente:$("#n_c").value.trim(),ig:igUser($("#n_ig").value),wa:waNum($("#n_wa").value),fecha:f,hora:$("#n_h").value||"12:00",cat:kc,canal:$("#n_a").value,desc:$("#n_d").value.trim()||"Sin descripción.",personas:+$("#n_pe").value||null,total:tot,pagado:pg,fotos:pend.slice(),listo:false,tc:$("#n_tc")?$("#n_tc").value:"minorista"};
-  if(!window.NO_CLI){n.cid=nSaveCli()||null;n.desp=mnum($("#n_desp").value);n.dsc=parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0;n.dsct=$("#n_dsct").value}
+  if(!window.NO_CLI){n.cid=nSaveCli()||null;n.desp=nDespB();n.despi=($("#n_despi")||{}).value==="sin"?"sin":"con";n.dsc=parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0;n.dsct=$("#n_dsct").value}
   orders.push(n);pend=[];cur={y:p.getFullYear(),m:p.getMonth()};view=isq?"ped":"cal";$("#dlg").close();render();
   if(isq){openOrder(n.id);toast("Cotización "+qn(n)+" guardada")}
 });

@@ -49,6 +49,8 @@
   function current() {
     var m = {};
     m["neg"] = { t: "neg", row: { nombre: cfg.nombre, telefono: cfg.tel, correo: cfg.mail, web: cfg.url, cond_cotizacion: cfg.cond, validez_dias: cfg.vig, abono_pct: cfg.abono, cap_diaria: cfg.cap, costeo: cfg.costeo === "estimado" ? "estimado" : "real", sueldo_mensual: hora.sueldo, horas_mes: hora.horas, siguiente_cotizacion: qnum, logo_path: cfg.logoPath || null } };
+    if (typeof eqSync === "function") { eqSync(); m["neg"].row.sueldo_mensual = hora.sueldo; m["neg"].row.horas_mes = hora.horas; }
+    if (!window.NO_EQ) m["neg"].row.equipo = EQ.map(function (p) { return { n: String(p.n || "").trim(), s: Math.round(+p.s || 0), h: Math.round((+p.h || 0) * 10) / 10 }; });
     if (!window.NO_P2) m["neg"].row.mayorista = { desp: +MAY.desp || 0, pack: +MAY.pack || 0, coord: +MAY.coord || 0, fact: +MAY.fact || 0 };
     pcats.forEach(function (c) { m["pc:" + ensure(c)] = { t: "pc", row: { id: c.uid, negocio_id: NEG, nombre: c.n, margen: c.m, color: c.col || null } }; });
     gcats.forEach(function (n) { m["gc:" + n] = { t: "gc", row: { negocio_id: NEG, nombre: n } }; });
@@ -63,7 +65,7 @@
       if (!window.NO_P2) m["p:" + id].row.descontado = o.desc_st || null;
       if (!window.NO_PM) m["p:" + id].row.tipo_cliente = o.tc === "mayorista" ? "mayorista" : "minorista";
       if (!window.NO_CLI) { var oc = o.cid ? clis.find(function (c) { return c.id === o.cid; }) : null; m["p:" + id].row.cliente_id = oc ? ensure(oc) : null; m["p:" + id].row.despacho = +o.desp || 0; m["p:" + id].row.descuento = +o.dsc || 0; m["p:" + id].row.descuento_tipo = o.dsct === "porcentaje" ? "porcentaje" : "monto"; }
-      if (!window.NO_DOC) { m["p:" + id].row.doc_tipo = o.doct || ""; m["p:" + id].row.doc_num = o.docn || null; }
+      if (!window.NO_DOC) { m["p:" + id].row.doc_tipo = o.doct || ""; m["p:" + id].row.doc_num = o.docn || null; m["p:" + id].row.despacho_iva = o.despi === "sin" ? "sin" : "con"; }
       var its = [];
       (o.items || []).forEach(function (l) { var r = recipes.find(function (q) { return q.id === l.rid; }); if (r) { var pi = { negocio_id: NEG, pedido_id: id, receta_id: r.uid, cantidad: +l.q || 0 }; if (!window.NO_PM) pi.precio = l.p == null || l.p === "" ? null : +l.p; its.push(pi); } });
       m["pr:" + id] = { t: "pr", pid: id, rows: its };
@@ -254,14 +256,16 @@
       Promise.resolve().then(function () { return sb.from("recetas").select("unidades").limit(1); }).catch(function (e) { return { error: e }; }),
       Promise.resolve().then(function () { return sb.from("recetas").select("margen_may").limit(1); }).catch(function (e) { return { error: e }; }),
       Promise.resolve().then(function () { return sb.from("recetas").select("precio_may").limit(1); }).catch(function (e) { return { error: e }; }),
-      Promise.resolve().then(function () { return sb.from("pedidos").select("doc_tipo").limit(1); }).catch(function (e) { return { error: e }; })
+      Promise.resolve().then(function () { return sb.from("pedidos").select("doc_tipo,despacho_iva").limit(1); }).catch(function (e) { return { error: e }; })
     ]);
     var RCL = R.splice(11, 1)[0]; window.NO_CLI = !!RCL.error;
     window.NO_PM = !!R[13].error; window.NO_DOC = !!R[14].error;
     window.NO_ING = !!R[10].error; window.NO_UN = !!R[11].error; window.NO_P2 = !!R[12].error || window.NO_ING; R.slice(0, 10).forEach(function (r) { chk(r); });
     var neg = R[0].data;
     cfg.nombre = neg.nombre; cfg.tel = neg.telefono || ""; cfg.mail = neg.correo || ""; cfg.url = neg.web || ""; cfg.cond = neg.cond_cotizacion;
-    cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; var my = neg.mayorista || {}; MAY.desp = +my.desp || 0; MAY.pack = +my.pack || 0; MAY.coord = +my.coord || 0; MAY.fact = +my.fact || 0; qnum = neg.siguiente_cotizacion;
+    cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; window.NO_EQ = !("equipo" in neg);
+    EQ.length = 0; (Array.isArray(neg.equipo) ? neg.equipo : []).forEach(function (p) { EQ.push({ n: p.n || "", s: +p.s || 0, h: +p.h || 0 }); });
+    if (!EQ.length && hora.sueldo > 0 && hora.horas > 0) EQ.push({ n: "Tú", s: hora.sueldo, h: Math.round(hora.horas / (52 / 12) * 10) / 10 }); var my = neg.mayorista || {}; MAY.desp = +my.desp || 0; MAY.pack = +my.pack || 0; MAY.coord = +my.coord || 0; MAY.fact = +my.fact || 0; qnum = neg.siguiente_cotizacion;
     window.CALT = neg.cal_token || null; cfg.logoPath = neg.logo_path; cfg.logo = null; cfg.logoData = null; cfg.logoDirty = false;
     if (neg.logo_path) {
       var ls = await signed([neg.logo_path]);
@@ -283,7 +287,7 @@
     R[8].data.forEach(function (f) { if (urls[f.path]) { fotoPath[urls[f.path]] = f.path; if (urls[tpath(f.path)]) window.THUMB[urls[f.path]] = urls[tpath(f.path)]; } });
     orders.length = 0;
     R[6].data.forEach(function (p) {
-      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", personas: p.personas || null, total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, desc_st: p.descontado || null, cuid: p.cliente_id || null, doct: p.doc_tipo || "", docn: p.doc_num || "", desp: +p.despacho || 0, dsc: +p.descuento || 0, dsct: p.descuento_tipo === "porcentaje" ? "porcentaje" : "monto", tc: p.tipo_cliente === "mayorista" ? "mayorista" : "minorista", items: [], fotos: [] };
+      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", personas: p.personas || null, total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, desc_st: p.descontado || null, cuid: p.cliente_id || null, doct: p.doc_tipo || "", docn: p.doc_num || "", despi: p.despacho_iva === "sin" ? "sin" : "con", desp: +p.despacho || 0, dsc: +p.descuento || 0, dsct: p.descuento_tipo === "porcentaje" ? "porcentaje" : "monto", tc: p.tipo_cliente === "mayorista" ? "mayorista" : "minorista", items: [], fotos: [] };
       if (o.cond == null) delete o.cond; if (o.vig == null) delete o.vig;
       R[7].data.filter(function (x) { return x.pedido_id === p.id; }).forEach(function (x) { if (rmap[x.receta_id]) o.items.push({ rid: rmap[x.receta_id], q: +x.cantidad, p: x.precio == null ? null : +x.precio }); });
       R[8].data.filter(function (x) { return x.pedido_id === p.id && urls[x.path]; }).forEach(function (x) { o.fotos.push(urls[x.path]); });
