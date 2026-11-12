@@ -315,7 +315,7 @@ function vCost(){
       if(window.NO_ING)g+='<tr><td><input class="t" type="text" value="'+esc(r.n)+'" data-r="'+i+'" data-k="n" aria-label="Nombre"></td><td><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td><input class="u t" type="text" value="'+esc(r.u)+'" data-r="'+i+'" data-k="u" aria-label="Unidad"></td><td><input type="text" class="money" inputmode="decimal" value="'+mfmt(r.c)+'" data-r="'+i+'" data-k="c" aria-label="Costo por unidad"></td>';
       else{var ix=r.n?ingFind(r.n,r.u):null;
       g+='<tr><td><button type="button" class="ingpick'+(ix?'':' empty')+'" data-pickb="'+i+'" aria-haspopup="listbox"><span>'+(ix?esc(ix.n):'Elige un ingrediente…')+'</span><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+(r.n&&!ix?'<div class="note" style="margin:2px 0 0;color:var(--bad)">“'+esc(r.n)+'” no está en Ingredientes</div>':'')+'</td><td><input type="number" step="any" value="'+r.q+'" data-r="'+i+'" data-k="q" aria-label="Cantidad"></td><td class="ro"><span class="rov">'+esc(r.u||"—")+'</span></td><td class="r ro" title=""El precio se cambia en Ingredientes"><span class="rov">'+(r.n&&ix&&!(+ix.c)?'<button class="lnk bad" data-v="ing">Sin precio</button>':$$u(r.c))+'</span></td>';}
-      g+='<td class="r"><span class="rov" id="sub'+i+'">'+$$(r.q*r.c)+'</span></td><td><button class="x" data-delrow=""'+i+'" aria-label="Quitar ítem">✕</button></td></tr>';
+      g+='<td class="r"><span class="rov" id="sub'+i+'">'+$$(r.q*r.c)+'</span></td><td><button class="x" data-delrow="'+i+'" aria-label="Quitar ítem">✕</button></td></tr>';
     });
     g+='<tr><td colspan="6"><button class="btn ghost sm" data-addrow="'+gi+'">+ Agregar ítem</button></td></tr>';
   });
@@ -337,7 +337,8 @@ function rsum(){
     if(hasH(rp))t='<b>Esta receta tiene “Horas de trabajo” como ítem.</b> Ahora la mano de obra se calcula con el tiempo de trabajo con manos. Quita ese ítem para no contarla dos veces. <button class="btn ghost sm" data-qhoras>Quitar el ítem de horas</button>';
     else if(!vh)t='Falta el valor de la hora de trabajo. <button class="lnk" data-equipo>Calcúlalo aquí</button> y la mano de obra se suma sola.';
     else if(!rp.ta)t='Anota el <b>trabajo con manos</b> para sumar la mano de obra al costo.';
-    else t='<b>Mano de obra</b> = '+hmin(rp.ta)+' de trabajo con manos × '+$$(vh)+' por hora = <b>'+$$(lab)+'</b>'+(un>1?' ('+$$u(lab/un)+' por '+esc(u1)+')':'')+'.';
+    else t='<b>Mano de obra de la receta completa</b> = '+hmin(rp.ta)+' de trabajo con manos × '+$$(vh)+' por hora = <b>'+$$(lab)+'</b>.'+
+      (un>1?'<br>La receta rinde '+fq(un)+' '+esc(udPl(rp,un))+': '+$$(lab)+' ÷ '+fq(un)+' = <b>'+$$u(lab/un)+' de mano de obra por '+esc(u1)+'</b>.':'<br><span class="neg">Esta receta rinde 1 unidad, así que toda la mano de obra se carga a 1 '+esc(u1)+'.</span> Si la receta completa hace más (ej.: 12 alfajores), cambia <b>Unidades que rinde</b> y <b>Se vende por</b>.');
     mc.innerHTML=t;mc.className="mocalc"+(hasH(rp)?" warn":"")}
   var tp=$("#tpu");if(tp){var ta=+rp.ta||0,te=+rp.te||0;tp.innerHTML=un>1&&(ta||te)?'Por '+esc(u1)+': '+(ta?fq(Math.round(ta/un*10)/10)+' min de trabajo con manos':'')+(ta&&te?' · ':'')+(te?fq(Math.round(te/un*10)/10)+' min de horno o reposo':''):'';tp.hidden=!tp.innerHTML}
   if($("#hv"))$("#hv").textContent=$$(vh);
@@ -394,14 +395,14 @@ function preM(r){var un=r.un||1,cu=costTanda(r)/un,m=(+r.margen||0)/100,sug=m<1?
 function realTxt(v,obj){return v==null?'<span class="note" style="margin:0">sin precio</span>':'margen real <span class="'+(v>=obj?'pos':'neg')+'">'+fq(Math.round(v*10)/10)+'%</span>'}
 var PQ="";
 function preRow(r){var k=preM(r),u1=udPl(r,1),mm=r.mm==null?45:+r.mm,hid=PQ&&xNorm(r.nombre).indexOf(xNorm(PQ))<0;
-  return '<tr data-prow="'+r.id+'"'+(hid?' hidden':'')+'><td data-l="Producto"><button type="button" class="prn" data-preopen="'+r.id+'"><b>'+esc(r.nombre)+'</b><span>por '+esc(u1)+'</span></button></td>'+
-  '<td class="r" data-l="Costo por '+esc(u1)+'">'+$$u(k.cu)+'</td>'+
-  '<td class="r pmn" data-l="Minorista · margen %"><span class="pin"><input type="number" min="0" max="95" step="1" inputmode="numeric" data-pmg="'+r.id+'" value="'+(+r.margen||0)+'" aria-label="Margen minorista de '+esc(r.nombre)+'"></span></td>'+
-  '<td class="r pmn" data-l="Minorista · sugerido"><span class="psv" id="psg'+r.id+'">'+$$(k.sug)+'</span><button type="button" class="lnk" data-puse="min:'+r.id+'">usar</button></td>'+
-  '<td class="r pmn" data-l="Minorista · tu precio con IVA"><input type="text" class="money" inputmode="numeric" data-ppa="'+r.id+'" value="'+mfmt(r.precio||0)+'" aria-label="Precio minorista con IVA de '+esc(r.nombre)+'"><small class="prl" id="prl'+r.id+'">'+realTxt(k.real,+r.margen||0)+'</small></td>'+
-  (window.NO_P2?'':'<td class="r pmy" data-l="Mayorista · margen %"><span class="pin"><input type="number" min="0" max="95" step="1" inputmode="numeric" data-pmm="'+r.id+'" value="'+mm+'" aria-label="Margen mayorista de '+esc(r.nombre)+'"></span></td>'+
-  '<td class="r pmy" data-l="Mayorista · sugerido neto"><span class="psv" id="psm'+r.id+'">'+$$(k.mc.neto)+'</span><button type="button" class="lnk" data-puse="may:'+r.id+'">usar</button></td>'+
-  (window.NO_PM?'':'<td class="r pmy" data-l="Mayorista · tu precio neto"><input type="text" class="money" inputmode="numeric" data-ppm="'+r.id+'" value="'+mfmt(r.pm||0)+'" aria-label="Precio mayorista neto de '+esc(r.nombre)+'"><small class="prl" id="prm'+r.id+'">'+realTxt(k.mreal,mm)+'</small></td>'))+'</tr>'}
+  return '<tr data-prow="'+r.id+'"'+(hid?' hidden':'')+'><td data-l="Producto"><button type="button" class="prn" data-preopen="'+r.id+'"><b>'+esc(r.nombre)+'</b><span>por '+esc(u1)+' · rinde '+fq(r.un||1)+'</span></button></td>'+
+  '<td class="r" data-l="Costo por '+esc(u1)+'"><span class="pcv">'+$$u(k.cu)+'</span></td>'+
+  '<td class="r pmn" data-l="Margen %"><span class="pin"><input type="number" min="0" max="95" step="1" inputmode="numeric" data-pmg="'+r.id+'" value="'+(+r.margen||0)+'" aria-label="Margen minorista de '+esc(r.nombre)+'"></span></td>'+
+  '<td class="r pmn" data-l="Sugerido con IVA"><span class="psv" id="psg'+r.id+'">'+$$(k.sug)+'</span><button type="button" class="lnk" data-puse="min:'+r.id+'">usar</button></td>'+
+  '<td class="r pmn" data-l="Tu precio con IVA"><input type="text" class="money" inputmode="numeric" data-ppa="'+r.id+'" value="'+mfmt(r.precio||0)+'" aria-label="Precio minorista con IVA de '+esc(r.nombre)+'"><small class="prl" id="prl'+r.id+'">'+realTxt(k.real,+r.margen||0)+'</small></td>'+
+  (window.NO_P2?'':'<td class="r pmy" data-l="Margen %"><span class="pin"><input type="number" min="0" max="95" step="1" inputmode="numeric" data-pmm="'+r.id+'" value="'+mm+'" aria-label="Margen mayorista de '+esc(r.nombre)+'"></span></td>'+
+  '<td class="r pmy" data-l="Sugerido neto"><span class="psv" id="psm'+r.id+'">'+$$(k.mc.neto)+'</span><button type="button" class="lnk" data-puse="may:'+r.id+'">usar</button></td>'+
+  (window.NO_PM?'':'<td class="r pmy" data-l="Tu precio neto"><input type="text" class="money" inputmode="numeric" data-ppm="'+r.id+'" value="'+mfmt(r.pm||0)+'" aria-label="Precio mayorista neto de '+esc(r.nombre)+'"><small class="prl" id="prm'+r.id+'">'+realTxt(k.mreal,mm)+'</small></td>'))+'</tr>'}
 function preUpd(id){var r=recipes.find(function(q){return q.id===id});if(!r)return;var k=preM(r),e;
   if(e=$("#psg"+id))e.textContent=$$(k.sug);if(e=$("#prl"+id))e.innerHTML=realTxt(k.real,+r.margen||0);
   if(e=$("#psm"+id))e.textContent=$$(k.mc.neto);if(e=$("#prm"+id))e.innerHTML=realTxt(k.mreal,r.mm==null?45:+r.mm)}
@@ -412,10 +413,12 @@ function vPre(){
   var info='<div class="card preinfo"><div><span class="tg tmin">Minorista</span> Precio a público: escríbelo <b>con IVA</b> (bruto), lo que paga tu cliente.</div>'+(window.NO_P2?'':'<div><span class="tg tmay">Mayorista</span> Cafeterías y reventa: escríbelo <b>neto</b>. El IVA se suma en el pedido.</div>')+
    '<p class="note" style="margin:6px 0 0">El <b>costo por unidad</b> viene de Recetas (ingredientes + mano de obra). <b>Sugerido</b> = costo ÷ (1 − margen), redondeado. Cambia el margen y el sugerido se recalcula; toca <b>usar</b> para copiarlo a tu precio. Toca un producto para ver el detalle mayorista (packaging y pedido mínimo).</p></div>';
   var rows=recipes.slice().sort(function(a,b){return String(a.nombre||"").localeCompare(String(b.nombre||""),"es",{sensitivity:"base",numeric:true})}).map(preRow).join("");
-  var th=function(g,t,sub,cl){return '<th class="r '+cl+'"><span class="tg '+(cl==="pmn"?'tmin':'tmay')+'">'+g+'</span>'+t+(sub?'<small>'+sub+'</small>':'')+'</th>'};
-  return top+info+'<section class="card prewrap"><div class="scroll"><table class="prtab"><thead><tr><th>Producto</th><th class="r">Costo por unidad</th>'+
-    th("Minorista","Margen %","","pmn")+th("Minorista","Sugerido","con IVA","pmn")+th("Minorista","Tu precio","con IVA","pmn")+
-    (window.NO_P2?'':th("Mayorista","Margen %","","pmy")+th("Mayorista","Sugerido","neto","pmy")+(window.NO_PM?'':th("Mayorista","Tu precio","neto","pmy")))+
+  var th=function(t,sub,cl){return '<th class="r '+cl+'">'+t+'<small>'+(sub||'&nbsp;')+'</small></th>'},nm=3,ny=window.NO_P2?0:(window.NO_PM?2:3);
+  return top+info+'<section class="card prewrap"><div class="scroll"><table class="prtab"><colgroup><col class="c-p"><col class="c-c"><col class="c-m"><col class="c-s"><col class="c-t">'+(ny?'<col class="c-m"><col class="c-s">'+(ny>2?'<col class="c-t">':''):'')+'</colgroup>'+
+    '<thead><tr class="pgh"><th colspan="2"></th><th colspan="'+nm+'" class="pmn"><span class="tg tmin">Minorista</span> a público · con IVA</th>'+(ny?'<th colspan="'+ny+'" class="pmy"><span class="tg tmay">Mayorista</span> cafeterías · neto</th>':'')+'</tr>'+
+    '<tr><th>Producto<small>&nbsp;</small></th><th class="r">Costo<small>por unidad</small></th>'+
+    th("Margen","%","pmn")+th("Sugerido","con IVA","pmn")+th("Tu precio","con IVA","pmn")+
+    (window.NO_P2?'':th("Margen","%","pmy")+th("Sugerido","neto","pmy")+(window.NO_PM?'':th("Tu precio","neto","pmy")))+
     '</tr></thead><tbody>'+rows+'</tbody></table></div><p class="note" id="pnone" style="margin:8px 0 0"'+(recipes.some(function(r){return !PQ||xNorm(r.nombre).indexOf(xNorm(PQ))>=0})?' hidden':'')+'>No hay productos con ese nombre.</p></section>';
 }
 document.addEventListener("input",function(e){var t=e.target,d=t.dataset||{},id;
@@ -902,7 +905,7 @@ function ingList(){
   order.forEach(function(e){var ps=Object.keys(e.prices).map(Number);e.price=ps.sort(function(a,b){return e.prices[b]-e.prices[a]})[0]||0;e.distinct=ps.length>1?ps.sort(function(a,b){return a-b}):null});
   return order;
 }
-var ings=[], iid=1, UNITS=["g","kg","ml","L","un","cda","cdta","taza","h","cm","m"];
+var ings=[], iid=1, UNITS=["g","kg","ml","L","un","cda","cdta","taza","cm","m"];
 function normU(u){u=String(u==null?"":u).trim();if(/^(l|lt|lts|litro|litros)$/i.test(u))return "L";var k=u.toLowerCase();for(var i=0;i<UNITS.length;i++)if(UNITS[i].toLowerCase()===k)return UNITS[i];return u}window.normU=normU;
 function ingK(n,u){return xNorm(n)+"|"+xNorm(u)}
 function ingFind(n,u){var k=ingK(n,u);return ings.find(function(x){return ingK(x.n,x.u)===k})}
@@ -1409,8 +1412,8 @@ function extraInput(t){
   if(t.dataset&&t.dataset.pcol!==undefined){var pci=+t.dataset.pcol;pcats[pci].col=t.value;var sw=document.getElementById("sw"+pci);if(sw)sw.className="sw cc-"+t.value;return true}
   if(t.dataset&&t.dataset.pm!==undefined){pcats[+t.dataset.pm].m=Math.min(100,Math.max(0,parseFloat(t.value)||0))/100;return true}
   if(t.id==="rn"){rp.nombre=t.value;var b=document.querySelector(".rc.on b");if(b)b.textContent=t.value;return true}
-  if(t.id==="run"){rp.un=Math.max(1,Math.round(+t.value||1));return true}
-  if(t.id==="rud"){rp.ud=t.value;return true}
+  if(t.id==="run"){rp.un=Math.max(1,Math.round(+t.value||1));rsum();return true}
+  if(t.id==="rud"){rp.ud=t.value;rsum();return true}
   if(t.id==="rr"){rp.rinde=t.value;var s=document.querySelector(".rc.on span");if(s)s.textContent=t.value;return true}
   return false;
 }
@@ -1445,6 +1448,16 @@ function oDsc(x,sub){return x.dsct==="porcentaje"?Math.round(sub*(+x.dsc||0)/100
 function oTot(x){var s0=oSub(x);return Math.round(s0+(+x.desp||0)-oDsc(x,s0))}
 function cliStats(c){var l=real().filter(function(o){return o.cid===c.id}),t=l.reduce(function(a,o){return a+(+o.total||0)},0),u=l.reduce(function(a,o){return o.fecha>a?o.fecha:a},"");return {n:l.length,t:t,u:u}}
 function cliFind(nm){var k=xNorm(nm);return k?clis.find(function(c){return xNorm(c.n)===k}):null}
+function esH(it){return String(it.u||"").trim().toLowerCase()==="h"}
+function migH(){ // las "horas de trabajo" que estaban como ítem pasan al tiempo de trabajo con manos
+  if(window.NO_P2)return;var n=0;
+  recipes.forEach(function(r){var hs=(r.items||[]).filter(esH);if(!hs.length)return;
+    if(!(+r.ta))r.ta=Math.round(hs.reduce(function(a,it){return a+(+it.q||0)},0)*60);
+    for(var i=r.items.length-1;i>=0;i--)if(esH(r.items[i]))r.items.splice(i,1);n++});
+  if(rp&&rp.items)recipe=rp.items;
+  if(!window.NO_ING)for(var j=ings.length-1;j>=0;j--)if(esH(ings[j])&&!ingUses(ings[j]))ings.splice(j,1);
+  if(n)setTimeout(function(){toast(n===1?"La mano de obra de 1 receta pasó a “Trabajo con manos”":"La mano de obra de "+n+" recetas pasó a “Trabajo con manos”")},400);
+}
 function cliAutoImport(){ // la primera vez, los clientes de los pedidos pasan a ser clientes guardados
   if(window.NO_CLI||clis.length||!orders.length)return;var key="dulcia_cliimp_"+((window.CUENTA||{}).negocio_id||"");try{if(localStorage.getItem(key))return;localStorage.setItem(key,"1")}catch(e){}
   var n=0;orders.slice().sort(function(a,b){return (a.fecha+a.hora)<(b.fecha+b.hora)?-1:1}).forEach(function(o){var nm=String(o.cliente||"").trim();if(!nm)return;
@@ -1753,7 +1766,7 @@ function readFiles(files,cb,max){
 
 /* ---------- RENDER + EVENTOS ---------- */
 function render(){
-  cliAutoImport();renderNav();
+  cliAutoImport();migH();renderNav();
   var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,cli:vCli,prod:vProd,cost:vCost,pre:vPre,ing:vIng,com:vCom,inv:vInv,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
   if(view==="cost"&&recipes.length)rsum();
 }
