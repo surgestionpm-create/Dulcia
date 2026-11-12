@@ -708,3 +708,14 @@ td.ro{color:var(--soft)}
   .ln.lnp>input[data-lp]{grid-column:auto}
   .ln.lnh{display:none}
 }
+
+/* Inventario: casillas alineadas a la izquierda bajo su título */
+.itab th,.itab td{padding:6px 8px}
+.itab .iu{justify-content:flex-start}
+.itab .iu input{text-align:right}
+.itab td .st{margin-left:0}
+.ingcard .inghead span:nth-child(3),.ingcard .inghead span:nth-child(4),.ingcard .inghead span:nth-child(5){padding-right:0}
+
+.manualc{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.manualc>div{flex:1;min-width:220px}
+.manualc a.btn{text-decoration:none;white-space:nowrap}

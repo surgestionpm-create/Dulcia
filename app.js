@@ -404,7 +404,7 @@ function xTemplate(){
       [E1,"20 cm · 12 porciones",35,"Ingredientes","Harina",0.25,"kg",1200,"Sí"],
       [E1,"","","Ingredientes","Huevos",6,"un",250,"Sí"],
       [E1,"","","Ingredientes","Leche condensada",1,"un",2800,"Sí"],
-      [E1,"","","Ingredientes","Crema",0.5,"l",7000,"Sí"],
+      [E1,"","","Ingredientes","Crema",0.5,"L",7000,"Sí"],
       [E1,"","","Empaque y decoración","Caja",1,"un",1500,"Sí"],
       [E1,"","","Mano de obra y gastos","Horas de trabajo",2,"h",3750,"No"],
       [E2,"20 porciones",50,"Ingredientes","Chocolate 54%",0.3,"kg",9000,"Sí"],
@@ -452,7 +452,7 @@ function xParse(buf,X){
     var gp=String(g(col.g)).trim()||"Ingredientes", bv=xNorm(g(col.b));
     var buy=bv?!(bv==="no"||bv==="n"||bv==="false"||bv==="0"):!/mano de obra/i.test(gp);
     R.buy[gp]=(R.buy[gp]===true)||buy;
-    R.items.push({g:gp,n:it,q:q,u:String(g(col.u)).trim()||"un",c:c});
+    R.items.push({g:gp,n:it,q:q,u:normU(String(g(col.u)).trim()||"un"),c:c});
   }
   return {recs:out.filter(function(x){return x.items.length}),errs:errs};
 }
@@ -762,7 +762,8 @@ function ingList(){
   order.forEach(function(e){var ps=Object.keys(e.prices).map(Number);e.price=ps.sort(function(a,b){return e.prices[b]-e.prices[a]})[0]||0;e.distinct=ps.length>1?ps.sort(function(a,b){return a-b}):null});
   return order;
 }
-var ings=[], iid=1, UNITS=["g","kg","ml","l","un","cda","cdta","taza","h","cm","m"];
+var ings=[], iid=1, UNITS=["g","kg","ml","L","un","cda","cdta","taza","h","cm","m"];
+function normU(u){u=String(u==null?"":u).trim();if(/^(l|lt|lts|litro|litros)$/i.test(u))return "L";var k=u.toLowerCase();for(var i=0;i<UNITS.length;i++)if(UNITS[i].toLowerCase()===k)return UNITS[i];return u}window.normU=normU;
 function ingK(n,u){return xNorm(n)+"|"+xNorm(u)}
 function ingFind(n,u){var k=ingK(n,u);return ings.find(function(x){return ingK(x.n,x.u)===k})}
 function ingUses(x){var k=ingK(x.n,x.u),n=0;recipes.forEach(function(r){if(r.items.some(function(it){return ingKey(it)===k}))n++});return n}
@@ -863,18 +864,18 @@ document.addEventListener("input",function(e){var t=e.target;if(t.id==="in_u"||t
 document.addEventListener("change",function(e){if(e.target.id==="in_u")inRes()});
 /* ---------- Ingredientes por Excel ---------- */
 var IX_H=["Ingrediente","Unidad","Cuánto trae el envase","Precio del envase","Categoría","Stock actual","Stock mínimo","Merma %"];
-function ixUnit(u){var k=xNorm(u);var m={g:"g",gr:"g",grs:"g",gramo:"g",gramos:"g",kg:"kg",kilo:"kg",kilos:"kg",kilogramo:"kg",kilogramos:"kg",ml:"ml",cc:"ml",mililitro:"ml",mililitros:"ml",l:"l",lt:"l",lts:"l",litro:"l",litros:"l",un:"un",u:"un",und:"un",unidad:"un",unidades:"un",cda:"cda",cucharada:"cda",cucharadas:"cda",cdta:"cdta",cucharadita:"cdta",cucharaditas:"cdta",taza:"taza",tazas:"taza",h:"h",hora:"h",horas:"h",cm:"cm",m:"m",metro:"m",metros:"m"};return m[k]||""}
+function ixUnit(u){var k=xNorm(u);var m={g:"g",gr:"g",grs:"g",gramo:"g",gramos:"g",kg:"kg",kilo:"kg",kilos:"kg",kilogramo:"kg",kilogramos:"kg",ml:"ml",cc:"ml",mililitro:"ml",mililitros:"ml",l:"L",lt:"L",lts:"L",litro:"L",litros:"L",un:"un",u:"un",und:"un",unidad:"un",unidades:"un",cda:"cda",cucharada:"cda",cucharadas:"cda",cdta:"cdta",cucharadita:"cdta",cucharaditas:"cdta",taza:"taza",tazas:"taza",h:"h",hora:"h",horas:"h",cm:"cm",m:"m",metro:"m",metros:"m"};return m[k]||""}
 function openIngX(){
   var d=$("#dlg");
   d.innerHTML='<div class="dlg"><header><h2 style="font-size:1.62rem">Ingredientes en Excel</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
-  '<ol style="margin:0;padding-left:20px;line-height:1.6"><li>Descarga la plantilla (o tus ingredientes actuales) y ábrela en Excel o Google Sheets.</li><li>Una fila por ingrediente: nombre, unidad (g, kg, ml, l, un…), cuánto trae el envase y lo que pagas por él.</li><li>Súbela aquí. Antes de cargar te mostramos qué se crea y qué se actualiza.</li></ol>'+
+  '<ol style="margin:0;padding-left:20px;line-height:1.6"><li>Descarga la plantilla (o tus ingredientes actuales) y ábrela en Excel o Google Sheets.</li><li>Una fila por ingrediente: nombre, unidad (g, kg, ml, L, un…), cuánto trae el envase y lo que pagas por él.</li><li>Súbela aquí. Antes de cargar te mostramos qué se crea y qué se actualiza.</li></ol>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn ghost" data-ixtpl>Descargar plantilla</button>'+(ings.length?'<button type="button" class="btn ghost" data-ixexp>Descargar mis ingredientes ('+ings.length+')</button>':'')+'<label class="btn" style="cursor:pointer">Subir mi Excel<input type="file" id="iximp" accept=".xlsx,.xls,.csv" hidden></label></div>'+
   '<p class="note" style="margin:0">Si un ingrediente ya existe con el mismo nombre y unidad, se actualizan su envase, precio y categoría, y el nuevo costo se aplica a todas las recetas que lo usan. Nada se borra.</p><div id="ixmsg"></div></div>';
   if(!d.open)d.showModal();
 }
 function ixBook(X,rows){
   var ws=X.utils.aoa_to_sheet([IX_H].concat(rows));ws["!cols"]=[30,10,20,18,18,14,14,10].map(function(w){return {wch:w}});
-  var ins=X.utils.aoa_to_sheet([["Cómo llenar la hoja Ingredientes"],[""],["Ingrediente: el nombre tal como quieres verlo en tus recetas."],["Unidad: g, kg, ml, l, un, cda, cdta, taza, h, cm o m. Es la unidad en que usas el ingrediente en las recetas."],["Cuánto trae el envase: en esa misma unidad. Ej.: bolsa de harina de 1 kg con unidad g → 1000."],["Precio del envase: lo que pagas por ese envase, con IVA. Ej.: 1290."],["Categoría: Ingredientes, Empaque y decoración, o Mano de obra y gastos (o una categoría tuya)."],["Stock actual y stock mínimo: en la misma unidad. Si los dejas vacíos, no se cambian."],["Merma %: lo que se pierde al usarlo (ej.: 5 para frutas). Se suma a lo que necesitas comprar."],[""],["El costo por unidad lo calcula Dulcia: precio del envase ÷ cuánto trae."]]);ins["!cols"]=[{wch:110}];
+  var ins=X.utils.aoa_to_sheet([["Cómo llenar la hoja Ingredientes"],[""],["Ingrediente: el nombre tal como quieres verlo en tus recetas."],["Unidad: g, kg, ml, L, un, cda, cdta, taza, h, cm o m. Es la unidad en que usas el ingrediente en las recetas."],["Cuánto trae el envase: en esa misma unidad. Ej.: bolsa de harina de 1 kg con unidad g → 1000."],["Precio del envase: lo que pagas por ese envase, con IVA. Ej.: 1290."],["Categoría: Ingredientes, Empaque y decoración, o Mano de obra y gastos (o una categoría tuya)."],["Stock actual y stock mínimo: en la misma unidad. Si los dejas vacíos, no se cambian."],["Merma %: lo que se pierde al usarlo (ej.: 5 para frutas). Se suma a lo que necesitas comprar."],[""],["El costo por unidad lo calcula Dulcia: precio del envase ÷ cuánto trae."]]);ins["!cols"]=[{wch:110}];
   var wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Ingredientes");X.utils.book_append_sheet(wb,ins,"Instrucciones");return wb;
 }
 function ixTemplate(){xlsxLib().then(function(X){X.writeFile(ixBook(X,[["Harina sin polvos","g",1000,1290,I,2500,1000,0],["Huevos","un",30,7990,I,30,15,0],["Mantequilla","g",250,2890,I,500,250,0],["Frutillas","g",1000,3990,I,0,0,10],["Caja torta 20 cm","un",1,900,E,10,5,0]]),"Plantilla_ingredientes_Dulcia.xlsx");toast("Plantilla descargada")}).catch(function(e){toast(e.message)})}
@@ -887,7 +888,7 @@ function ixParse(buf,X){
   var out=[],err=[],seen={};
   for(var r=hi+1;r<aoa.length;r++){var row=aoa[r],g=function(c){return c==null?"":row[c]};var n=String(g(col.n)).trim();if(!n)continue;
     var u=ixUnit(g(col.u)),e=xNum(g(col.e)),p=xNum(g(col.p)),cat=String(g(col.g)).trim();
-    if(!u){err.push("Fila "+(r+1)+" ("+n+"): unidad “"+g(col.u)+"” no válida. Usa g, kg, ml, l, un, cda, cdta, taza, h, cm o m.");continue}
+    if(!u){err.push("Fila "+(r+1)+" ("+n+"): unidad “"+g(col.u)+"” no válida. Usa g, kg, ml, L, un, cda, cdta, taza, h, cm o m.");continue}
     if(isNaN(e)||e<=0)e=1; if(isNaN(p)||p<0)p=0;
     var k=ingK(n,u);if(seen[k]){err.push("Fila "+(r+1)+": “"+n+"” ("+u+") está repetido; se usa la primera fila.");continue}seen[k]=1;
     var ov=function(c){var v=g(c);return v===""||v==null?null:xNum(v)},st=ov(col.st),mn=ov(col.mn),mm=ov(col.mm);
@@ -923,11 +924,11 @@ function vInv(){
   var l=ings.filter(function(x){return x.g!==M}),bajo=l.filter(function(x){return (+x.mn||0)>0&&(+x.st||0)<(+x.mn||0)}).length,sin=l.filter(function(x){return (+x.st||0)<=0}).length,val=l.reduce(function(a,x){return a+Math.max(0,+x.st||0)*(+x.c||0)},0);
   var cats=ingCats().filter(function(g){return g!==M});
   var html=cats.map(function(g){var lg=l.filter(function(x){return x.g===g}).sort(function(a,b){return a.n.localeCompare(b.n,"es")});if(!lg.length)return "";
-    return '<section class="card invcard"><h2 style="font-size:1.3rem;margin-bottom:6px">'+esc(g)+'</h2><div class="scroll"><table class="itab"><thead><tr><th>Ingrediente</th><th class="r">Tengo</th><th class="r">Stock mínimo</th><th class="r">Merma %</th><th class="r">Valor</th><th>Estado</th></tr></thead><tbody>'+
+    return '<section class="card invcard"><h2 style="font-size:1.3rem;margin-bottom:6px">'+esc(g)+'</h2><div class="scroll"><table class="itab"><thead><tr><th>Ingrediente</th><th>Tengo</th><th>Stock mínimo</th><th>Merma</th><th class="r">Valor</th><th>Estado</th></tr></thead><tbody>'+
     lg.map(function(x){return '<tr data-invn="'+esc(xNorm(x.n))+'"><td><b>'+esc(x.n)+'</b><div class="note" style="margin:0">'+(+x.c?$$u(x.c)+' / '+esc(x.u):'sin precio')+'</div></td>'+
-      '<td class="r"><span class="iu"><input type="number" step="any" inputmode="decimal" data-ist="'+x.id+'" value="'+(Math.round((+x.st||0)*100)/100)+'" aria-label="Stock de '+esc(x.n)+'"><i>'+esc(x.u)+'</i></span></td>'+
-      '<td class="r"><span class="iu"><input type="number" min="0" step="any" inputmode="decimal" data-imn="'+x.id+'" value="'+(+x.mn||"")+'" placeholder="0" aria-label="Mínimo de '+esc(x.n)+'"><i>'+esc(x.u)+'</i></span></td>'+
-      '<td class="r"><span class="iu"><input type="number" min="0" max="90" step="any" inputmode="decimal" data-imm="'+x.id+'" value="'+(+x.mm||"")+'" placeholder="0" aria-label="Merma de '+esc(x.n)+'"><i>%</i></span></td>'+
+      '<td><span class="iu"><input type="number" step="any" inputmode="decimal" data-ist="'+x.id+'" value="'+(Math.round((+x.st||0)*100)/100)+'" aria-label="Stock de '+esc(x.n)+'"><i>'+esc(x.u)+'</i></span></td>'+
+      '<td><span class="iu"><input type="number" min="0" step="any" inputmode="decimal" data-imn="'+x.id+'" value="'+(+x.mn||"")+'" placeholder="0" aria-label="Mínimo de '+esc(x.n)+'"><i>'+esc(x.u)+'</i></span></td>'+
+      '<td><span class="iu"><input type="number" min="0" max="90" step="any" inputmode="decimal" data-imm="'+x.id+'" value="'+(+x.mm||"")+'" placeholder="0" aria-label="Merma de '+esc(x.n)+'"><i>%</i></span></td>'+
       '<td class="r" id="iv'+x.id+'">'+$$(Math.max(0,+x.st||0)*(+x.c||0))+'</td><td id="ie'+x.id+'">'+invEstado(x)+'</td></tr>'}).join("")+'</tbody></table></div></section>'}).join("");
   return top+'<div class="grid kpis k3" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">'+kpi("Bajo el mínimo",bajo,"van solos a la lista de Compras")+kpi("Sin stock",sin,"de "+l.length+" ingredientes")+kpi("Valor del inventario",$$(val),"según el costo de cada ingrediente")+'</div>'+
   '<div class="rtip"><span class="rtipi" aria-hidden="true">📦</span><div><b>Se actualiza solo:</b> se descuenta cuando marcas un pedido como <b>Listo</b> en Producción (y se devuelve si lo desmarcas) y se suma cuando tocas <b>Comprado</b> en Compras. Si cuentas tu bodega, corrige aquí el número de “Tengo”.</div></div>'+html;
@@ -1152,6 +1153,7 @@ function vCfg(){
   return head("Ajustes")+'<div class="grid" style="max-width:720px">'+
   '<section class="card"><h2 style="font-size:1.38rem">Tu pastelería</h2><div class="logoedit" style="margin-top:12px"><img src="'+logoSrc()+'" alt="Logo"><label class="btn ghost sm" style="cursor:pointer">Cambiar logo<input type="file" accept="image/*" hidden id="cl"></label></div>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:14px">Nombre<input type="text" id="cn" value="'+esc(cfg.nombre)+'"></label><p class="note">El logo y el nombre aparecen en el menú y, más adelante, en tus cotizaciones en PDF.</p></section>'+
+  '<section class="card manualc"><div><h2 style="font-size:1.38rem">Manual de uso</h2><p class="note" style="margin:2px 0 0">Guía completa de Dulcia, paso a paso y con imágenes: recetas, precios, pedidos, producción, compras, inventario y más. Se actualiza con cada mejora de la app.</p></div><a class="btn" href="/manual-dulcia.pdf" target="_blank" rel="noopener" download="Manual-Dulcia.pdf">Descargar manual (PDF)</a></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Cómo calcular tu resultado</h2><p class="note" style="margin-top:2px">Así el Panel no cuenta dos veces lo que gastas en ingredientes.</p>'+
   '<div class="rad" role="radiogroup" aria-label="Cómo calcular tu resultado" style="margin-top:10px"><label><input type="radio" name="costeo" value="real"'+(cfg.costeo!=="estimado"?' checked':'')+'><span><b>Anoto todas mis compras en Gastos</b><br><span style="color:var(--soft)">Ingredientes, materiales y gastos fijos. Resultado = ventas netas − gastos.</span></span></label>'+
   '<label><input type="radio" name="costeo" value="estimado"'+(cfg.costeo==="estimado"?' checked':'')+'><span><b>En Gastos anoto solo gastos fijos</b><br><span style="color:var(--soft)">Arriendo, luz, sueldos. Los ingredientes se estiman con el margen de cada categoría.</span></span></label></div></section>'+
