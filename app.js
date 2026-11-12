@@ -68,6 +68,7 @@ function catCol(n){var i=pcats.findIndex(function(c){return c.n===n});if(i>=0&&p
 function chipS(x){return '<span class="chip s-'+st(x)+'">'+STL[st(x)]+'</span>'}
 
 var ICON={
+cli:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.4 3.4 0 0 1 0 6.8M18.5 14.8c1.7.7 2.7 2.4 3 5.2"/></svg>',
  ing:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
  panel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>',
  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
@@ -82,7 +83,7 @@ ICON.gas='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-widt
 ICON.cfg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>';
 ICON.mkt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6L6 10z"/><path d="M16 9a4 4 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11"/></svg>';
 ICON.com='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h10l2-8H6.5"/><circle cx="9" cy="19.500" r="1.200"/><circle cx="17" cy="19.500" r="1.200"/></svg>';
-var NAV=[["panel","Panel","panel"],["cal","Calendario","cal"],["ped","Pedidos","ped"],["prod","Producción","prod"],["cost","Recetas","cost"],["ing","Ingredientes","ing"],["com","Compras","com"],["inv","Inventario","inv"],["gas","Gastos","gas"],["mkt","Marketing","mkt"],["cfg","Ajustes","cfg"]];
+var NAV=[["panel","Panel","panel"],["cal","Calendario","cal"],["ped","Pedidos","ped"],["cli","Clientes","cli"],["prod","Producción","prod"],["cost","Recetas","cost"],["ing","Ingredientes","ing"],["com","Compras","com"],["inv","Inventario","inv"],["gas","Gastos","gas"],["mkt","Marketing","mkt"],["cfg","Ajustes","cfg"]];
 function renderNav(){
   $("#side").innerHTML='<div class="brand"><img class="blogo" src="'+logoSrc()+'" alt=""><div><div class="bn">'+esc(cfg.nombre)+'</div><small>con Dulcia</small></div></div><div style="height:14px"></div>'+NAV.map(function(n){
     return '<button class="nav" data-v="'+n[0]+'"'+(view===n[0]?' aria-current="page"':'')+'>'+ICON[n[2]]+'<span>'+n[1]+'</span></button>'}).join("")+
@@ -1231,7 +1232,7 @@ function extra(t){
   if(t.dataset.delo){var oi=orders.findIndex(function(q){return q.id===+t.dataset.delo});var od=orders.splice(oi,1)[0];$("#dlg").close();
     toast("Pedido de “"+od.cliente+"” eliminado",function(){orders.splice(oi,0,od)});return true}
   if(t.dataset.ladd){var xo=orders.find(function(q){return q.id===+t.dataset.ladd});xo.items=xo.items||[];xo.items.push({rid:recipes[0].id,q:1,p:window.NO_PM?null:precioStd(recipes[0],xo.tc)});openOrder(xo.id);return true}
-  if(t.dataset.ltot){var xt=orders.find(function(q){return q.id===+t.dataset.ltot});xt.total=Math.round(lnTot(xt));if(xt.pagado>xt.total)xt.pagado=xt.total;openOrder(xt.id);render();toast("Total del pedido: "+$$(xt.total));return true}
+  if(t.dataset.ltot){var xt=orders.find(function(q){return q.id===+t.dataset.ltot});xt.total=oTot(xt);if(xt.pagado>xt.total)xt.pagado=xt.total;openOrder(xt.id);render();toast("Total del pedido: "+$$(xt.total));return true}
   if(t.dataset.ldel){var pl=t.dataset.ldel.split(":"),xl=orders.find(function(q){return q.id===+pl[0]});xl.items.splice(+pl[1],1);openOrder(xl.id);return true}
   if(t.dataset.pdel){var pp=t.dataset.pdel.split(":"),xp=orders.find(function(q){return q.id===+pp[0]});xp.fotos.splice(+pp[1],1);openOrder(xp.id);return true}
   if(t.dataset.gedit){openGastoEdit(+t.dataset.gedit);return true}
@@ -1301,11 +1302,73 @@ function extraSubmit(f){
 
 /* ---------- DIALOGOS ---------- */
 var TCL={minorista:"Minorista (público)",mayorista:"Mayorista (cafetería, reventa)"};
+var clis=[],cid=1,CLQ="",CLF="";
+function cliPrecio(c,r,tc){if(c&&c.pr&&c.pr[r.id]!=null&&c.pr[r.id]!=="")return +c.pr[r.id];return precioStd(r,tc)}
+function oSub(x){return (x.items||[]).reduce(function(a,l){return a+(+l.q||0)*lnP(l,x.tc)},0)}
+function oDsc(x,sub){return x.dsct==="porcentaje"?Math.round(sub*(+x.dsc||0)/100):(+x.dsc||0)}
+function oTot(x){var s0=oSub(x);return Math.round(s0+(+x.desp||0)-oDsc(x,s0))}
+function cliStats(c){var l=real().filter(function(o){return o.cid===c.id}),t=l.reduce(function(a,o){return a+(+o.total||0)},0),u=l.reduce(function(a,o){return o.fecha>a?o.fecha:a},"");return {n:l.length,t:t,u:u}}
+function cliFind(nm){var k=xNorm(nm);return k?clis.find(function(c){return xNorm(c.n)===k}):null}
+function cliAutoImport(){ // la primera vez, los clientes de los pedidos pasan a ser clientes guardados
+  if(window.NO_CLI||clis.length||!orders.length)return;var key="dulcia_cliimp_"+((window.CUENTA||{}).negocio_id||"");try{if(localStorage.getItem(key))return;localStorage.setItem(key,"1")}catch(e){}
+  var n=0;orders.slice().sort(function(a,b){return (a.fecha+a.hora)<(b.fecha+b.hora)?-1:1}).forEach(function(o){var nm=String(o.cliente||"").trim();if(!nm)return;
+    var c=clis.find(function(z){return (o.wa&&z.wa===o.wa)||(o.ig&&z.ig&&z.ig.toLowerCase()===o.ig.toLowerCase())||xNorm(z.n)===xNorm(nm)});
+    if(!c){c={id:cid++,n:nm,tipo:"minorista",wa:"",ig:"",mail:"",rs:"",rut:"",giro:"",dir:"",com:"",notas:"",pr:{},may:0};clis.push(c);n++}
+    if(o.wa)c.wa=o.wa;if(o.ig)c.ig=o.ig;if(o.tc==="mayorista")c.may=(c.may||0)+1;o.cid=c.id});
+  clis.forEach(function(c){if(c.may)c.tipo="mayorista";delete c.may});
+  if(n)setTimeout(function(){toast(n+" cliente"+(n===1?"":"s")+" creado"+(n===1?"":"s")+" desde tus pedidos. Revísalos en Clientes.")},400);
+}
+function vCli(){
+  var top=head("Clientes",'<input type="search" id="cliq" placeholder="Buscar cliente" aria-label="Buscar cliente" value="'+esc(CLQ)+'" style="max-width:240px"><button class="btn" data-clinew>Nuevo cliente</button>');
+  if(window.NO_CLI)return top+'<div class="card empty">Falta un paso en la base de datos para guardar clientes. Avísale a soporte.</div>';
+  var q=xNorm(CLQ),l=clis.filter(function(c){return (!CLF||c.tipo===CLF)&&(!q||xNorm(c.n+" "+c.wa+" "+c.ig+" "+c.rs+" "+c.rut).indexOf(q)>=0)}).sort(function(a,b){return a.n.localeCompare(b.n,"es",{sensitivity:"base"})});
+  var nm=clis.filter(function(c){return c.tipo==="mayorista"}).length;
+  var chips='<div class="segs">'+[["","Todos",clis.length],["minorista","Minoristas",clis.length-nm],["mayorista","Mayoristas",nm]].map(function(z){return '<button class="segc'+(CLF===z[0]?' on':'')+'" data-clf="'+z[0]+'">'+z[1]+' · '+z[2]+'</button>'}).join("")+'</div>';
+  var rows=l.map(function(c){var st=cliStats(c);return '<tr class="clir" data-cliedit="'+c.id+'"><td><b>'+esc(c.n)+'</b>'+(c.rs?'<div class="note" style="margin:0">'+esc(c.rs)+(c.rut?' · '+esc(c.rut):'')+'</div>':'')+'</td><td><span class="st '+(c.tipo==="mayorista"?'regalo':'pagando')+'">'+(c.tipo==="mayorista"?'Mayorista':'Minorista')+'</span></td><td>'+(c.wa?esc(waFmt(c.wa)):'')+(c.ig?'<div class="note" style="margin:0">@'+esc(c.ig)+'</div>':'')+(!c.wa&&!c.ig?'<span class="note" style="margin:0">—</span>':'')+'</td><td class="r">'+st.n+'</td><td class="r">'+$$(st.t)+'</td><td>'+(st.u?dmy(st.u):'—')+'</td><td class="r"><button class="btn ghost sm" data-clinp="'+c.id+'">Nuevo pedido</button></td></tr>'}).join("");
+  return top+'<p class="note" style="margin:-6px 0 12px">Guarda a tus clientes una vez y elígelos al crear un pedido: se completan solos su contacto, su tipo de precio y sus precios especiales.</p>'+chips+
+    '<section class="card">'+(l.length?'<div class="scroll"><table class="pg ctl"><thead><tr><th>Cliente</th><th>Tipo</th><th>Contacto</th><th class="r">Pedidos</th><th class="r">Total comprado</th><th>Último pedido</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">'+(clis.length?'No hay clientes con ese filtro.':'Aún no tienes clientes guardados. Crea el primero con “Nuevo cliente”.')+'</div>')+'</section>';
+}
+function openCli(id,alGuardar){
+  var c=id?clis.find(function(z){return z.id===id}):{tipo:"minorista",pr:{}};if(!c)return;var nuevo=!id,d=$("#dlg");
+  var f=function(lb,idf,v,ph,ty){return '<label>'+lb+'<input type="'+(ty||"text")+'" id="'+idf+'" value="'+esc(v||"")+'"'+(ph?' placeholder="'+ph+'"':'')+'></label>'};
+  var precios=recipes.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,"es")}).map(function(r){var v=c.pr&&c.pr[r.id]!=null&&c.pr[r.id]!==""?mfmt(c.pr[r.id]):"";
+    return '<div class="cpr"><span>'+esc(r.nombre)+' <span class="note" style="margin:0">por '+esc(udPl(r,1))+'</span></span><span class="cpn" data-cpn="'+r.id+'">'+$$(precioStd(r,c.tipo))+'</span><input type="text" class="money" inputmode="numeric" data-cpr="'+r.id+'" value="'+v+'" placeholder="—" aria-label="Precio especial de '+esc(r.nombre)+'"></div>'}).join("");
+  d.innerHTML='<form class="dlg" id="clf"><header><h2 style="font-size:1.62rem">'+(nuevo?'Nuevo cliente':esc(c.n))+'</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
+    '<div class="f"><label class="w">Nombre o razón comercial<input type="text" id="cl_n" required value="'+esc(c.n||"")+'" placeholder="Ej.: Café del Puerto"></label>'+
+    '<label>Tipo de cliente<select id="cl_t"><option value="minorista"'+(c.tipo!=="mayorista"?' selected':'')+'>'+TCL.minorista+'</option><option value="mayorista"'+(c.tipo==="mayorista"?' selected':'')+'>'+TCL.mayorista+'</option></select></label>'+
+    f("WhatsApp","cl_wa",c.wa?waFmt(c.wa):"","+56 9 1234 5678","tel")+f("Instagram","cl_ig",c.ig?"@"+c.ig:"","@usuario")+f("Correo","cl_m",c.mail,"contacto@cliente.cl","email")+
+    '<div class="w fsec">Facturación</div>'+f("Razón social","cl_rs",c.rs,"Ej.: Café del Puerto SpA")+f("RUT","cl_rut",c.rut,"76.123.456-7")+'<label class="w">Giro<input type="text" id="cl_g" value="'+esc(c.giro||"")+'" placeholder="Ej.: Cafetería"></label>'+
+    '<div class="w fsec">Despacho</div>'+f("Dirección","cl_dir",c.dir,"Calle y número")+f("Comuna","cl_com",c.com,"Ej.: Puerto Montt")+
+    (recipes.length?'<div class="w fsec">Precios especiales <span class="note" style="margin:0;font-weight:400">por unidad, con IVA. Vacío = usa su precio normal.</span></div><div class="w cprs"><div class="cpr cph"><span>Producto</span><span>Precio normal</span><span>Precio especial</span></div>'+precios+'</div>':'')+
+    '<label class="w">Notas<textarea id="cl_no" rows="3" placeholder="Horario de entrega, preferencias, forma de pago…">'+esc(c.notas||"")+'</textarea></label></div>'+
+    '<div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">'+(nuevo?'<span></span>':'<button type="button" class="btn ghost sm danger" data-clidel="'+c.id+'">Eliminar cliente</button>')+'<div style="display:flex;gap:8px"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit">'+(nuevo?'Crear cliente':'Guardar')+'</button></div></div></form>';
+  d.dataset.cli=id||"";window._cliCb=alGuardar||null;if(!d.open)d.showModal();
+}
+function cliGuardar(){
+  var id=+$("#dlg").dataset.cli,nuevo=!id,c=nuevo?{id:cid++,pr:{}}:clis.find(function(z){return z.id===id});if(!c)return;
+  var nm=$("#cl_n").value.trim().replace(/\s+/g," ");if(!nm){$("#cl_n").focus();return}
+  var otro=cliFind(nm);if(otro&&otro.id!==c.id){toast("Ya existe un cliente llamado “"+otro.n+"”");$("#cl_n").focus();return}
+  c.n=nm;c.tipo=$("#cl_t").value;c.wa=waNum($("#cl_wa").value);c.ig=igUser($("#cl_ig").value);c.mail=$("#cl_m").value.trim();c.rs=$("#cl_rs").value.trim();c.rut=$("#cl_rut").value.trim();c.giro=$("#cl_g").value.trim();c.dir=$("#cl_dir").value.trim();c.com=$("#cl_com").value.trim();c.notas=$("#cl_no").value.trim();
+  c.pr={};document.querySelectorAll("[data-cpr]").forEach(function(i){if(i.value.trim()&&mnum(i.value)>0)c.pr[+i.dataset.cpr]=mnum(i.value)});
+  if(nuevo)clis.push(c);var cb=window._cliCb;window._cliCb=null;$("#dlg").close();render();toast(nuevo?"Cliente “"+c.n+"” creado":"Cliente guardado");if(cb)cb(c);
+}
+document.addEventListener("submit",function(e){if(e.target.id==="clf"){e.preventDefault();cliGuardar()}});
+document.addEventListener("change",function(e){if(e.target.id==="cl_t")document.querySelectorAll("[data-cpn]").forEach(function(s){var r=recipes.find(function(q){return q.id===+s.dataset.cpn});if(r)s.textContent=$$(precioStd(r,e.target.value))})});
+document.addEventListener("input",function(e){if(e.target.id==="cliq"){CLQ=e.target.value;var p=e.target.selectionStart;render();var i=$("#cliq");if(i){i.focus();try{i.setSelectionRange(p,p)}catch(er){}}}});
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("button,tr[data-cliedit]");if(!t)return;
+  if(t.hasAttribute("data-clinew")){openCli(0);return}
+  if(t.dataset.clf!=null){CLF=t.dataset.clf;render();return}
+  if(t.dataset.clinp){e.stopPropagation();var c0=clis.find(function(z){return z.id===+t.dataset.clinp});openNew(TODAY);if(c0)nCliente(c0);return}
+  if(t.dataset.cliedit&&!e.target.closest("button")){openCli(+t.dataset.cliedit);return}
+  if(t.dataset.clidel){var c1=clis.find(function(z){return z.id===+t.dataset.clidel});if(!c1)return;if(!t.dataset.sure){t.dataset.sure=1;t.textContent="Toca de nuevo para eliminar";return}
+    var i1=clis.indexOf(c1);clis.splice(i1,1);var os=orders.filter(function(o){return o.cid===c1.id});os.forEach(function(o){o.cid=null});$("#dlg").close();render();
+    toast("Cliente eliminado (sus pedidos se mantienen)",function(){clis.splice(i1,0,c1);os.forEach(function(o){o.cid=c1.id});render()});return}
+});
 function precioStd(r,tc){if(!r)return 0;return tc==="mayorista"?(+r.pm?Math.round(+r.pm*IVA):0):(+r.precio||0)}
 function lnP(l,tc){return l.p==null||l.p===""?precioStd(recipes.find(function(r){return r.id===l.rid}),tc):+l.p}
 function lnTot(x){return (x.items||[]).reduce(function(a,l){return a+(+l.q||0)*lnP(l,x.tc)},0)}
 function lnSync(x){var tot=lnTot(x),e=$("#lntot");if(e)e.innerHTML=lnTotHtml(x);(x.items||[]).forEach(function(l,i){var s=$("#lsub"+i);if(s)s.textContent=$$((+l.q||0)*lnP(l,x.tc))})}
-function lnTotHtml(x){var t=Math.round(lnTot(x));return 'Total de las recetas: <b>'+$$(t)+'</b>'+(t&&Math.round(t)!==Math.round(+x.total||0)?' <button class="btn ghost sm" data-ltot="'+x.id+'">Usar como total del pedido</button>':(t?' <span class="note" style="margin:0">= total del pedido</span>':''))}
+function lnTotHtml(x){var t=oTot(x);return (+x.desp||+x.dsc?'Total calculado (productos + despacho − descuento): <b>':'Total de los productos: <b>')+''+$$(t)+'</b>'+(t&&Math.round(t)!==Math.round(+x.total||0)?' <button class="btn ghost sm" data-ltot="'+x.id+'">Usar como total del pedido</button>':(t?' <span class="note" style="margin:0">= total del pedido</span>':''))}
 function recOpts(sel){return recipes.map(function(r){return '<option value="'+r.id+'"'+(r.id===sel?' selected':'')+'>'+esc(r.nombre)+'</option>'}).join("")}
 function evTimes(x){var d=x.fecha.replace(/-/g,""),h=(x.hora||"12:00").split(":"),a=+h[0]||0,m=h[1]||"00",z=function(n){return String(n).padStart(2,"0")};
   return {s:d+"T"+z(a)+m+"00",e:d+"T"+z(Math.min(23,a+1))+m+"00"}}
@@ -1322,7 +1385,7 @@ function openOrder(id){
     '<button class="x" data-ldel="'+x.id+':'+i+'" aria-label="Quitar receta">✕</button></div>'}).join("");
   d.innerHTML='<div class="dlg"><header><div><h2 style="font-size:1.62rem">'+esc(x.cliente)+'</h2><div class="note" style="margin:2px 0 0">'+fechaLarga(x.fecha)+' · '+x.hora+'</div></div><div style="display:flex;gap:8px;flex:none"><button class="ib" data-edito="'+x.id+'" aria-label="Editar pedido" title="Editar pedido"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ib" data-close aria-label="Cerrar">✕</button></div></header>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="'+gcalUrl(x)+'">Agregar a Google Calendar</a><button class="btn ghost sm" data-ics="'+x.id+'">Descargar para otro calendario</button></div>'+
-  '<dl class="kv"><dt>Categoría</dt><dd>'+esc(x.cat)+'</dd>'+(PM?'<dt>Cliente</dt><dd>'+(x.tc==="mayorista"?'Mayorista':'Minorista')+'</dd>':'')+(x.personas?'<dt>Personas</dt><dd>'+x.personas+'</dd>':'')+'<dt>Canal</dt><dd>'+esc(x.canal)+'</dd><dt>Total</dt><dd>'+$$(x.total)+'</dd><dt>Pagado</dt><dd>'+$$(x.pagado)+' '+chipS(x)+'</dd><dt>Saldo</dt><dd>'+$$(x.total-x.pagado)+'</dd></dl>'+
+  '<dl class="kv"><dt>Categoría</dt><dd>'+esc(x.cat)+'</dd>'+(PM?'<dt>Cliente</dt><dd>'+(x.tc==="mayorista"?'Mayorista':'Minorista')+'</dd>':'')+(x.personas?'<dt>Personas</dt><dd>'+x.personas+'</dd>':'')+'<dt>Canal</dt><dd>'+esc(x.canal)+'</dd>'+(+x.desp?'<dt>Despacho</dt><dd>'+$$(x.desp)+'</dd>':'')+(+x.dsc?'<dt>Descuento</dt><dd>'+(x.dsct==="porcentaje"?fq(x.dsc)+'% ('+$$(oDsc(x,oSub(x)))+')':$$(x.dsc))+'</dd>':'')+'<dt>Total</dt><dd>'+$$(x.total)+'</dd><dt>Pagado</dt><dd>'+$$(x.pagado)+' '+chipS(x)+'</dd><dt>Saldo</dt><dd>'+$$(x.total-x.pagado)+'</dd></dl>'+
   '<div class="contact"><b>Contacto</b>'+
   '<label>Instagram<span class="crow2"><input type="text" data-ig="'+x.id+'" value="'+esc(x.ig?"@"+x.ig:"")+'" placeholder="@usuario" autocapitalize="none" autocomplete="off"><a class="btn ghost sm" id="a_ig" target="_blank" rel="noopener" href="'+igUrl(x.ig)+'"'+(x.ig?'':' hidden')+'>Ver perfil</a></span></label>'+
   '<label>WhatsApp<span class="crow2"><input type="tel" inputmode="tel" data-wa="'+x.id+'" value="'+esc(waFmt(x.wa))+'" placeholder="+56 9 1234 5678" autocomplete="off"><a class="btn ghost sm" id="a_wa" target="_blank" rel="noopener" href="'+waUrl(x.wa)+'"'+(x.wa?'':' hidden')+'>Abrir chat</a></span></label></div>'+
@@ -1356,38 +1419,81 @@ function openEdit(id){
   var a=$("#n_a"); if(![].some.call(a.options,function(o){return o.value===x.canal})){var o2=document.createElement("option");o2.textContent=x.canal;a.appendChild(o2)} a.value=x.canal;
   var pe=$("#n_pe"); if(x.personas&&![].some.call(pe.options,function(o){return +o.value===x.personas})){var o3=document.createElement("option");o3.value=x.personas;o3.textContent=x.personas+" personas";pe.appendChild(o3)} pe.value=x.personas?String(x.personas):"";
   $("#n_t").value=mfmt(x.total); $("#n_p").value=mfmt(x.pagado); $("#n_d").value=x.desc==="Sin descripción."?"":x.desc;
-  [$("#n_r"),$("#n_rq"),$("#n_rp"),$("#n_ph")].forEach(function(el){var l=el&&el.closest("label,.w");if(l)l.hidden=true});
+  [$("#n_r"),$("#n_rq"),$("#n_ph")].forEach(function(el){var l=el&&el.closest("label,.w");if(l)l.hidden=true});
   if($("#n_tc"))$("#n_tc").value=x.tc||"minorista";
+  if(!window.NO_CLI){fm.dataset.cid=x.cid||"";var cx=x.cid?clis.find(function(c){return c.id===x.cid}):null;if(cx)nCliente(cx);var bx=$("#n_cli");if(bx&&!cx)bx.innerHTML='';
+    if($("#n_desp"))$("#n_desp").value=mfmt(x.desp||0);if($("#n_dsc"))$("#n_dsc").value=String(x.dsc||0).replace(".",",");if($("#n_dsct"))$("#n_dsct").value=x.dsct||"monto"}
+  if(!window.NO_PM){window._nl=(x.items||[]).map(function(l){return {rid:l.rid,q:l.q,p:lnP(l,x.tc),man:true}});nRender();window._ntman=Math.round(+x.total||0)!==window._ntcalc;$("#n_t").value=mfmt(x.total);var rb=$("#n_trec");if(rb)rb.hidden=!window._ntman}
   var sc=fm.querySelector("[data-savecot]"); if(sc)sc.hidden=true;
   fm.querySelector("button[type=submit]").textContent="Guardar cambios";
-  var nt=document.createElement("p");nt.className="note w";nt.style.margin="0";nt.textContent="Las recetas y las fotos se cambian en el detalle del pedido.";fm.querySelector(".f").appendChild(nt);
+  var nt=document.createElement("p");nt.className="note w";nt.style.margin="0";nt.textContent=window.NO_PM?"Las recetas y las fotos se cambian en el detalle del pedido.":"Las fotos se cambian en el detalle del pedido.";fm.querySelector(".f").appendChild(nt);
 }
 function nPrecio(precio){ // pedido nuevo: precio estándar según receta y tipo de cliente; total = cantidad × precio
   var r=recipes.find(function(q){return q.id===+(($("#n_r")||{}).value)}),tc=($("#n_tc")||{}).value,pi=$("#n_rp"),nt=$("#n_rpn");if(!pi)return;
   if(precio){var p=precioStd(r,tc);pi.value=mfmt(p);if(nt){nt.hidden=!r;nt.textContent=r?(tc==="mayorista"?(+r.pm?"Precio mayorista de “"+r.nombre+"”: "+$$(r.pm)+" + IVA. Puedes cambiarlo.":"“"+r.nombre+"” no tiene precio mayorista: anótalo en la receta o escríbelo aquí."):(+r.precio?"Precio a público de “"+r.nombre+"”. Puedes cambiarlo.":"“"+r.nombre+"” no tiene precio a público: anótalo en la receta o escríbelo aquí.")):""}}
   if(r){var t=Math.round((parseFloat($("#n_rq").value)||0)*mnum(pi.value));$("#n_t").value=mfmt(t)}
 }
-document.addEventListener("change",function(e){var id=e.target.id;if(id==="n_r"||id==="n_tc")nPrecio(true)});
-document.addEventListener("input",function(e){var id=e.target.id;if(id==="n_rq"||id==="n_rp")nPrecio(false)});
+
 function openNew(fecha){
   var d=$("#dlg"), fdef=fecha||(TODAY.slice(0,7)===cur.y+'-'+String(cur.m+1).padStart(2,"0")?TODAY:cur.y+'-'+String(cur.m+1).padStart(2,"0")+'-15');
   d.innerHTML='<form class="dlg" id="nf"><header><h2 style="font-size:1.62rem">Nuevo pedido</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
-  '<div class="f"><label class="w">Cliente<input type="text" id="n_c" required placeholder="Nombre del cliente"></label>'+
+  '<div class="f"><label class="w">Cliente<input type="text" id="n_c" required placeholder="Escribe o elige un cliente guardado" autocomplete="off"'+(window.NO_CLI?'':' list="n_cl"')+'></label>'+
+  (window.NO_CLI?'':'<datalist id="n_cl">'+clis.slice().sort(function(a,b){return a.n.localeCompare(b.n,"es")}).map(function(c){return '<option value="'+esc(c.n)+'">'+(c.tipo==="mayorista"?'Mayorista':'Minorista')+(c.wa?' · '+esc(waFmt(c.wa)):'')+'</option>'}).join("")+'</datalist><div class="w ncli" id="n_cli"></div>')+
   '<label>Instagram<input type="text" id="n_ig" placeholder="@usuario" autocapitalize="none" autocomplete="off"></label><label>WhatsApp<input type="tel" id="n_wa" placeholder="+56 9 1234 5678" inputmode="tel" autocomplete="off"></label>'+
   '<label>Fecha de entrega<input type="date" id="n_f" required value="'+fdef+'"></label><label>Hora<input type="time" id="n_h" value="12:00"></label>'+
   '<label>Categoría<select id="n_k">'+pcats.map(function(c){return '<option>'+esc(c.n)+'</option>'}).join("")+'<option value="__new">+ Crear categoría nueva</option></select></label>'+
   '<label>Canal<select id="n_a">'+CANALES.map(function(c){return '<option>'+c+'</option>'}).join("")+'</select></label>'+
   (window.NO_PM?'':'<label>Tipo de cliente<select id="n_tc"><option value="minorista">'+TCL.minorista+'</option><option value="mayorista">'+TCL.mayorista+'</option></select></label>')+
   '<div class="w f" id="n_nkw" hidden><label>Nombre de la categoría<input type="text" id="n_nkn" placeholder="Ej.: Postres"></label><label>Margen %<input type="number" id="n_nkm" value="70" min="0" max="100"></label></div>'+
-  '<label>Receta (opcional)<select id="n_r"><option value="">Sin receta</option>'+recOpts(-1)+'</select></label><label>Cantidad<input type="number" id="n_rq" step="any" min="0" value="1"></label>'+
-  (window.NO_PM?'':'<label>Precio por unidad (con IVA)<input type="text" class="money" inputmode="numeric" id="n_rp" value="$ 0"></label><p class="note w" id="n_rpn" style="margin:-6px 0 0" hidden></p>')+
+  (window.NO_PM?'<label>Receta (opcional)<select id="n_r"><option value="">Sin receta</option>'+recOpts(-1)+'</select></label><label>Cantidad<input type="number" id="n_rq" step="any" min="0" value="1"></label>':
+  '<div class="w nprod"><div class="nph">Productos del pedido</div><div id="n_lines"></div>'+(recipes.length?'<button type="button" class="btn ghost sm" data-naddl>+ Agregar producto</button>':'<p class="note" style="margin:0">Primero crea tus productos en Recetas.</p>')+
+  '<div class="ntot"><div class="ntr"><span>Subtotal productos</span><b id="n_sub">$ 0</b></div>'+(window.NO_CLI?'':'<div class="ntr"><span>Despacho</span><input type="text" class="money" inputmode="numeric" id="n_desp" value="$ 0" aria-label="Despacho"></div>'+
+  '<div class="ntr"><span>Descuento</span><span class="ndsc"><input type="text" inputmode="decimal" id="n_dsc" value="0" aria-label="Descuento"><select id="n_dsct" aria-label="Tipo de descuento"><option value="monto">$</option><option value="porcentaje">%</option></select></span></div>')+'</div></div>')+
   '<label>Personas<select id="n_pe"><option value="">Sin indicar</option>'+PERS.map(function(n){return '<option value="'+n+'">'+n+' personas</option>'}).join("")+'</select></label>'+
-  '<label>Total con IVA<input type="text" class="money" inputmode="numeric" id="n_t" required value="$ 0"></label><label>Anticipo pagado<input type="text" class="money" inputmode="numeric" id="n_p" value="$ 0"></label>'+
+  '<label>Total con IVA'+(window.NO_PM?'':' <button type="button" class="lnk" id="n_trec" hidden>recalcular</button>')+'<input type="text" class="money" inputmode="numeric" id="n_t" required value="$ 0"></label><label>Anticipo pagado<input type="text" class="money" inputmode="numeric" id="n_p" value="$ 0"></label>'+
   '<label class="w">Descripción<textarea id="n_d" rows="4" placeholder="Sabores, tamaño, decoración, dirección de entrega…"></textarea></label>'+
   '<div class="w"><div style="font-size:.85rem;color:var(--soft);font-weight:500;margin-bottom:6px">Fotos</div><div class="photos" id="n_ph"><label class="addp">+ Agregar fotos<small style="display:block;font-size:.72rem">máximo 2</small><input type="file" accept="image/*" multiple hidden id="n_file"></label></div></div></div>'+
   '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn ghost" data-close>Cancelar</button><button type="button" class="btn ghost" data-savecot>Guardar como cotización</button><button class="btn" type="submit">Guardar pedido</button></div></form>';
   if(!d.open)d.showModal();
+  window._nl=[];window._ntman=false;if(!window.NO_PM){nAddLine();nRender()}
 }
+/* ---- pedido: lista de productos, cliente guardado y total automático ---- */
+function nCli(){return window.NO_CLI?null:clis.find(function(c){return c.id===+(($("#nf")||{dataset:{}}).dataset.cid||0)})}
+function nTc(){return ($("#n_tc")||{}).value||"minorista"}
+function nAddLine(rid){var r=rid?recipes.find(function(q){return q.id===rid}):null;window._nl.push({rid:r?r.id:0,q:1,p:r?cliPrecio(nCli(),r,nTc()):0,man:false})}
+function nRender(){var box=$("#n_lines");if(!box)return;
+  box.innerHTML=(window._nl.length?'<div class="nln nlh"><span>Producto</span><span>Cantidad</span><span>Precio c/IVA</span><span>Subtotal</span><span></span></div>':'')+window._nl.map(function(l,i){var r=recipes.find(function(q){return q.id===l.rid});
+    return '<div class="nln"><select data-nlr="'+i+'" aria-label="Producto"><option value="">Elige un producto…</option>'+recOpts(l.rid)+'</select><input type="number" step="any" min="0" data-nlq="'+i+'" value="'+l.q+'" aria-label="Cantidad" title="'+(r?'Cantidad en '+esc(udPl(r,2)):'')+'"><input type="text" class="money" inputmode="numeric" data-nlp="'+i+'" value="'+mfmt(l.p)+'" aria-label="Precio por unidad con IVA"><span class="lsub" id="nls'+i+'">'+$$((+l.q||0)*(+l.p||0))+'</span><button type="button" class="x" data-nldel="'+i+'" aria-label="Quitar producto">✕</button></div>'}).join("");
+  nTotal();}
+function nTotal(){if(window.NO_PM)return;var sub=window._nl.reduce(function(a,l){return a+(l.rid?(+l.q||0)*(+l.p||0):0)},0);window._nl.forEach(function(l,i){var e=$("#nls"+i);if(e)e.textContent=$$((+l.q||0)*(+l.p||0))});
+  var desp=$("#n_desp")?mnum($("#n_desp").value):0,dv=$("#n_dsc")?parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0:0,dt=($("#n_dsct")||{}).value,dsc=dt==="porcentaje"?Math.round(sub*dv/100):dv,tot=Math.round(sub+desp-dsc);
+  $("#n_sub").textContent=$$(sub);var rb=$("#n_trec");if(rb)rb.hidden=!window._ntman;if(!window._ntman)$("#n_t").value=mfmt(Math.max(0,tot));window._ntcalc=Math.max(0,tot)}
+function nPrecios(){window._nl.forEach(function(l){if(l.man||!l.rid)return;var r=recipes.find(function(q){return q.id===l.rid});if(r)l.p=cliPrecio(nCli(),r,nTc())});nRender()}
+function nCliente(c){ // completa los datos desde un cliente guardado
+  var fm=$("#nf");if(!fm)return;fm.dataset.cid=c?c.id:"";var box=$("#n_cli");
+  if(c){$("#n_c").value=c.n;if(c.ig)$("#n_ig").value="@"+c.ig;if(c.wa)$("#n_wa").value=waFmt(c.wa);if($("#n_tc"))$("#n_tc").value=c.tipo;
+    if(box)box.innerHTML='<span class="st '+(c.tipo==="mayorista"?'regalo':'pagando')+'">Cliente guardado · '+(c.tipo==="mayorista"?'mayorista':'minorista')+'</span>'+(Object.keys(c.pr||{}).length?' <span class="note" style="margin:0">con precios especiales</span>':'')+(c.dir?' <span class="note" style="margin:0">· despacho: '+esc(c.dir+(c.com?", "+c.com:""))+'</span>':'');
+    if(c.dir&&$("#n_d")&&!$("#n_d").value.trim())$("#n_d").value="Despacho: "+c.dir+(c.com?", "+c.com:"")}
+  else if(box){var nm=$("#n_c").value.trim();box.innerHTML=nm&&!fm.dataset.edit?'<label class="chk"><input type="checkbox" id="n_save" checked> Guardar “'+esc(nm)+'” como cliente nuevo</label>':''}
+  nPrecios();
+}
+document.addEventListener("input",function(e){var t=e.target,d=t.dataset||{};if(!$("#nf"))return;
+  if(t.id==="n_c"){if(window.NO_CLI)return;var c=cliFind(t.value);if(c){if(+($("#nf").dataset.cid)!==c.id)nCliente(c)}else{if($("#nf").dataset.cid){$("#nf").dataset.cid=""}nCliente(null)}return}
+  if(d.nlq!=null){window._nl[+d.nlq].q=parseFloat(t.value)||0;nTotal();return}
+  if(d.nlp!=null){var l=window._nl[+d.nlp];l.p=mnum(t.value);l.man=true;nTotal();return}
+  if(t.id==="n_desp"||t.id==="n_dsc"){nTotal();return}
+  if(t.id==="n_t"){window._ntman=mnum(t.value)!==window._ntcalc;var rb=$("#n_trec");if(rb)rb.hidden=!window._ntman}
+});
+document.addEventListener("change",function(e){var t=e.target,d=t.dataset||{};if(!$("#nf"))return;
+  if(d.nlr!=null){var l=window._nl[+d.nlr],r=recipes.find(function(q){return q.id===+t.value});l.rid=r?r.id:0;l.man=false;l.p=r?cliPrecio(nCli(),r,nTc()):0;nRender();return}
+  if(t.id==="n_tc"){nPrecios();return}
+  if(t.id==="n_dsct"){nTotal();return}
+});
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("button");if(!t||!$("#nf"))return;
+  if(t.hasAttribute("data-naddl")){nAddLine();nRender();var s2=document.querySelectorAll("[data-nlr]");if(s2.length)s2[s2.length-1].focus();return}
+  if(t.dataset.nldel!=null){window._nl.splice(+t.dataset.nldel,1);nRender();return}
+  if(t.id==="n_trec"){window._ntman=false;nTotal();return}
+});
 function openCats(kind,msg){
   catsOpen=kind; var d=$("#dlg"), isP=kind==="ped";
   var list=isP?pcats:gcats.map(function(n){return {n:n}});
@@ -1421,8 +1527,8 @@ function readFiles(files,cb,max){
 
 /* ---------- RENDER + EVENTOS ---------- */
 function render(){
-  renderNav();
-  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,prod:vProd,cost:vCost,ing:vIng,com:vCom,inv:vInv,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
+  cliAutoImport();renderNav();
+  var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,cli:vCli,prod:vProd,cost:vCost,ing:vIng,com:vCom,inv:vInv,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
   if(view==="cost"&&recipes.length)rsum();
 }
 document.addEventListener("input",function(e){var t=e.target;if(!t.classList||!t.classList.contains("money"))return;
@@ -1469,6 +1575,9 @@ document.addEventListener("input",function(e){
   else if(t.dataset&&t.dataset.ig){var qi=orders.find(function(q){return q.id===+t.dataset.ig});qi.ig=igUser(t.value);var ai=$("#a_ig");ai.href=igUrl(qi.ig);ai.hidden=!qi.ig}
   else if(t.dataset&&t.dataset.wa){var qw=orders.find(function(q){return q.id===+t.dataset.wa});qw.wa=waNum(t.value);var aw=$("#a_wa");aw.href=waUrl(qw.wa);aw.hidden=!qw.wa}
 });
+function nSaveCli(){ // cliente del pedido: el guardado elegido, o uno nuevo si se marcó "Guardar como cliente"
+  var c=nCli();if(c)return c.id;var sv=$("#n_save"),nm=$("#n_c").value.trim();if(!sv||!sv.checked||!nm)return null;
+  var ex=cliFind(nm);if(ex)return ex.id;c={id:cid++,n:nm,tipo:nTc(),wa:waNum($("#n_wa").value),ig:igUser($("#n_ig").value),mail:"",rs:"",rut:"",giro:"",dir:"",com:"",notas:"",pr:{}};clis.push(c);return c.id}
 document.addEventListener("submit",function(e){
   if(e.target.id==="gf"||e.target.id==="grpf"||e.target.id==="catf"||e.target.id==="newrf"){e.preventDefault();extraSubmit(e.target);return}
   if(e.target.id!=="nf")return; e.preventDefault();
@@ -1478,15 +1587,18 @@ document.addEventListener("submit",function(e){
     if(!ox.cot&&ef!==ox.fecha&&!window._skipW&&dayWarn(ef,ox.id,function(){window._skipW=true;$("#nf").requestSubmit()},function(){var fi=$("#n_f");if(fi)fi.focus()}))return;
     window._skipW=false;
     ox.cliente=$("#n_c").value.trim();ox.ig=igUser($("#n_ig").value);ox.wa=waNum($("#n_wa").value);ox.fecha=ef;ox.hora=$("#n_h").value||"12:00";ox.cat=ek;ox.canal=$("#n_a").value;
+    if(!window.NO_PM)ox.items=window._nl.filter(function(l){return l.rid}).map(function(l){return {rid:l.rid,q:+l.q||0,p:+l.p||0}});
+    if(!window.NO_CLI){ox.cid=nSaveCli()||null;ox.desp=mnum($("#n_desp").value);ox.dsc=parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0;ox.dsct=$("#n_dsct").value}
     if($("#n_tc"))ox.tc=$("#n_tc").value;ox.personas=+$("#n_pe").value||null;ox.desc=$("#n_d").value.trim()||"Sin descripción.";ox.total=et;ox.pagado=Math.min(et,mnum($("#n_p").value));
     $("#dlg").close();var ep=pd(ef);cur={y:ep.getFullYear(),m:ep.getMonth()};render();openOrder(ox.id);toast("Cambios guardados");return}
   var f=$("#n_f").value, p=pd(f), tot=mnum($("#n_t").value), pg=Math.min(tot,mnum($("#n_p").value)), kc=$("#n_k").value;
   if(kc==="__new"){kc=$("#n_nkn").value.trim()||"Sin categoría";if(!pcats.some(function(q){return q.n===kc}))pcats.push({n:kc,m:Math.min(100,Math.max(0,parseFloat($("#n_nkm").value)||70))/100})}
-  var rv=$("#n_r").value, its=rv?[{rid:+rv,q:parseFloat($("#n_rq").value)||1,p:$("#n_rp")?mnum($("#n_rp").value):null}]:[];
+  var rv=($("#n_r")||{}).value, its=window.NO_PM?(rv?[{rid:+rv,q:parseFloat($("#n_rq").value)||1}]:[]):window._nl.filter(function(l){return l.rid}).map(function(l){return {rid:l.rid,q:+l.q||0,p:+l.p||0}});
   var isq=!!window._cot; window._cot=false;
   if(!isq&&!window._skipW&&dayWarn(f,0,function(){window._skipW=true;$("#nf").requestSubmit()},function(){var fi=$("#n_f");if(fi)fi.focus()}))return;
   window._skipW=false;
   var n={id:nextId++,cot:isq,num:isq?nextQ():0,cond:cfg.cond,vig:cfg.vig,items:its,cliente:$("#n_c").value.trim(),ig:igUser($("#n_ig").value),wa:waNum($("#n_wa").value),fecha:f,hora:$("#n_h").value||"12:00",cat:kc,canal:$("#n_a").value,desc:$("#n_d").value.trim()||"Sin descripción.",personas:+$("#n_pe").value||null,total:tot,pagado:pg,fotos:pend.slice(),listo:false,tc:$("#n_tc")?$("#n_tc").value:"minorista"};
+  if(!window.NO_CLI){n.cid=nSaveCli()||null;n.desp=mnum($("#n_desp").value);n.dsc=parseFloat(String($("#n_dsc").value).replace(/\./g,"").replace(",","."))||0;n.dsct=$("#n_dsct").value}
   orders.push(n);pend=[];cur={y:p.getFullYear(),m:p.getMonth()};view=isq?"ped":"cal";$("#dlg").close();render();
   if(isq){openOrder(n.id);toast("Cotización "+qn(n)+" guardada")}
 });

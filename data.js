@@ -54,12 +54,15 @@
     gcats.forEach(function (n) { m["gc:" + n] = { t: "gc", row: { negocio_id: NEG, nombre: n } }; });
     gastos.forEach(function (g) { m["g:" + ensure(g)] = { t: "g", row: { id: g.uid, negocio_id: NEG, fecha: g.fecha, nombre: g.nombre, categoria: g.cat, monto: +g.monto || 0, iva_modo: g.iva } }; });
     recipes.forEach(function (rr) { var x = receta(rr); m["r:" + x.row.id] = { t: "r", row: x.row, grupos: x.grupos, items: x.items }; });
+    if (!window.NO_CLI) clis.forEach(function (c) { var pr = {}; Object.keys(c.pr || {}).forEach(function (k) { var r = recipes.find(function (q) { return q.id === +k; }); if (r && c.pr[k] !== "" && c.pr[k] != null) pr[ensure(r)] = +c.pr[k]; });
+      m["c:" + ensure(c)] = { t: "c", row: { id: c.uid, negocio_id: NEG, nombre: c.n, tipo: c.tipo === "mayorista" ? "mayorista" : "minorista", whatsapp: c.wa || null, instagram: c.ig || null, correo: c.mail || null, razon_social: c.rs || null, rut: c.rut || null, giro: c.giro || null, direccion: c.dir || null, comuna: c.com || null, notas: c.notas || null, precios: pr } }; });
     if (!window.NO_ING) ings.forEach(function (x) { m["i:" + ensure(x)] = { t: "i", row: { id: x.uid, negocio_id: NEG, nombre: x.n, unidad: x.u || "", costo: +x.c || 0, envase: +x.e || 0, precio_envase: +x.pe || 0, categoria: x.g || "Ingredientes" } }; if (!window.NO_P2) { var ir = m["i:" + x.uid].row; ir.stock = Math.round((+x.st || 0) * 1000) / 1000; ir.stock_min = +x.mn || 0; ir.merma = +x.mm || 0; } });
     orders.forEach(function (o) {
       var id = ensure(o);
       m["p:" + id] = { t: "p", row: { id: id, negocio_id: NEG, es_cotizacion: !!o.cot, numero_cotizacion: o.num || null, cliente: o.cliente, instagram: o.ig || "", whatsapp: o.wa || "", fecha: o.fecha, hora: t5(o.hora), categoria: o.cat, canal: o.canal, descripcion: o.desc || "", personas: o.personas || null, total: +o.total || 0, pagado: +o.pagado || 0, listo: !!o.listo, condiciones: o.cond == null ? null : o.cond, validez_dias: o.vig == null ? null : o.vig, origen: o.origen || "app" } };
       if (!window.NO_P2) m["p:" + id].row.descontado = o.desc_st || null;
       if (!window.NO_PM) m["p:" + id].row.tipo_cliente = o.tc === "mayorista" ? "mayorista" : "minorista";
+      if (!window.NO_CLI) { var oc = o.cid ? clis.find(function (c) { return c.id === o.cid; }) : null; m["p:" + id].row.cliente_id = oc ? ensure(oc) : null; m["p:" + id].row.despacho = +o.desp || 0; m["p:" + id].row.descuento = +o.dsc || 0; m["p:" + id].row.descuento_tipo = o.dsct === "porcentaje" ? "porcentaje" : "monto"; }
       var its = [];
       (o.items || []).forEach(function (l) { var r = recipes.find(function (q) { return q.id === l.rid; }); if (r) { var pi = { negocio_id: NEG, pedido_id: id, receta_id: r.uid, cantidad: +l.q || 0 }; if (!window.NO_PM) pi.precio = l.p == null || l.p === "" ? null : +l.p; its.push(pi); } });
       m["pr:" + id] = { t: "pr", pid: id, rows: its };
@@ -98,7 +101,7 @@
     try {
       await uploadPending();
       var cur = current(), keys = Object.keys(cur), old = Object.keys(snap);
-      var del = { pc: [], g: [], r: [], p: [], i: [] }, delGc = [];
+      var del = { pc: [], g: [], r: [], p: [], i: [], c: [] }, delGc = [];
       old.forEach(function (k) {
         if (k in cur) return;
         var p = k.split(":"), t = p[0], id = k.slice(t.length + 1);
@@ -142,6 +145,7 @@
       }
       var ig = by("i"); for (var ck = 0; ck < ig.length; ck += 200) chk(await sb.from("ingredientes").upsert(ig.slice(ck, ck + 200).map(function (x) { return x.row; }), { onConflict: "id" }));
       var g = by("g"); if (g.length) chk(await sb.from("gastos").upsert(g.map(function (x) { return x.row; }), { onConflict: "id" }));
+      var cl = by("c"); for (var cc = 0; cc < cl.length; cc += 200) chk(await sb.from("clientes").upsert(cl.slice(cc, cc + 200).map(function (x) { return x.row; }), { onConflict: "id" }));
       var p = by("p"); if (p.length) chk(await sb.from("pedidos").upsert(p.map(function (x) { return x.row; }), { onConflict: "id" }));
       var pr = by("pr");
       if (pr.length) {
@@ -149,6 +153,7 @@
         var prr = []; pr.forEach(function (x) { prr = prr.concat(x.rows); });
         if (prr.length) chk(await sb.from("pedido_recetas").insert(prr));
       }
+      for (var cd = 0; cd < del.c.length; cd += 100) chk(await sb.from("clientes").delete().in("id", del.c.slice(cd, cd + 100)));
       var pf = by("pf");
       if (pf.length) {
         var pfid = pf.map(function (x) { return x.pid; }); for (var cj = 0; cj < pfid.length; cj += 100) chk(await sb.from("pedido_fotos").delete().in("pedido_id", pfid.slice(cj, cj + 100)));
@@ -244,10 +249,12 @@
     var R = await Promise.all([
       sel("negocios", function (q) { return q.eq("id", NEG).single(); }), sel("categorias_pedido"), sel("categorias_gasto"), sel("recetas"), sel("receta_grupos"), sel("receta_items"),
       sel("pedidos"), sel("pedido_recetas"), sel("pedido_fotos"), sel("gastos"), sel("ingredientes"),
+      Promise.resolve().then(function () { return sel("clientes"); }).catch(function (e) { return { error: e }; }),
       Promise.resolve().then(function () { return sb.from("recetas").select("unidades").limit(1); }).catch(function (e) { return { error: e }; }),
       Promise.resolve().then(function () { return sb.from("recetas").select("margen_may").limit(1); }).catch(function (e) { return { error: e }; }),
       Promise.resolve().then(function () { return sb.from("recetas").select("precio_may").limit(1); }).catch(function (e) { return { error: e }; })
     ]);
+    var RCL = R.splice(11, 1)[0]; window.NO_CLI = !!RCL.error;
     window.NO_PM = !!R[13].error;
     window.NO_ING = !!R[10].error; window.NO_UN = !!R[11].error; window.NO_P2 = !!R[12].error || window.NO_ING; R.slice(0, 10).forEach(function (r) { chk(r); });
     var neg = R[0].data;
@@ -266,7 +273,7 @@
       var rr = { id: rid++, uid: r.id, nombre: r.nombre, rinde: r.rinde || "", margen: +r.margen, precio: +r.precio, un: Math.max(1, +r.unidades || 1), ud: r.unidad_venta || "", mm: r.margen_may == null ? 45 : +r.margen_may, mpk: r.may_pack == null ? "" : +r.may_pack, mds: r.may_desp == null ? "" : +r.may_desp, ta: +r.t_act || 0, te: +r.t_esp || 0, mo: r.mano_obra == null ? null : !!r.mano_obra, pm: +r.precio_may || 0, items: [] };
       var its = R[5].data.filter(function (i) { return i.receta_id === r.id; }).map(function (i) { return { i: i, g: gmap[i.grupo_id] || { nombre: "Ingredientes", orden: 0 } }; });
       its.sort(function (a, b) { return a.g.orden - b.g.orden || a.i.orden - b.i.orden; });
-      its.forEach(function (x) { rr.items.push({ g: x.g.nombre, n: x.i.nombre, q: +x.i.cantidad, u: x.i.unidad, c: +x.i.costo_unidad }); });
+      its.forEach(function (x) { rr.items.push({ g: x.g.nombre, n: x.i.nombre, q: +x.i.cantidad, u: window.normU ? normU(x.i.unidad) : x.i.unidad, c: +x.i.costo_unidad }); });
       recipes.push(rr); rmap[r.id] = rr.id;
     });
     var paths = R[8].data.map(function (f) { return f.path; }), urls = await signed(paths.concat(paths.map(tpath)));
@@ -274,14 +281,18 @@
     R[8].data.forEach(function (f) { if (urls[f.path]) { fotoPath[urls[f.path]] = f.path; if (urls[tpath(f.path)]) window.THUMB[urls[f.path]] = urls[tpath(f.path)]; } });
     orders.length = 0;
     R[6].data.forEach(function (p) {
-      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", personas: p.personas || null, total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, desc_st: p.descontado || null, tc: p.tipo_cliente === "mayorista" ? "mayorista" : "minorista", items: [], fotos: [] };
+      var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", personas: p.personas || null, total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, desc_st: p.descontado || null, cuid: p.cliente_id || null, desp: +p.despacho || 0, dsc: +p.descuento || 0, dsct: p.descuento_tipo === "porcentaje" ? "porcentaje" : "monto", tc: p.tipo_cliente === "mayorista" ? "mayorista" : "minorista", items: [], fotos: [] };
       if (o.cond == null) delete o.cond; if (o.vig == null) delete o.vig;
       R[7].data.filter(function (x) { return x.pedido_id === p.id; }).forEach(function (x) { if (rmap[x.receta_id]) o.items.push({ rid: rmap[x.receta_id], q: +x.cantidad, p: x.precio == null ? null : +x.precio }); });
       R[8].data.filter(function (x) { return x.pedido_id === p.id && urls[x.path]; }).forEach(function (x) { o.fotos.push(urls[x.path]); });
       orders.push(o);
     });
     gastos.length = 0; R[9].data.forEach(function (g) { gastos.push({ id: gid++, uid: g.id, fecha: g.fecha, cat: g.categoria, nombre: g.nombre, monto: +g.monto, iva: g.iva_modo }); });
-    ings.length = 0; if (!window.NO_ING) (R[10].data || []).forEach(function (x) { var e0 = x.envase == null ? 1 : +x.envase, pe0 = x.precio_envase == null ? (+x.costo || 0) * e0 : +x.precio_envase; ings.push({ id: iid++, uid: x.id, n: x.nombre, u: x.unidad || "", c: +x.costo || 0, e: e0, pe: pe0, g: x.categoria || "Ingredientes", st: +x.stock || 0, mn: +x.stock_min || 0, mm: +x.merma || 0 }); });
+    clis.length = 0; if (!window.NO_CLI) { var ruid = {}; recipes.forEach(function (r) { ruid[r.uid] = r.id; });
+      (RCL.data || []).forEach(function (c) { var pr = {}; Object.keys(c.precios || {}).forEach(function (k) { if (ruid[k]) pr[ruid[k]] = +c.precios[k]; });
+        clis.push({ id: cid++, uid: c.id, n: c.nombre, tipo: c.tipo === "mayorista" ? "mayorista" : "minorista", wa: c.whatsapp || "", ig: c.instagram || "", mail: c.correo || "", rs: c.razon_social || "", rut: c.rut || "", giro: c.giro || "", dir: c.direccion || "", com: c.comuna || "", notas: c.notas || "", pr: pr, creado: c.creado_en }); });
+      var cmap = {}; clis.forEach(function (c) { cmap[c.uid] = c.id; }); orders.forEach(function (o) { if (o.cuid && cmap[o.cuid]) o.cid = cmap[o.cuid]; }); }
+    ings.length = 0; if (!window.NO_ING) (R[10].data || []).forEach(function (x) { var e0 = x.envase == null ? 1 : +x.envase, pe0 = x.precio_envase == null ? (+x.costo || 0) * e0 : +x.precio_envase; ings.push({ id: iid++, uid: x.id, n: x.nombre, u: window.normU ? normU(x.unidad || "") : (x.unidad || ""), c: +x.costo || 0, e: e0, pe: pe0, g: x.categoria || "Ingredientes", st: +x.stock || 0, mn: +x.stock_min || 0, mm: +x.merma || 0 }); });
     if (recipes.length) selR(recipes[0].id);
     snap = {}; var c = current(); Object.keys(c).forEach(function (k) { snap[k] = c[k].json; });
     loaded = true; setStatus("Todo guardado");
