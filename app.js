@@ -267,8 +267,9 @@ function invListo(o){
   if(!o.listo&&o.desc_st){var d=o.desc_st,m=0;Object.keys(d).forEach(function(k){var x=ings.find(function(i){return ingK(i.n,i.u)===k});if(x){x.st=(+x.st||0)+d[k];m++}});o.desc_st=null;return m?"Inventario: se devolvieron "+m+" ingrediente"+(m===1?"":"s"):""}
   return "";
 }
+var PRODOFF=0;
 function vProd(){
-  var t0=pd(TODAY), days=[];
+  var t0=pd(addDays(TODAY,PRODOFF*7)), days=[];
   for(var i=0;i<7;i++){var d=new Date(t0.getFullYear(),t0.getMonth(),t0.getDate()+i);days.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))}
   var total=0,html=days.map(function(iso){
     var ev=real().filter(function(x){return x.fecha===iso}).sort(function(a,b){return a.hora<b.hora?-1:1});
@@ -276,10 +277,12 @@ function vProd(){
     var sdd=prodSum([iso]),sd=sdd.rows;
     return '<div class="day"><h3>'+fechaLarga(iso)+(iso===TODAY?' (hoy)':'')+'</h3>'+(sd.length?'<div class="daysum">'+(!window.NO_P2&&sdd.ta?'<span class="dh">⏱ '+hTxt(sdd.ta)+'</span>':'')+sd.map(function(x){return '<span>'+fq(x.q)+' '+esc(udPl(x.r,x.q))+' · '+esc(x.r.nombre)+'</span>'}).join("")+'</div>':'')+(ev.length?ev.map(function(x){
       return '<label class="prod'+(x.listo?' done':'')+'"><input type="checkbox" data-l="'+x.id+'"'+(x.listo?' checked':'')+'><div style="flex:1;min-width:0"><b>'+x.hora+' · '+esc(x.cliente)+'</b><div class="note" style="margin:0">'+esc(x.cat)+(x.personas?' · '+persTxt(x):'')+' · '+esc(x.desc)+'</div></div>'+(x.fotos[0]?'<img class="thumb" loading="lazy" decoding="async" style="width:48px;height:48px" src="'+th(x.fotos[0])+'" alt="">':'')+'</label>'}).join(""):'<div class="note">Sin pedidos.</div>')+'</div>'}).join("");
-  var sm=prodSum(days),tot=sm.rows.length?'<section class="card prodsum"><h2 style="font-size:1.35rem">Total a producir · próximos 7 días</h2><div class="scroll"><table class="pg"><thead><tr><th>Receta</th><th class="r">Cantidad</th>'+(window.NO_UN?'':'<th class="r">Tandas de receta</th>')+'<th class="r">Pedidos</th>'+(window.NO_P2?'':'<th class="r">Trabajo activo</th>')+'<th class="r">Listo</th></tr></thead><tbody>'+
+  var a0=pd(days[0]),a6=pd(days[6]),rng=a0.getDate()+(a0.getMonth()!==a6.getMonth()?' de '+MESES[a0.getMonth()]:'')+' al '+a6.getDate()+' de '+MESES[a6.getMonth()];
+  var sm=prodSum(days),tot=!sm.rows.length?'<section class="card prodsum"><h2 style="font-size:1.35rem">Total a producir · '+rng+'</h2><p class="note" style="margin:6px 0 0">'+(total?'Ningún pedido de estos días tiene receta asignada. Abre cada pedido y agrégale su receta y cantidad: aquí se juntan por producto (ej.: “5 galletas chips en total”).':'No hay pedidos en estos días.')+'</p></section>':'<section class="card prodsum"><h2 style="font-size:1.35rem">Total a producir · '+rng+'</h2><p class="note" style="margin:2px 0 8px">Todos los pedidos de estos días juntos por producto.</p><div class="scroll"><table class="pg ptab"><thead><tr><th>Receta</th><th class="r">Cantidad</th>'+(window.NO_UN?'':'<th class="r">Tandas de receta</th>')+'<th class="r">Pedidos</th>'+(window.NO_P2?'':'<th class="r">Trabajo activo</th>')+'<th class="r">Listo</th></tr></thead><tbody>'+
     sm.rows.map(function(x){var un=x.r.un||1;return '<tr><td><b>'+esc(x.r.nombre)+'</b></td><td class="r"><b>'+fq(x.q)+'</b> '+esc(udPl(x.r,x.q))+'</td>'+(window.NO_UN?'':'<td class="r">'+(un>1?fq(x.tn)+' <span class="note" style="margin:0">(rinde '+un+(x.tn*un>x.q?', sobran '+fq(x.tn*un-x.q):'')+')</span>':fq(x.q))+'</td>')+'<td class="r">'+x.ped+'</td>'+(window.NO_P2?'':'<td class="r">'+(+x.r.ta?hTxt(x.ta):'<button class="lnk" data-gorec="'+x.r.id+'" title="Anota el tiempo en la receta">sin tiempo</button>')+'</td>')+'<td class="r">'+(x.listo>=x.q?'<span class="st pagando">Todo</span>':x.listo?fq(x.listo)+' de '+fq(x.q):'—')+'</td></tr>'}).join("")+
-    '</tbody></table></div>'+(window.NO_P2?'':!sm.ta?'<p class="ptime note">Anota el tiempo de trabajo de cada receta (Recetas → Tiempo de producción) para ver cuántas horas necesitas por día y por semana.</p>':'<p class="ptime"><b>'+hTxt(sm.ta)+' de trabajo activo</b> en los próximos 7 días'+(sm.te?' · '+hTxt(sm.te)+' de horno o reposo':'')+(hora.sueldo?' · mano de obra '+$$(sm.ta/60*vhora()):'')+(sm.sinT?'. <span class="note" style="margin:0">'+sm.sinT+' receta'+(sm.sinT===1?'':'s')+' sin tiempo anotado.</span>':'')+'</p>')+(sm.sin?'<p class="note" style="margin:8px 0 0">'+sm.sin+' pedido'+(sm.sin===1?'':'s')+' sin receta no se cuenta'+(sm.sin===1?'':'n')+'. Asígnales una receta para incluirlos.</p>':'')+'</section>':'';
-  return head("Producción",'<span class="note" style="margin:0">Próximos 7 días · '+total+' pedidos</span>')+tot+html;
+    '</tbody></table></div>'+(window.NO_P2?'':!sm.ta?'<p class="ptime note">Anota el tiempo de trabajo de cada receta (Recetas → Tiempo de producción) para ver cuántas horas necesitas por día y por semana.</p>':'<p class="ptime"><b>'+hTxt(sm.ta)+' de trabajo activo</b> '+(PRODOFF?'en esos días':'en los próximos 7 días')+(sm.te?' · '+hTxt(sm.te)+' de horno o reposo':'')+(hora.sueldo?' · mano de obra '+$$(sm.ta/60*vhora()):'')+(sm.sinT?'. <span class="note" style="margin:0">'+sm.sinT+' receta'+(sm.sinT===1?'':'s')+' sin tiempo anotado.</span>':'')+'</p>')+(sm.sin?'<p class="note" style="margin:8px 0 0">'+sm.sin+' pedido'+(sm.sin===1?'':'s')+' sin receta no se cuenta'+(sm.sin===1?'':'n')+'. Asígnales una receta para incluirlos.</p>':'')+'</section>';
+  var bar='<div class="month"><button class="ib" data-pw="-1" aria-label="Semana anterior">'+ICON.l+'</button><b style="min-width:11em;text-transform:none">'+(PRODOFF===0?'Próximos 7 días':rng)+'</b><button class="ib" data-pw="1" aria-label="Semana siguiente">'+ICON.r+'</button></div>'+(PRODOFF?'<button class="btn ghost sm" data-pw="0">Volver a hoy</button>':'')+'<span class="note" style="margin:0">'+total+' pedido'+(total===1?'':'s')+'</span>';
+  return head("Producción",bar)+tot+html;
 }
 
 /* ---------- RECETAS ---------- */
@@ -326,7 +329,7 @@ function rsum(){
   $("#kc").textContent=$$(ci); $("#kg").textContent=$$(netoU-cu);
   if($("#klab")){$("#klab").textContent=lab?$$(lab):"—";$("#ktot").textContent=$$(c);$("#kcu").textContent=$$(cu);$("#kcul").textContent="Costo por "+u1;$("#kgl").textContent="Ganancia por "+u1}
   if($("#msug")){var mc=mayCalc(rp);$("#mgmv").textContent=(rp.mm==null?45:rp.mm)+"%";
-    $("#msug").textContent=$$(mc.neto)+" + IVA";$("#msugn").textContent="por "+u1+" · "+$$(Math.round(mc.neto*IVA))+" con IVA"+(sug>0?" · "+Math.round((1-mc.neto*IVA/sug)*100)+"% menos que a público":"");
+    $("#msug").textContent=$$(mc.neto)+" + IVA";$("#msugn").textContent="por "+u1+" · "+$$(Math.round(mc.neto*IVA))+" con IVA"+(sug>0?(mc.neto*IVA<sug?" · "+Math.round((1-mc.neto*IVA/sug)*100)+"% menos que a público":" · ⚠ queda más caro que a público: baja el margen mayorista"):"");
     $("#mcu").textContent=$$(mc.cuM);$("#mg1").textContent=$$(mc.g);
     var t;if(mc.g<=0)t='<b class="neg">Con este margen pierdes plata en cada '+esc(u1)+'.</b> Sube el margen mayorista.';
     else if(!mc.F)t='No tienes costos por pedido mayorista. Configúralos en <button class="lnk" data-v="cfg">Ajustes</button> (despacho, coordinación, factura) para calcular el mínimo.';
@@ -942,6 +945,7 @@ document.addEventListener("click",function(e){var t=e.target.closest&&e.target.c
   if(t.dataset.cbuy){var x=ings.find(function(i){return i.id===+t.dataset.cbuy}),q=+t.dataset.cq;if(!x)return;x.st=(+x.st||0)+q;render();toast(x.n+": +"+fq(Math.round(q*100)/100)+" "+x.u+" al inventario",function(){x.st=(+x.st||0)-q;render()});return}
   if(t.hasAttribute("data-cbuyall")){var c=compras(),mv=c.compra.filter(function(r){return r.x});mv.forEach(function(r){r.x.st=(+r.x.st||0)+r.buy});render();toast(mv.length+" ingrediente"+(mv.length===1?"":"s")+" sumado"+(mv.length===1?"":"s")+" al inventario",function(){mv.forEach(function(r){r.x.st=(+r.x.st||0)-r.buy});render()});return}
   if(t.hasAttribute("data-crw")){CR=null;render();return}
+  if(t.dataset.pw!=null){PRODOFF=t.dataset.pw==="0"?0:PRODOFF+(+t.dataset.pw);render();scrollTo(0,0);return}
   if(t.dataset.gorec){selR(+t.dataset.gorec);view="cost";render();scrollTo(0,0);return}
 });
 document.addEventListener("change",function(e){var t=e.target;if(t.id!=="crd"&&t.id!=="crh")return;var d=$("#crd").value||crD(),h=$("#crh").value||crH();if(h<d){var z=d;d=h;h=z}CR={d:d,h:h};render()});
