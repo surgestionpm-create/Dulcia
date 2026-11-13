@@ -3,5 +3,5 @@
 window.DULCIA_CONFIG = {
   url: "https://rliibqyyugqdvncldibl.supabase.co",
   key: "sb_publishable_RA75I7Kf0cnugHsiwavxBw_ytE3hhxl",
-  contacto: "sociedadreposteraspa@gmail.com"
+  contacto: "contacto.dulcia@gmail.com"
 };
