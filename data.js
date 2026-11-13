@@ -687,6 +687,7 @@
       showPending(r.data[0]); return;
     }
     if (window.__pv) { clearInterval(window.__pv); window.__pv = 0; }
+    try { var dm = await sb.rpc("es_demo"); window.ES_DEMO = !dm.error && dm.data === true; } catch (e) { window.ES_DEMO = false; }
     NEG = r.data[0].negocio_id; await enter();
     if (/[?&]pago=ok/.test(location.search)) {
       try { history.replaceState(null, "", location.pathname); } catch (e) {}
