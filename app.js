@@ -814,6 +814,49 @@ document.addEventListener("click",function(e){var t=e.target.closest&&e.target.c
   t.disabled=true;t.textContent="Cargando datos…";
   if(typeof window.demoReiniciar!=="function"){toast("No se pudo reiniciar. Recarga la página e intenta de nuevo.");return}
   window.demoReiniciar().catch(function(er){t.disabled=false;delete t.dataset.sure;t.textContent="Reiniciar datos de demostración";toast(er&&er.message?er.message:"No se pudo reiniciar. Intenta de nuevo.")})});
+/* ---------- Guía de inicio: 5 pasos que se marcan solos cuando la clienta los hace ---------- */
+var GUIA=[
+  {t:"Tu equipo y sus sueldos",d:"Anota quiénes trabajan, su sueldo y sus horas a la semana. Con eso Dulcia calcula la mano de obra de cada receta.",b:"Abrir equipo",
+   ok:function(){return EQ.some(function(p){return +p.s>0})},go:function(){view="cfg";render();openEq()}},
+  {t:"Agrega tus ingredientes",d:"Al menos 3, con el precio y el tamaño del envase que compras (por ejemplo, harina 1 kg a $1.290).",b:"Ir a Ingredientes",
+   ok:function(){return ings.filter(function(i){return +i.c>0}).length>=3},go:function(){view="ing";render()}},
+  {t:"Crea tu primera receta",d:"Escribe cuántas porciones rinde y sus ingredientes con la cantidad: verás el costo al instante.",b:"Ir a Recetas",
+   ok:function(){return recipes.some(function(r){return (r.items||[]).some(function(i){return i.n&&+i.q>0})})},go:function(){view="cost";render()}},
+  {t:"Define tu precio de venta",d:"En Precios ves el precio sugerido según tu costo y margen, y escribes el precio al que vendes.",b:"Ir a Precios",
+   ok:function(){return recipes.some(function(r){return +r.precio>0})},go:function(){view="pre";render()}},
+  {t:"Registra tu primer pedido",d:"Elige la clienta, la fecha y los productos. Queda en el calendario y en la producción de la semana.",b:"Crear pedido",
+   ok:function(){return orders.some(function(o){return !o.cot})},go:function(){view="ped";render();openNew()}}
+];
+function guiaKey(k){return "dulcia_guia_"+k+"_"+(window.NEG_ID||"")}
+function guiaGet(k){try{return localStorage.getItem(guiaKey(k))}catch(e){return null}}
+function guiaSet(k,v){try{if(v==null)localStorage.removeItem(guiaKey(k));else localStorage.setItem(guiaKey(k),v)}catch(e){}}
+function guiaEstado(){return window.NO_GUIA?(guiaGet("estado")||((recipes.length||orders.length)?"antigua":"")):(cfg.guia||"")}
+function guiaPoner(v){if(window.NO_GUIA)guiaSet("estado",v);else cfg.guia=v}
+function guiaRender(){
+  var el=document.getElementById("guia");
+  if(window.ES_DEMO||guiaEstado()!==""){if(el)el.remove();return}
+  var hechos=GUIA.map(function(s){try{return !!s.ok()}catch(e){return false}}),n=hechos.filter(Boolean).length,sig=hechos.indexOf(false),min=guiaGet("min")==="1";
+  if(!el){el=document.createElement("aside");el.id="guia";el.setAttribute("aria-label","Guía de inicio");document.body.appendChild(el)}
+  el.className=min?"min":"";
+  if(min){el.innerHTML='<button class="guiapill" data-guia="abrir"><span class="gpr"><i style="width:'+(n*20)+'%"></i></span>Guía de inicio · '+n+' de 5</button>';return}
+  var fin=n===5;
+  el.innerHTML='<div class="gtop"><div><b class="gtit">'+(fin?"¡Listo! Ya sabes lo básico":(n?"Guía de inicio":"¡Bienvenida a Dulcia!"))+'</b>'+
+    '<div class="gsub">'+(fin?"Completaste los 5 pasos. Ya puedes costear, poner precios y llevar tus pedidos.":(n?n+" de 5 pasos listos":"Te guiamos en 5 pasos para dejar tu pastelería lista."))+'</div></div>'+
+    '<button class="ib" data-guia="min" aria-label="Minimizar guía" title="Minimizar">–</button></div>'+
+    '<div class="gpr"><i style="width:'+(n*20)+'%"></i></div>'+
+    '<ol class="gpasos">'+GUIA.map(function(s,i){var ok=hechos[i],act=i===sig;
+      return '<li class="'+(ok?"ok":"")+(act?" act":"")+'"><span class="gnum">'+(ok?"✓":i+1)+'</span><div class="gtx"><b>'+s.t+'</b>'+(act?'<p>'+s.d+'</p><button class="btn sm" data-guia="ir" data-gi="'+i+'">'+s.b+'</button>':'')+'</div>'+(!ok&&!act?'<button class="lnk" data-guia="ir" data-gi="'+i+'">Ir</button>':'')+'</li>'}).join("")+'</ol>'+
+    '<div class="gpie"><a href="/manual-dulcia.pdf" target="_blank" rel="noopener" download="Manual-Dulcia.pdf">Ver el manual completo (PDF)</a>'+
+    (fin?'<button class="btn sm" data-guia="fin">Cerrar guía</button>':'<button class="lnk" data-guia="omitir">Omitir guía</button>')+'</div>';
+}
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-guia]");if(!t)return;var k=t.dataset.guia;
+  if(k==="min"){guiaSet("min","1");guiaRender()}
+  else if(k==="abrir"){guiaSet("min",null);guiaRender()}
+  else if(k==="ir"){var s=GUIA[+t.dataset.gi];if(innerWidth<=820)guiaSet("min","1");s.go();guiaRender()}
+  else if(k==="omitir"){guiaPoner("oculta");guiaRender();toast("Guía oculta. La puedes abrir cuando quieras en Ajustes.")}
+  else if(k==="fin"){guiaPoner("lista");guiaRender()}
+  else if(k==="ver"){guiaPoner("");guiaSet("min",null);guiaRender();scrollTo(0,0)}
+});
 /* Respaldo completo en Excel (antes de eliminar la cuenta, o cuando quiera) */
 function respaldoExcel(){xlsxLib().then(function(X){
   var wb=X.utils.book_new(),hoja=function(n,H,rows,w){var ws=X.utils.aoa_to_sheet([H].concat(rows));ws["!cols"]=w.map(function(x){return {wch:x}});X.utils.book_append_sheet(wb,ws,n)};
@@ -1406,7 +1449,7 @@ function vCfg(){
   (window.ES_DEMO?'<section class="card democard"><h2 style="font-size:1.38rem">Cuenta de demostración</h2><p class="note" style="margin-top:2px">Esta cuenta tiene datos ficticios de “Pastelería Dulce Lago” para mostrar Dulcia. Se reinicia sola cada madrugada. Si cambiaste algo durante una presentación, toca el botón: se borra todo y se vuelve a cargar con fechas desde hoy (3 meses de historia y el próximo mes).</p><div style="margin-top:10px"><button class="btn sm" data-demo>Reiniciar datos de demostración</button></div></section>':'')+
   '<section class="card"><h2 style="font-size:1.38rem">Tu pastelería</h2><div class="logoedit" style="margin-top:12px"><img src="'+logoSrc()+'" alt="Logo"><label class="btn ghost sm" style="cursor:pointer">Cambiar logo<input type="file" accept="image/*" hidden id="cl"></label></div>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:14px">Nombre<input type="text" id="cn" value="'+esc(cfg.nombre)+'"></label><p class="note">El logo y el nombre aparecen en el menú y, más adelante, en tus cotizaciones en PDF.</p></section>'+
-  '<section class="card manualc"><div><h2 style="font-size:1.38rem">Manual de uso</h2><p class="note" style="margin:2px 0 0">Guía completa de Dulcia, paso a paso y con imágenes: recetas, precios, pedidos, producción, compras, inventario y más. Se actualiza con cada mejora de la app.</p></div><a class="btn" href="/manual-dulcia.pdf" target="_blank" rel="noopener" download="Manual-Dulcia.pdf">Descargar manual (PDF)</a></section>'+
+  '<section class="card manualc"><div><h2 style="font-size:1.38rem">Manual de uso</h2><p class="note" style="margin:2px 0 0">Guía completa de Dulcia, paso a paso y con imágenes: recetas, precios, pedidos, producción, compras, inventario y más. Se actualiza con cada mejora de la app.</p></div><div class="mcbtns"><a class="btn" href="/manual-dulcia.pdf" target="_blank" rel="noopener" download="Manual-Dulcia.pdf">Descargar manual (PDF)</a>'+(window.ES_DEMO?'':'<button class="btn ghost" data-guia="ver">Ver la guía de inicio</button>')+'</div></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Cómo calcular tu resultado</h2><p class="note" style="margin-top:2px">Así el Panel no cuenta dos veces lo que gastas en ingredientes.</p>'+
   '<div class="rad" role="radiogroup" aria-label="Cómo calcular tu resultado" style="margin-top:10px"><label><input type="radio" name="costeo" value="real"'+(cfg.costeo!=="estimado"?' checked':'')+'><span><b>Anoto todas mis compras en Gastos</b><br><span style="color:var(--soft)">Ingredientes, materiales y gastos fijos. Resultado = ventas netas − gastos.</span></span></label>'+
   '<label><input type="radio" name="costeo" value="estimado"'+(cfg.costeo==="estimado"?' checked':'')+'><span><b>En Gastos anoto solo gastos fijos</b><br><span style="color:var(--soft)">Arriendo, luz, sueldos. Los ingredientes se estiman con el margen de cada categoría.</span></span></label></div></section>'+
@@ -1881,6 +1924,7 @@ function render(){
   var m=$("#main"); m.innerHTML='<div class="mtop"><img src="'+logoSrc()+'" alt=""><b class="bn">'+esc(cfg.nombre)+'</b></div>'+(window.planBanner?window.planBanner():"")+({panel:vPanel,cal:vCal2,ped:vPed,cli:vCli,prod:vProd,cost:vCost,pre:vPre,ing:vIng,com:vCom,inv:vInv,gas:vGas,mkt:vMkt,cfg:vCfg})[view]();
   if(view==="cost"&&recipes.length)rsum();
   document.querySelectorAll(".ptab").forEach(function(t){var h=[].map.call(t.querySelectorAll("thead th"),function(x){return x.textContent});t.querySelectorAll("tbody tr").forEach(function(tr){[].forEach.call(tr.children,function(td,i){if(h[i]&&!td.dataset.l)td.setAttribute("data-l",h[i])})})});
+  guiaRender();
 }
 /* tras cerrar el diálogo del equipo o de un precio, la vista se vuelve a dibujar (listener de close) */
 document.addEventListener("input",function(e){var t=e.target;if(!t.classList||!t.classList.contains("money"))return;

@@ -51,6 +51,7 @@
     var m = {};
     m["neg"] = { t: "neg", row: { nombre: cfg.nombre, telefono: cfg.tel, correo: cfg.mail, web: cfg.url, cond_cotizacion: cfg.cond, validez_dias: cfg.vig, abono_pct: cfg.abono, cap_diaria: cfg.cap, costeo: cfg.costeo === "estimado" ? "estimado" : "real", sueldo_mensual: hora.sueldo, horas_mes: hora.horas, siguiente_cotizacion: qnum, logo_path: cfg.logoPath || null } };
     if (typeof eqSync === "function") { eqSync(); m["neg"].row.sueldo_mensual = hora.sueldo; m["neg"].row.horas_mes = hora.horas; }
+    if (!window.NO_GUIA) m["neg"].row.guia = cfg.guia || null;
     if (!window.NO_EQ) m["neg"].row.equipo = EQ.map(function (p) { return { n: String(p.n || "").trim(), s: Math.round(+p.s || 0), h: Math.round((+p.h || 0) * 10) / 10 }; });
     if (!window.NO_P2) m["neg"].row.mayorista = { desp: +MAY.desp || 0, pack: +MAY.pack || 0, coord: +MAY.coord || 0, fact: +MAY.fact || 0 };
     pcats.forEach(function (c) { m["pc:" + ensure(c)] = { t: "pc", row: { id: c.uid, negocio_id: NEG, nombre: c.n, margen: c.m, color: c.col || null } }; });
@@ -275,7 +276,7 @@
     window.NO_ING = !!R[10].error; window.NO_UN = !!R[11].error; window.NO_P2 = !!R[12].error || window.NO_ING; R.slice(0, 10).forEach(function (r) { chk(r); });
     var neg = R[0].data;
     cfg.nombre = neg.nombre; cfg.tel = neg.telefono || ""; cfg.mail = neg.correo || ""; cfg.url = neg.web || ""; cfg.cond = neg.cond_cotizacion;
-    cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; window.NO_EQ = !("equipo" in neg);
+    cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; window.NO_EQ = !("equipo" in neg); window.NO_GUIA = !("guia" in neg); cfg.guia = neg.guia || ""; window.NEG_ID = neg.id || "";
     EQ.length = 0; (Array.isArray(neg.equipo) ? neg.equipo : []).forEach(function (p) { EQ.push({ n: p.n || "", s: +p.s || 0, h: +p.h || 0 }); });
     if (!EQ.length && hora.sueldo > 0 && hora.horas > 0) EQ.push({ n: "Tú", s: hora.sueldo, h: Math.round(hora.horas / (52 / 12) * 10) / 10 }); var my = neg.mayorista || {}; MAY.desp = +my.desp || 0; MAY.pack = +my.pack || 0; MAY.coord = +my.coord || 0; MAY.fact = +my.fact || 0; qnum = neg.siguiente_cotizacion;
     window.ES_DEMO = neg.es_demo === true || window.ES_DEMO === true || String(window.USER_EMAIL || "").toLowerCase() === "contacto.dulcia@gmail.com";
