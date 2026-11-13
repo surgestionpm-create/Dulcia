@@ -278,6 +278,7 @@
     cfg.vig = neg.validez_dias; cfg.abono = +neg.abono_pct; cfg.cap = neg.cap_diaria; cfg.costeo = neg.costeo === "estimado" ? "estimado" : "real"; hora.sueldo = +neg.sueldo_mensual; hora.horas = +neg.horas_mes; window.NO_EQ = !("equipo" in neg);
     EQ.length = 0; (Array.isArray(neg.equipo) ? neg.equipo : []).forEach(function (p) { EQ.push({ n: p.n || "", s: +p.s || 0, h: +p.h || 0 }); });
     if (!EQ.length && hora.sueldo > 0 && hora.horas > 0) EQ.push({ n: "Tú", s: hora.sueldo, h: Math.round(hora.horas / (52 / 12) * 10) / 10 }); var my = neg.mayorista || {}; MAY.desp = +my.desp || 0; MAY.pack = +my.pack || 0; MAY.coord = +my.coord || 0; MAY.fact = +my.fact || 0; qnum = neg.siguiente_cotizacion;
+    window.ES_DEMO = neg.es_demo === true || window.ES_DEMO === true || String(window.USER_EMAIL || "").toLowerCase() === "contacto.dulcia@gmail.com";
     window.CALT = neg.cal_token || null; cfg.logoPath = neg.logo_path; cfg.logo = null; cfg.logoData = null; cfg.logoDirty = false;
     if (neg.logo_path) {
       var ls = await signed([neg.logo_path]);
