@@ -99,6 +99,7 @@
     }
   }
   async function save() {
+    if (window.DEMO_BLOQ) return;
     if (!NEG || !loaded) return;
     if (saving) { again = true; return; }
     saving = true; clearTimeout(retry);
@@ -185,6 +186,15 @@
     if (again) { again = false; scheduleSave(); }
   }
   window.dulciaSaveNow = save;
+  // Cuenta de demostración: guarda lo pendiente, el servidor borra y recarga todo, y la app se vuelve a abrir
+  window.demoReiniciar = async function () {
+    try { await save(); } catch (e) {}
+    window.DEMO_BLOQ = true;
+    var r = await sb.rpc("demo_reiniciar");
+    if (r.error) { window.DEMO_BLOQ = false; throw new Error(/no es de demostraci/i.test(r.error.message || "") ? "Esta cuenta no es de demostración." : "No se pudo reiniciar: " + msg(r.error)); }
+    try { sessionStorage.setItem("dulcia_demo_ok", "1"); } catch (e) {}
+    location.reload();
+  };
   addEventListener("online", function () { if (fallas) { fallas = 0; clearTimeout(retry); save(); } });
   var _render = window.render; window.render = function () { _render.apply(this, arguments); scheduleSave(); };
 
@@ -689,6 +699,7 @@
     if (window.__pv) { clearInterval(window.__pv); window.__pv = 0; }
     try { var dm = await sb.rpc("es_demo"); window.ES_DEMO = !dm.error && dm.data === true; } catch (e) { window.ES_DEMO = false; }
     NEG = r.data[0].negocio_id; await enter();
+    try { if (sessionStorage.getItem("dulcia_demo_ok")) { sessionStorage.removeItem("dulcia_demo_ok"); if (typeof toast === "function") toast("Listo: datos de demostración cargados con fechas desde hoy"); } } catch (e) {}
     if (/[?&]pago=ok/.test(location.search)) {
       try { history.replaceState(null, "", location.pathname); } catch (e) {}
       if (typeof toast === "function") toast("¡Gracias! Tu pago se está confirmando. La fecha de tu plan se actualiza en unos minutos.");

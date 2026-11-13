@@ -808,96 +808,12 @@ function ventasExcel(alcance){
   }).catch(function(e){toast(e.message||"No se pudo crear el Excel")});
 }
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-vxls]");if(t)ventasExcel(t.dataset.vxls)});
-/* ---------- Cuenta de demostración: datos ficticios de "Pastelería Dulce Lago", con fechas desde hoy ---------- */
-function demoCargar(){
-  var sd=20261113,rnd=function(){sd=(sd*1103515245+12345)%2147483648;return sd/2147483648},pick=function(l){return l[Math.floor(rnd()*l.length)]};
-  // configuración
-  cfg.nombre="Pastelería Dulce Lago";cfg.tel="+56 9 8765 4321";cfg.mail="hola@dulcelago.cl";cfg.url="@dulcelago";cfg.vig=7;cfg.abono=50;cfg.costeo="real";
-  EQ.length=0;EQ.push({n:"Valentina (dueña)",s:650000,h:45},{n:"Camila (ayudante)",s:520000,h:30});eqSync();
-  MAY.desp=5000;MAY.pack=120;MAY.coord=0.5;MAY.fact=0;
-  pcats.length=0;[["Tortas",0.52],["Cheesecakes y kuchen",0.52],["Dulces y cajas",0.55],["Cafeterías",0.35],["Eventos",0.5]].forEach(function(c){pcats.push({n:c[0],m:c[1],col:null})});
-  gcats.length=0;["Arriendo","Servicios básicos","Ingredientes","Packaging","Sueldos","Marketing","Otros"].forEach(function(n){gcats.push(n)});
-  gbuy[I]=true;gbuy[E]=true;
-  // ingredientes: nombre, unidad, envase, precio del envase, categoría
-  ings.length=0;iid=1;
-  [["Harina","kg",1,1290],["Azúcar","kg",1,1300],["Mantequilla","kg",1,9500],["Huevos","un",30,7990],["Leche","L",1,1100],["Crema","L",1,4590],["Leche condensada","un",1,1890],["Manjar","kg",1,4200],
-   ["Chocolate 54%","kg",1,12990],["Cacao en polvo","kg",1,8990],["Chips de chocolate","kg",1,9990],["Frutos rojos congelados","kg",1,6990],["Polvo de hornear","kg",1,5990],["Esencia de vainilla","ml",250,3990],
-   ["Nueces","kg",1,13990],["Maicena","kg",1,2490],["Coco rallado","kg",1,5490],["Queso crema","kg",1,8990],["Galletas de vino","kg",1,3990],
-   ["Caja de torta","un",1,900,E],["Base de cartón","un",1,450,E],["Pirotines","un",100,2990,E],["Caja 12 unidades","un",1,600,E],["Bolsa de celofán","un",100,3990,E]].forEach(function(z,i){
-    var x={id:iid++,n:z[0],u:z[1],e:z[2],pe:z[3],g:z[4]||I,st:0,mn:0,mm:0};ingCalc(x);ings.push(x)});
-  var st={"Harina":6,"Azúcar":4,"Mantequilla":1.5,"Huevos":45,"Leche":3,"Crema":1,"Leche condensada":4,"Manjar":2,"Chocolate 54%":0.8,"Cacao en polvo":0.5,"Chips de chocolate":0.4,"Frutos rojos congelados":1.2,"Nueces":0.3,"Maicena":2,"Queso crema":0.5,"Caja de torta":8,"Base de cartón":10,"Pirotines":150,"Caja 12 unidades":20,"Bolsa de celofán":200,"Esencia de vainilla":180,"Polvo de hornear":0.4,"Coco rallado":0.3,"Galletas de vino":0.6};
-  var mn={"Harina":3,"Mantequilla":2,"Huevos":30,"Chocolate 54%":1,"Crema":2,"Caja de torta":5,"Queso crema":1};
-  ings.forEach(function(x){x.st=st[x.n]||0;x.mn=mn[x.n]||0;x.mm=x.n==="Frutos rojos congelados"?8:0});
-  // recetas
-  recipes.length=0;rid=1;
-  var it=function(n,q){var x=ings.find(function(i){return i.n===n});return {g:x.g,n:x.n,q:q,u:x.u,c:x.c}};
-  var R=function(nombre,un,ta,te,margen,precio,pm,lista){var r={id:rid++,nombre:nombre,rinde:un+(un===1?" porción":" porciones"),margen:margen,precio:precio,un:un,ud:"",mm:45,mpk:"",mds:"",ta:ta,te:te,stk:0,mo:null,pm:pm,items:lista.map(function(l){return it(l[0],l[1])})};recipes.push(r);return r};
-  var T3=R("Torta tres leches (20 personas)",1,90,60,65,36990,22000,[["Harina",0.25],["Huevos",6],["Azúcar",0.2],["Leche condensada",1],["Leche",0.5],["Crema",0.5],["Polvo de hornear",0.01],["Caja de torta",1],["Base de cartón",1]]);
-  var SN=R("Torta selva negra (20 personas)",1,120,60,65,42990,27000,[["Harina",0.3],["Cacao en polvo",0.08],["Huevos",8],["Azúcar",0.3],["Crema",1],["Frutos rojos congelados",0.4],["Chocolate 54%",0.15],["Caja de torta",1],["Base de cartón",1]]);
-  var CH=R("Cheesecake frutos rojos (12 personas)",1,60,240,65,32990,20000,[["Galletas de vino",0.25],["Mantequilla",0.1],["Queso crema",0.6],["Azúcar",0.2],["Huevos",4],["Crema",0.2],["Frutos rojos congelados",0.3],["Caja de torta",1],["Base de cartón",1]]);
-  var KU=R("Kuchen de frutos rojos",1,45,50,60,18990,12000,[["Harina",0.3],["Mantequilla",0.15],["Azúcar",0.15],["Huevos",2],["Frutos rojos congelados",0.5],["Caja de torta",1]]);
-  var AL=R("Alfajores de maicena",24,90,30,70,990,550,[["Maicena",0.3],["Harina",0.2],["Mantequilla",0.2],["Azúcar",0.1],["Huevos",3],["Manjar",0.5],["Coco rallado",0.05],["Bolsa de celofán",24]]);
-  var GA=R("Galletas chips",24,60,30,70,1200,700,[["Harina",0.5],["Mantequilla",0.25],["Chips de chocolate",0.3],["Azúcar",0.2],["Huevos",2]]);
-  var BR=R("Brownies",16,45,35,70,1990,1150,[["Chocolate 54%",0.3],["Mantequilla",0.25],["Azúcar",0.3],["Huevos",4],["Harina",0.12],["Nueces",0.1]]);
-  var CU=R("Cupcakes de vainilla",12,75,25,70,2490,1450,[["Harina",0.25],["Azúcar",0.2],["Mantequilla",0.15],["Huevos",3],["Leche",0.12],["Esencia de vainilla",5],["Queso crema",0.2],["Pirotines",12]]);
-  GA.stk=24;AL.stk=12;
-  // precios a partir del costo real (ingredientes + mano de obra), con terminación en 90
-  var lindo=function(n){return n<10000?Math.ceil(n/100)*100-10:Math.ceil(n/1000)*1000-10};
-  recipes.forEach(function(r){r.margen=r.un>1?55:52;r.mm=35;var k=preM(r);r.precio=lindo(k.sug);r.pm=Math.ceil(k.mc.neto/50)*50});
-  // clientes
-  clis.length=0;cid=1;
-  var C=function(n,tipo,wa,ig,ex){var c=Object.assign({id:cid++,n:n,tipo:tipo,wa:wa,ig:ig,mail:"",rs:"",rut:"",giro:"",dir:"",com:"",notas:"",pr:{}},ex||{});clis.push(c);return c};
-  var CP=C("Café del Puerto","mayorista","56955551234","cafedelpuerto",{mail:"compras@cafedelpuerto.cl",rs:"Café del Puerto SpA",rut:"76.123.456-7",giro:"Cafetería",dir:"Av. Angelmó 1234",com:"Puerto Montt",notas:"Entregar antes de las 9:00"});
-  var CM=C("Café Mirador","mayorista","56966662345","cafemirador",{mail:"hola@cafemirador.cl",rs:"Inversiones Mirador Ltda.",rut:"77.234.567-8",giro:"Cafetería y restaurante",dir:"Costanera 456",com:"Puerto Varas"});
-  var HL=C("Hotel Lago Llanquihue","mayorista","56977773456","",{mail:"eventos@hotellago.cl",rs:"Hotelera del Lago S.A.",rut:"96.345.678-9",giro:"Hotelería",dir:"Camino a Ensenada km 2",com:"Puerto Varas",notas:"Factura a 30 días"});
-  CP.pr[GA.id]=Math.round(GA.pm*0.92/10)*10*IVA;
-  var MIN=[["Javiera Soto","56912345678","javi.soto"],["Constanza Muñoz","56923456789","coni.munoz"],["Francisca Rojas","56934567890",""],["Daniela Pérez","56945678901","dani.perez.c"],["Catalina Díaz","56956789012","cata.diaz"],
-    ["Ignacia Vargas","56967890123",""],["Fernanda Castro","56978901234","fer.castro"],["Paula Fuentes","56989012345","pau.fuentes"],["Rocío Silva","56990123456",""],["Antonia Reyes","56901234567","anto.reyes"],["Martina Herrera","56911223344","marti.h"],["Valeria Morales","56922334455",""]]
-    .map(function(m){return C(m[0],"minorista",m[1],m[2])});
-  // pedidos
-  orders.length=0;nextId=1;qnum=1;var fact=1520,bol=3410;
-  var P=function(f,hora,c,cat,canal,lineas,ex){
-    var tc=c.tipo,items=lineas.map(function(l){var r=l[0];var p=tc==="mayorista"?(c.pr[r.id]||r.pm*IVA):r.precio;return {rid:r.id,q:l[1],p:p}});
-    var o=Object.assign({id:nextId++,cot:false,num:0,cliente:c.n,ig:c.ig,wa:c.wa,fecha:f,hora:hora,cat:cat,canal:canal,desc:"",personas:null,total:0,pagado:0,listo:false,fotos:[],items:items,tc:tc,cid:c.id,desp:0,despi:"con",dsc:0,dsct:"monto",doct:"",docn:"",desc_st:null},ex||{});
-    var sub=items.reduce(function(a,l){return a+l.q*l.p},0);o.total=Math.round(sub+(+o.desp||0)-oDsc(o,sub));
-    var pasado=f<TODAY;
-    if(o.cot){o.num=qnum++;o.pagado=0}
-    else if(pasado){o.pagado=o.total;o.listo=true;if(tc==="mayorista"){o.doct="factura";o.docn=String(fact++)}else if(rnd()<0.6){o.doct="boleta";o.docn=String(bol++)}}
-    else if(f===TODAY){o.pagado=tc==="mayorista"?0:o.total;o.listo=rnd()<0.5}
-    else o.pagado=tc==="mayorista"?0:Math.round(o.total*0.5/1000)*1000;
-    if(!o.desc)o.desc="Sin descripción.";orders.push(o);return o};
-  var d0=addDays(TODAY,-90),dow=function(iso){return pd(iso).getDay()};
-  for(var i=0;i<=120;i++){var f=addDays(d0,i),w=dow(f);
-    if(w===1)P(f,"08:30",CP,"Cafeterías","WhatsApp",[[GA,48],[BR,32]],{desp:Math.round(5000*IVA),despi:"sin",desc:"Pedido semanal para vitrina"});
-    if(w===4)P(f,"09:00",CM,"Cafeterías","WhatsApp",[[AL,48],[CU,12]],{desp:Math.round(5000*IVA),despi:"sin",desc:"Reposición semanal"});
-    if(w===5&&(i/7|0)%2===0)P(f,"11:00",HL,"Eventos","Tienda web",[[CH,2],[T3,2]],{desp:Math.round(8000*IVA),despi:"sin",dsc:5,dsct:"porcentaje",desc:"Postres para el buffet del fin de semana"});
-    if(w===3||w===6||(w===0&&rnd()<0.6)){var c=pick(MIN),k=rnd(),lin,cat,per=null,ds;
-      if(k<0.35){lin=[[pick([T3,SN]),1]];cat="Tortas";per=20;ds=pick(["Torta para cumpleaños, escribir “Feliz cumpleaños”","Decoración con flores naturales","Sin nueces, con velas","Para 20 personas, retiro en tienda"])}
-      else if(k<0.55){lin=[[pick([CH,KU]),1]];cat="Cheesecakes y kuchen";ds=pick(["Para once familiar","Retiro en tienda"])}
-      else if(k<0.85){lin=[[GA,12],[AL,12]];cat="Dulces y cajas";ds="Caja regalo con tarjeta"}
-      else{lin=[[CU,24],[pick([T3,SN]),1]];cat="Eventos";per=40;ds="Baby shower: cupcakes con tonos rosados";}
-      P(f,pick(["11:00","12:30","15:00","17:00","18:30"]),c,cat,pick(["WhatsApp","Instagram","WhatsApp"]),lin,{personas:per,desc:ds,desp:rnd()<0.3?3500:0})}
-  }
-  // cotizaciones abiertas
-  P(addDays(TODAY,12),"16:00",MIN[3],"Eventos","Instagram",[[CU,48],[SN,2]],{cot:true,personas:80,desc:"Matrimonio civil: mesa de dulces"});
-  P(addDays(TODAY,20),"12:00",MIN[7],"Eventos","WhatsApp",[[T3,1],[AL,36]],{cot:true,personas:30,desc:"Bautizo, torta con nombre"});
-  // gastos: 3 meses atrás + este mes (hasta hoy)
-  gastos.length=0;gid=1;
-  var G=function(f,n,cat,m,iva){if(f<=TODAY)gastos.push({id:gid++,fecha:f,nombre:n,cat:cat,monto:m,iva:iva})};
-  for(var mI=-3;mI<=0;mI++){var b=pd(TODAY);b.setDate(1);b.setMonth(b.getMonth()+mI);var m0=iso_(b),dd=function(n){return addDays(m0,n-1)};
-    G(dd(1),"Arriendo local","Arriendo",380000,"no");G(dd(5),"Luz","Servicios básicos",48000+Math.round(rnd()*9000),"incl");G(dd(6),"Gas","Servicios básicos",36000+Math.round(rnd()*8000),"incl");
-    G(dd(7),"Agua","Servicios básicos",12500,"incl");G(dd(8),"Internet y teléfono","Servicios básicos",22990,"incl");G(dd(28),"Sueldo Camila","Sueldos",520000,"no");
-    G(dd(10),"Publicidad Instagram","Marketing",30000,"incl");G(dd(15),"Cajas y bases","Packaging",58000+Math.round(rnd()*15000),"incl");
-    [3,10,17,24].forEach(function(n){G(dd(n),"Compra supermercado mayorista","Ingredientes",130000+Math.round(rnd()*60000),"incl")});
-    G(dd(20),"Mantención horno","Otros",mI===-2?45000:0,"incl")}
-  gastos=gastos.filter(function(g){return g.monto>0});
-  wk=TODAY;render();
-  if(typeof dulciaSaveNow==="function")dulciaSaveNow();
-  toast("Datos de demostración cargados: "+orders.length+" pedidos, "+recipes.length+" recetas, "+clis.length+" clientes");
-}
+/* ---------- Cuenta de demostración: el botón pide al servidor que borre y recargue los datos ficticios ---------- */
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-demo]");if(!t)return;
-  if(!t.dataset.sure){t.dataset.sure="1";t.textContent="Toca de nuevo: se borra todo y se carga de nuevo";setTimeout(function(){if(t.isConnected){delete t.dataset.sure;t.textContent="Reiniciar datos de demostración"}},5000);return}
-  t.disabled=true;demoCargar()});
+  if(!t.dataset.sure){t.dataset.sure="1";t.textContent="Toca de nuevo para confirmar";setTimeout(function(){if(t.isConnected&&!t.disabled){delete t.dataset.sure;t.textContent="Reiniciar datos de demostración"}},5000);return}
+  t.disabled=true;t.textContent="Cargando datos…";
+  if(typeof window.demoReiniciar!=="function"){toast("No se pudo reiniciar. Recarga la página e intenta de nuevo.");return}
+  window.demoReiniciar().catch(function(er){t.disabled=false;delete t.dataset.sure;t.textContent="Reiniciar datos de demostración";toast(er&&er.message?er.message:"No se pudo reiniciar. Intenta de nuevo.")})});
 /* Respaldo completo en Excel (antes de eliminar la cuenta, o cuando quiera) */
 function respaldoExcel(){xlsxLib().then(function(X){
   var wb=X.utils.book_new(),hoja=function(n,H,rows,w){var ws=X.utils.aoa_to_sheet([H].concat(rows));ws["!cols"]=w.map(function(x){return {wch:x}});X.utils.book_append_sheet(wb,ws,n)};
@@ -1487,6 +1403,7 @@ function openGrp(){
 /* ---------- AJUSTES ---------- */
 function vCfg(){
   return head("Ajustes")+'<div class="grid" style="max-width:720px">'+
+  (window.ES_DEMO?'<section class="card democard"><h2 style="font-size:1.38rem">Cuenta de demostración</h2><p class="note" style="margin-top:2px">Esta cuenta tiene datos ficticios de “Pastelería Dulce Lago” para mostrar Dulcia. Se reinicia sola cada madrugada. Si cambiaste algo durante una presentación, toca el botón: se borra todo y se vuelve a cargar con fechas desde hoy (3 meses de historia y el próximo mes).</p><div style="margin-top:10px"><button class="btn sm" data-demo>Reiniciar datos de demostración</button></div></section>':'')+
   '<section class="card"><h2 style="font-size:1.38rem">Tu pastelería</h2><div class="logoedit" style="margin-top:12px"><img src="'+logoSrc()+'" alt="Logo"><label class="btn ghost sm" style="cursor:pointer">Cambiar logo<input type="file" accept="image/*" hidden id="cl"></label></div>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:14px">Nombre<input type="text" id="cn" value="'+esc(cfg.nombre)+'"></label><p class="note">El logo y el nombre aparecen en el menú y, más adelante, en tus cotizaciones en PDF.</p></section>'+
   '<section class="card manualc"><div><h2 style="font-size:1.38rem">Manual de uso</h2><p class="note" style="margin:2px 0 0">Guía completa de Dulcia, paso a paso y con imágenes: recetas, precios, pedidos, producción, compras, inventario y más. Se actualiza con cada mejora de la app.</p></div><a class="btn" href="/manual-dulcia.pdf" target="_blank" rel="noopener" download="Manual-Dulcia.pdf">Descargar manual (PDF)</a></section>'+
@@ -1507,7 +1424,6 @@ function vCfg(){
   '<section class="card"><h2 style="font-size:1.38rem">Tu plan</h2>'+(window.planBox?window.planBox():"")+'</section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Tu cuenta</h2><p class="note" style="margin-top:2px">Sesión iniciada como <b>'+esc(window.USER_EMAIL||"")+'</b>.</p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn ghost sm" data-logout>Cerrar sesión</button>'+(window.IS_ADMIN?'<a class="btn sm" href="/admin" target="_blank" rel="noopener">Panel de administración</a>':'')+'</div></section>'+
 '<section class="card"><h2 style="font-size:1.38rem">Instala Dulcia en tu celular</h2><p class="note" style="margin-top:2px">Así la abres con un toque, como cualquier app, sin buscar el link.</p><p style="margin:10px 0 4px"><b>iPhone (Safari)</b></p><ol class="note" style="margin:0;padding-left:1.2em"><li>Abre Dulcia en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li><li>Elige <b>Agregar a pantalla de inicio</b> y toca <b>Agregar</b>.</li></ol><p style="margin:10px 0 4px"><b>Android (Chrome)</b></p><ol class="note" style="margin:0;padding-left:1.2em"><li>Abre Dulcia en <b>Chrome</b>.</li><li>Toca los <b>tres puntos</b> de arriba a la derecha.</li><li>Elige <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</li></ol></section>'+
-  (window.ES_DEMO?'<section class="card democard"><h2 style="font-size:1.38rem">Cuenta de demostración</h2><p class="note" style="margin-top:2px">Esta cuenta tiene datos ficticios de “Pastelería Dulce Lago” para mostrar Dulcia. Al reiniciar, se borra todo lo que cambiaste y se vuelve a cargar con fechas desde hoy: 3 meses de historia y el próximo mes.</p><div style="margin-top:10px"><button class="btn sm" data-demo>Reiniciar datos de demostración</button></div></section>':'')+
   '<section class="card bajacard"><h2 style="font-size:1.38rem">Eliminar mi cuenta</h2><p class="note" style="margin-top:2px">Cierra tu cuenta y cancela los cobros. Tienes 30 días para arrepentirte; después se borran tus datos.</p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn ghost sm" data-respaldo>Descargar respaldo en Excel</button><button class="btn ghost sm danger" data-baja>Eliminar mi cuenta</button></div></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Próximamente</h2><p class="note" style="margin-top:2px">Conexión con la tienda web de tu pastelería, ayudantes con acceso propio e inventario.</p></section>'+
   '</div>';
