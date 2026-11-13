@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Darse de baja · Dulcia</title>
+<link rel="icon" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FBF6EE;--card:#FFFFFF;--ink:#2A1E2E;--soft:#6B5F70;--line:#E9DFD0;--accent:#B3224F;--btn-fg:#FBF6EE;--pink:#F8DCE5;
+  --display:'Cormorant Garamond',Georgia,serif;--body:'Jost',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#231A26;--card:#33263A;--ink:#FBF6EE;--soft:#C9BDCB;--line:#4A3B50;--accent:#F29BB6;--pink:#4A2A3A;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#231A26;--card:#33263A;--ink:#FBF6EE;--soft:#C9BDCB;--line:#4A3B50;--accent:#F29BB6;--pink:#4A2A3A;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:400 17px/1.6 var(--body);padding:24px 16px}
+.card{max-width:480px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:32px 28px;box-shadow:0 10px 30px rgba(42,30,46,.08)}
+.logo{font:600 34px/1 var(--display);color:var(--accent)}
+h1{font:500 30px/1.1 var(--display);margin:18px 0 10px}
+p{margin:0 0 12px;color:var(--soft)}
+a.btn{display:inline-block;margin-top:8px;background:var(--accent);color:var(--btn-fg);text-decoration:none;font-weight:500;border-radius:999px;padding:13px 24px}
+</style></head>
+<body><main class="card">
+<div class="logo">Dulcia.</div>
+<h1 id="t">Listo, te dimos de baja</h1>
+<p id="m">No te enviaremos más correos de promociones ni campañas. Los avisos de tu cuenta, como el fin de tu prueba o el vencimiento de tu plan, te seguirán llegando.</p>
+<p>¿Fue un error? Escríbenos a <b>contacto.dulcia@gmail.com</b>.</p>
+<a class="btn" href="https://www.dulcia.cl/app/">Ir a Dulcia</a>
+</main>
+<script>
+(function(){var q=location.search;
+  if(/error=1/.test(q)){document.getElementById("t").textContent="No pudimos darte de baja";document.getElementById("m").textContent="El enlace no es válido o venció. Escríbenos y te sacamos de la lista a mano.";}
+  else if(/prueba=1/.test(q)){document.getElementById("t").textContent="Así se ve la baja";document.getElementById("m").textContent="Este es el correo de prueba: no se dio de baja a nadie. Cuando una clienta toca este enlace, deja de recibir campañas.";}
+})();
+</script>
+</body></html>
