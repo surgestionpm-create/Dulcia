@@ -427,7 +427,7 @@
     }
     if (t.hasAttribute("data-cptest")) {
       var dd0 = campDatos(); if (!dd0.asunto || !dd0.texto.trim()) { toast("Escribe el asunto y el texto", true); return; }
-      t.disabled = true; try { var rp = await avisos("campana_probar", dd0); toast("Prueba enviada a " + rp.a); } catch (er) { toast(errTxt(er), true); } t.disabled = false; return;
+      t.disabled = true; t.textContent = "Enviando prueba…"; try { var rp = await avisos("campana_probar", dd0); if (!rp.a) throw new Error("La función “avisos” de Supabase no está actualizada: vuelve a pegar su código y presiona Deploy"); toast("Prueba enviada a " + rp.a + (rp.id ? " (Resend " + rp.id + ")" : "") + ". Revisa también Spam y Promociones."); } catch (er) { toast(errTxt(er), true); } t.disabled = false; t.textContent = "Enviarme una prueba"; return;
     }
     if (t.hasAttribute("data-cpsend")) {
       var dd1 = campDatos(); if (!dd1.asunto || !dd1.texto.trim()) { toast("Escribe el asunto y el texto", true); return; }
