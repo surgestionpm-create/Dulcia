@@ -169,10 +169,10 @@
   function vCod() {
     if (S.sinCod) return '<section class="card"><p class="errmsg">Falta ejecutar en Supabase el SQL de los códigos (codigos.sql).</p></section>';
     var link = function (k) { return "https://www.dulcia.cl/?ref=" + k; };
-    var form = '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem">Nuevo código</h2><p class="note" style="margin:4px 0 10px">La persona lo escribe al crear su cuenta, o entra con el link del código y se completa solo. El código no da beneficios: los meses gratis se regalan desde cada cuenta.</p>' +
-      '<form id="codf" class="row2"><input type="text" id="cc" required maxlength="30" placeholder="Código (ej.: UFATRUFA)" style="text-transform:uppercase"><input type="text" id="ci" required maxlength="80" placeholder="Nombre del influencer"><input id="cp" type="number" min="0" max="100" step="0.5" value="20" style="max-width:110px" title="% de comisión"><span class="note" style="margin:0">% de cada pago</span><input type="text" id="ct" maxlength="120" placeholder="Contacto (opcional)"><button class="btn sm" type="submit">Crear código</button></form></section>';
-    var tabla = '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem;margin-bottom:8px">Códigos</h2>' + (S.cod.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Código</th><th>Influencer</th><th class="r">Comisión</th><th class="r">Clientes</th><th class="r">Pagando hoy</th><th class="r">Total pagado</th><th>Link para compartir</th><th></th></tr></thead><tbody>' +
-      S.cod.map(function (k) { return '<tr><td><b>' + esc(k.codigo) + '</b>' + (k.activo ? '' : ' <span class="st pausada">inactivo</span>') + '</td><td>' + esc(k.influencer) + (k.contacto ? '<div class="note" style="margin:0">' + esc(k.contacto) + '</div>' : '') + '</td><td class="r">' + (+k.comision) + '%</td><td class="r">' + k.clientes + '</td><td class="r">' + k.pagando + '</td><td class="r">' + $$(k.pagado_total) + '</td>' +
+    var form = '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem">Nuevo código</h2><p class="note" style="margin:4px 0 10px">Un código puede ser de <b>influencer</b> (comisión por cada pago), de <b>descuento</b> en los planes (campañas como Black Friday) o ambos. La persona lo escribe al crear su cuenta o al elegir su plan, o entra con el link del código. Los descuentos son solo para cuentas nuevas.</p>' +
+      '<form id="codf">' + codCampos(null) + '<div class="row2" style="margin-top:12px"><button class="btn sm" type="submit">Crear código</button></div></form></section>';
+    var tabla = '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem;margin-bottom:8px">Códigos</h2>' + (S.cod.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Código</th><th>Influencer</th><th class="r">Comisión</th><th>Descuento</th><th class="r">Usos</th><th class="r">Clientes</th><th class="r">Pagando hoy</th><th class="r">Total pagado</th><th>Link para compartir</th><th></th></tr></thead><tbody>' +
+      S.cod.map(function (k) { return '<tr><td><b>' + esc(k.codigo) + '</b>' + (k.activo ? '' : ' <span class="st pausada">inactivo</span>') + '</td><td>' + (k.influencer ? esc(k.influencer) : '<span class="note" style="margin:0">Campaña</span>') + (k.contacto ? '<div class="note" style="margin:0">' + esc(k.contacto) + '</div>' : '') + '</td><td class="r">' + (+k.comision ? (+k.comision) + '%' : '—') + '</td><td>' + dctoTxt(k) + '</td><td class="r">' + (+k.descuento ? (k.usos || 0) + (k.usos_max ? ' de ' + k.usos_max : '') + (k.usos_activos ? '<div class="note" style="margin:0">' + k.usos_activos + ' con descuento hoy</div>' : '') : '—') + '</td><td class="r">' + k.clientes + '</td><td class="r">' + k.pagando + '</td><td class="r">' + $$(k.pagado_total) + '</td>' +
         '<td><button class="btn ghost sm" data-clink="' + esc(link(k.codigo)) + '">Copiar link</button></td><td class="r"><button class="btn ghost sm" data-cedit="' + esc(k.codigo) + '">Editar</button></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">Todavía no hay códigos.</p>') + '</section>';
     var res = S.com ? comResumen() : [], tot = res.reduce(function (a, x) { return a + x.monto; }, 0);
     var com = '<section class="card"><h2 style="font-size:1.4rem">Comisiones del mes</h2><p class="note" style="margin:4px 0 10px">Suma los pagos del mes de los clientes de cada código (los planes semestral y anual cuentan completos el mes en que se pagan) y resta las devoluciones hechas ese mes.</p>' +
@@ -188,13 +188,59 @@
     try { S.com = await rpc("admin_comisiones", { p_mes: mesAct() + "-01" }) || []; } catch (e) { S.com = []; toast(errTxt(e), true); }
     S.comCargando = 0; if (S.tab === "cod") render();
   }
+  var PLN3 = { mensual: "Mensual", semestral: "Semestral", anual: "Anual" };
+  function dctoTxt(k) {
+    if (!+k.descuento) return '<span class="note" style="margin:0">—</span>';
+    var pl = (k.planes || []).map(function (p) { return p === "mensual" ? "Mensual (" + (+k.meses_desc ? k.meses_desc + (k.meses_desc == 1 ? " mes" : " meses") : "siempre") + ")" : PLN3[p] || p; }).join(", "), m = "";
+    var v = k.desde || k.hasta ? '<div class="note" style="margin:0">' + (k.desde ? "desde " + fdd(k.desde) + " " : "") + (k.hasta ? "hasta " + fdd(k.hasta) : "") + '</div>' : "";
+    if (k.aviso) v += '<div class="note" style="margin:0">📣 aviso en dulcia.cl' + (k.aviso_texto ? ': ' + esc(k.aviso_texto) : '') + '</div>';
+    return '<b>' + (+k.descuento) + '%</b> ' + esc(pl) + esc(m) + v;
+  }
+  function fdd(d) { return String(d).slice(0, 10).split("-").reverse().join("-"); }
+  function codCampos(c) {
+    var x = c || { comision: 20, descuento: 0, planes: ["mensual", "semestral", "anual"], meses_desc: 0 }, n = !c;
+    var pl = x.planes || [];
+    return '<div class="codgrid">' +
+      '<fieldset><legend>Código e influencer</legend>' +
+      (n ? '<label>Código<input type="text" id="cc" required maxlength="30" placeholder="Ej.: 6OFF o BLACKFRIDAY" style="text-transform:uppercase"></label>' : '') +
+      '<label><span>Influencer <span class=\"note\" style=\"margin:0;display:inline\">(vacío si es una campaña)</span></span><input type="text" id="ki" maxlength="80" value="' + esc(x.influencer || "") + '"></label>' +
+      '<label>% de comisión de cada pago<input id="kp" type="number" min="0" max="100" step="0.5" value="' + (+x.comision || 0) + '"></label>' +
+      '<label>Contacto<input type="text" id="kt" maxlength="120" value="' + esc(x.contacto || "") + '" placeholder="Opcional"></label>' +
+      (n ? '' : '<label>Nota<textarea id="kn" rows="2">' + esc(x.nota || "") + '</textarea></label>') + '</fieldset>' +
+      '<fieldset><legend>Descuento en los planes</legend>' +
+      '<label><span>% de descuento <span class=\"note\" style=\"margin:0;display:inline\">(0 = sin descuento)</span></span><input id="kd" type="number" min="0" max="95" step="1" value="' + (+x.descuento || 0) + '"></label>' +
+      '<div class="kpl"><span>Planes con descuento</span>' + ["mensual", "semestral", "anual"].map(function (p) { return '<label class="kck"><input type="checkbox" data-kpl="' + p + '"' + (pl.indexOf(p) >= 0 ? " checked" : "") + '> ' + PLN3[p] + '</label>'; }).join("") + '</div>' +
+      '<label><span>Mensual: meses con descuento <span class=\"note\" style=\"margin:0;display:inline\">(0 = siempre)</span></span><input id="km" type="number" min="0" max="36" step="1" value="' + (+x.meses_desc || 0) + '"></label>' +
+      '<div class="kdates"><label>Se puede usar desde<input id="kdd" type="date" value="' + (x.desde ? String(x.desde).slice(0, 10) : "") + '"></label><label>hasta<input id="kdh" type="date" value="' + (x.hasta ? String(x.hasta).slice(0, 10) : "") + '"></label></div>' +
+      '<label><span>Máximo de cuentas <span class=\"note\" style=\"margin:0;display:inline\">(vacío = sin límite)</span></span><input id="ku" type="number" min="1" step="1" value="' + (x.usos_max || "") + '"></label>' +
+      '<p class="note" style="margin:0">El descuento es <b>solo para cuentas nuevas</b> (que nunca han pagado un plan). Cada cuenta lo usa una vez.</p>' +
+      '<label class="kck"><input type="checkbox" id="ks"' + (x.aviso ? " checked" : "") + '> Mostrar aviso en la página principal dulcia.cl</label>' +
+      '<label><span>Título del aviso <span class="note" style="margin:0;display:inline">(ej.: Black Friday)</span></span><input type="text" id="kat" maxlength="40" value="' + esc(x.aviso_texto || "") + '"></label>' +
+      '<p class="note kej">' + codEjV(+x.descuento || 0, pl, +x.meses_desc || 0) + '</p></fieldset></div>';
+  }
+  function codEj(f) {
+    return codEjV(+f.querySelector("#kd").value || 0, [].filter.call(f.querySelectorAll("[data-kpl]"), function (i) { return i.checked; }).map(function (i) { return i.dataset.kpl; }), +f.querySelector("#km").value || 0);
+  }
+  function codEjV(d, pl, m) {
+    if (!d) return "Sin descuento: el código solo sirve para la comisión del influencer.";
+    var P = { mensual: 5990, semestral: 29990, anual: 54990 };
+    return "Así queda: " + (pl.length ? pl.map(function (p) { var v = Math.round(P[p] * (100 - d) / 100);
+      return p === "mensual" ? "mensual " + $$(v) + (m ? " los primeros " + m + (m === 1 ? " mes" : " meses") + " y luego " + $$(P.mensual) + " (automático)" : " al mes mientras siga suscrita") : p + " " + $$(v) + " (pago único, normal " + $$(P[p]) + ")"; }).join(" · ") : "elige al menos un plan") + ".";
+  }
+  function codUpd(e) { var g = e.target.closest && e.target.closest(".codgrid"); if (g) g.querySelector(".kej").textContent = codEj(g); }
+  document.addEventListener("input", codUpd); document.addEventListener("change", codUpd);
+  function codDatos(f) {
+    var q = function (s) { return f.querySelector(s); };
+    return { p_influencer: q("#ki").value.trim() || null, p_comision: q("#ki").value.trim() ? +q("#kp").value || 0 : 0, p_contacto: q("#kt").value.trim() || null, p_nota: q("#kn") ? q("#kn").value.trim() || null : null,
+      p_descuento: +q("#kd").value || 0, p_planes: [].filter.call(f.querySelectorAll("[data-kpl]"), function (i) { return i.checked; }).map(function (i) { return i.dataset.kpl; }),
+      p_meses_desc: +q("#km").value || 0, p_desde: q("#kdd").value || null, p_hasta: q("#kdh").value || null, p_usos_max: q("#ku").value ? +q("#ku").value : null, p_aviso: q("#ks").checked, p_aviso_texto: q("#kat").value.trim() || null };
+  }
   function editCod(k) {
     var c = S.cod.find(function (x) { return x.codigo === k; }); if (!c) return;
     dlg.innerHTML = '<div class="dlg"><header><div><h2 style="font-size:1.6rem">Código ' + esc(c.codigo) + '</h2><div class="note" style="margin:2px 0 0">' + c.clientes + ' cliente' + (c.clientes === 1 ? '' : 's') + ' · creado el ' + fd(c.creado_en) + '</div></div><button class="ib" data-close aria-label="Cerrar">✕</button></header>' +
-      '<form id="cedf" style="display:flex;flex-direction:column;gap:10px"><label>Influencer<input type="text" id="ei" required maxlength="80" value="' + esc(c.influencer) + '"></label><label>% de comisión de cada pago<input id="ep" type="number" min="0" max="100" step="0.5" value="' + (+c.comision) + '"></label>' +
-      '<label>Contacto<input type="text" id="et" maxlength="120" value="' + esc(c.contacto || "") + '"></label><label>Nota<textarea id="en" rows="2">' + esc(c.nota || "") + '</textarea></label>' +
-      '<label class="row2" style="gap:8px"><input type="checkbox" id="ea"' + (c.activo ? ' checked' : '') + ' style="width:auto;flex:0"> Código activo (si lo desactivas, nadie nuevo puede usarlo; sus clientes actuales siguen sumando comisión)</label>' +
-      '<p class="note" style="margin:0">Cambiar el % afecta el cálculo de todos los meses, también los anteriores.</p><div class="row2"><button class="btn sm" type="submit">Guardar</button></div></form></div>';
+      '<form id="cedf">' + codCampos(c) +
+      '<label class="row2" style="gap:8px;margin-top:10px"><input type="checkbox" id="ea"' + (c.activo ? ' checked' : '') + ' style="width:auto;flex:0;min-width:0"> Código activo (si lo desactivas, nadie nuevo puede usarlo; sus clientes actuales siguen sumando comisión y los descuentos ya empezados se respetan)</label>' +
+      '<p class="note" style="margin:6px 0 0">Cambiar la comisión afecta el cálculo de todos los meses. Cambiar el descuento solo afecta a quienes lo usen desde ahora.</p><div class="row2" style="margin-top:10px"><button class="btn sm" type="submit">Guardar</button></div></form></div>';
     dlg.dataset.id = ""; dlg.dataset.cod = k; if (!dlg.open) dlg.showModal();
   }
   function excelCom() {
@@ -379,8 +425,8 @@
       e.preventDefault(); var nuevo = e.target.id === "codf", b = e.target.querySelector("button[type=submit]"); b.disabled = true;
       var k = nuevo ? $("#cc").value.trim().toUpperCase() : dlg.dataset.cod, o = S.cod.find(function (x) { return x.codigo === k; }) || {};
       try {
-        await rpc("admin_codigo_guardar", nuevo ? { p_codigo: k, p_influencer: $("#ci").value, p_comision: +$("#cp").value, p_activo: true, p_contacto: $("#ct").value.trim() || null, p_nota: null, p_nuevo: true }
-          : { p_codigo: k, p_influencer: $("#ei").value, p_comision: +$("#ep").value, p_activo: $("#ea").checked, p_contacto: $("#et").value.trim() || null, p_nota: $("#en").value.trim() || null, p_nuevo: false });
+        var dd = codDatos(e.target); dd.p_codigo = k; dd.p_nuevo = nuevo; dd.p_activo = nuevo ? true : $("#ea").checked;
+        await rpc("admin_codigo_guardar", dd);
         if (!nuevo) dlg.close(); S.com = null; await load(); toast(nuevo ? "Código " + k + " creado" : "Código " + k + " guardado");
       } catch (er) { toast(errTxt(er), true); b.disabled = false; }
       return;

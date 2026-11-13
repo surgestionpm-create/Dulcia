@@ -44,6 +44,7 @@
     if (!window.NO_UN) { row.unidades = Math.max(1, +rr.un || 1); row.unidad_venta = String(rr.ud || "").trim() || null; }
     if (!window.NO_PM) row.precio_may = Math.round(+rr.pm || 0);
     if (!window.NO_P2) { row.margen_may = rr.mm == null ? 45 : +rr.mm; row.may_pack = rr.mpk === "" || rr.mpk == null ? null : +rr.mpk; row.may_desp = rr.mds === "" || rr.mds == null ? null : +rr.mds; row.t_act = Math.max(0, Math.round(+rr.ta || 0)); row.t_esp = Math.max(0, Math.round(+rr.te || 0)); row.mano_obra = rr.mo == null ? null : !!rr.mo; }
+    if (!window.NO_PST) row.stock = Math.round((+rr.stk || 0) * 100) / 100;
     return { row: row, grupos: grupos, items: items };
   }
   function current() {
@@ -256,10 +257,11 @@
       Promise.resolve().then(function () { return sb.from("recetas").select("unidades").limit(1); }).catch(function (e) { return { error: e }; }),
       Promise.resolve().then(function () { return sb.from("recetas").select("margen_may").limit(1); }).catch(function (e) { return { error: e }; }),
       Promise.resolve().then(function () { return sb.from("recetas").select("precio_may").limit(1); }).catch(function (e) { return { error: e }; }),
-      Promise.resolve().then(function () { return sb.from("pedidos").select("doc_tipo,despacho_iva").limit(1); }).catch(function (e) { return { error: e }; })
+      Promise.resolve().then(function () { return sb.from("pedidos").select("doc_tipo,despacho_iva").limit(1); }).catch(function (e) { return { error: e }; }),
+      Promise.resolve().then(function () { return sb.from("recetas").select("stock").limit(1); }).catch(function (e) { return { error: e }; })
     ]);
     var RCL = R.splice(11, 1)[0]; window.NO_CLI = !!RCL.error;
-    window.NO_PM = !!R[13].error; window.NO_DOC = !!R[14].error;
+    window.NO_PM = !!R[13].error; window.NO_DOC = !!R[14].error; window.NO_PST = !!R[15].error;
     window.NO_ING = !!R[10].error; window.NO_UN = !!R[11].error; window.NO_P2 = !!R[12].error || window.NO_ING; R.slice(0, 10).forEach(function (r) { chk(r); });
     var neg = R[0].data;
     cfg.nombre = neg.nombre; cfg.tel = neg.telefono || ""; cfg.mail = neg.correo || ""; cfg.url = neg.web || ""; cfg.cond = neg.cond_cotizacion;
@@ -276,7 +278,7 @@
     recipes.length = 0; var rmap = {}, gmap = {};
     R[4].data.forEach(function (g) { gmap[g.id] = g; gbuy[g.nombre] = g.se_compra; });
     R[3].data.forEach(function (r) {
-      var rr = { id: rid++, uid: r.id, nombre: r.nombre, rinde: r.rinde || "", margen: +r.margen, precio: +r.precio, un: Math.max(1, +r.unidades || 1), ud: r.unidad_venta || "", mm: r.margen_may == null ? 45 : +r.margen_may, mpk: r.may_pack == null ? "" : +r.may_pack, mds: r.may_desp == null ? "" : +r.may_desp, ta: +r.t_act || 0, te: +r.t_esp || 0, mo: r.mano_obra == null ? null : !!r.mano_obra, pm: +r.precio_may || 0, items: [] };
+      var rr = { id: rid++, uid: r.id, nombre: r.nombre, rinde: r.rinde || "", margen: +r.margen, precio: +r.precio, un: Math.max(1, +r.unidades || 1), ud: r.unidad_venta || "", mm: r.margen_may == null ? 45 : +r.margen_may, mpk: r.may_pack == null ? "" : +r.may_pack, mds: r.may_desp == null ? "" : +r.may_desp, ta: +r.t_act || 0, te: +r.t_esp || 0, stk: +r.stock || 0, mo: r.mano_obra == null ? null : !!r.mano_obra, pm: +r.precio_may || 0, items: [] };
       var its = R[5].data.filter(function (i) { return i.receta_id === r.id; }).map(function (i) { return { i: i, g: gmap[i.grupo_id] || { nombre: "Ingredientes", orden: 0 } }; });
       its.sort(function (a, b) { return a.g.orden - b.g.orden || a.i.orden - b.i.orden; });
       its.forEach(function (x) { rr.items.push({ g: x.g.nombre, n: x.i.nombre, q: +x.i.cantidad, u: window.normU ? normU(x.i.unidad) : x.i.unidad, c: +x.i.costo_unidad }); });
@@ -314,7 +316,7 @@
   /* Código de invitación (influencer): llega por ?ref=CODIGO o se escribe al crear la cuenta */
   function refGet() { try { return localStorage.getItem("dulcia_ref") || ""; } catch (e) { return ""; } }
   (function () { var m = /[?&]ref=([A-Za-z0-9_-]{3,30})/.exec(location.search); if (m) try { localStorage.setItem("dulcia_ref", m[1].toUpperCase()); } catch (e) {} })();
-  function refCampo(v) { return '<label><span>Código de invitación <span style="font-weight:400;opacity:.8">(opcional)</span></span><input type="text" id="aref" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Si alguien te recomendó Dulcia" value="' + String(v || "").replace(/[^A-Za-z0-9_-]/g, "") + '"></label>'; }
+  function refCampo(v) { return '<label><span>Código de invitación o descuento <span style="font-weight:400;opacity:.8">(opcional)</span></span><input type="text" id="aref" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Si alguien te recomendó Dulcia" value="' + String(v || "").replace(/[^A-Za-z0-9_-]/g, "") + '"></label>'; }
   function refLeer() { var i = document.getElementById("aref"); return i ? i.value.trim().toUpperCase() : ""; }
   function showAuth(mode) {
     mode = mode || "in";
@@ -384,25 +386,120 @@
   function planesHTML() {
     return '<div class="pls" role="radiogroup" aria-label="Planes">' + PLANES.map(function (p) {
       return '<label class="pl' + (p.best ? " best" : "") + '"><input type="radio" name="plan" value="' + p.k + '"' + (p.best ? " checked" : "") + '>' +
-        '<span class="pln">' + p.n + (p.best ? ' <em>Más conveniente</em>' : "") + '</span><span class="plp"><b>' + p.p + "</b> " + p.per + '</span><span class="pld">' + p.d + "</span></label>";
+        '<span class="pln">' + p.n + (p.best ? ' <em>Más conveniente</em>' : "") + '</span><span class="plp" data-plp="' + p.k + '"><b>' + p.p + "</b> " + p.per + '</span><span class="pld" data-pld="' + p.k + '">' + p.d + "</span></label>";
     }).join("") + "</div>" +
+      '<div class="plcod"><label for="pcod">¿Tienes un código de descuento?</label><div class="plcr"><input type="text" id="pcod" maxlength="30" placeholder="Ej.: BLACKFRIDAY" autocapitalize="characters" spellcheck="false" autocomplete="off"><button type="button" class="btn ghost sm" id="pcodb">Aplicar</button></div><div class="plcm" id="pcodm" hidden></div></div>' +
       '<label class="plmail" hidden>Correo de tu cuenta de Mercado Pago<input type="email" id="mpmail" value="' + esc2(window.USER_EMAIL || "") + '" autocomplete="email"><span class="pld">La suscripción queda a nombre de este correo. Si en Mercado Pago usas otro, cámbialo aquí.</span></label>' +
       '<button class="btn" id="pg" type="button">Continuar a Mercado Pago</button><p class="note" style="margin:0">Pagas con tarjeta o saldo en el sitio seguro de Mercado Pago. Nosotros no vemos tus datos de pago.</p>';
   }
+  function pz(n) { return "$\u00a0" + Math.round(+n || 0).toLocaleString("es-CL"); }
   function bindPlanes(root, onErr) {
-    var mail = root.querySelector(".plmail");
+    var mail = root.querySelector(".plmail"), promo = null, ci = root.querySelector("#pcod"), cm = root.querySelector("#pcodm");
     function upd() { var v = (root.querySelector("input[name=plan]:checked") || {}).value; mail.hidden = v !== "mensual"; }
     root.querySelectorAll("input[name=plan]").forEach(function (r) { r.onchange = upd; }); upd();
+    function pintar() {
+      PLANES.forEach(function (p) {
+        var x = promo && promo.planes && promo.planes[p.k], a = root.querySelector('[data-plp="' + p.k + '"]'), d = root.querySelector('[data-pld="' + p.k + '"]');
+        if (!x) { a.innerHTML = "<b>" + p.p + "</b> " + p.per; d.innerHTML = p.d; return; }
+        a.innerHTML = '<s class="plold">' + p.p + "</s> <b>" + pz(x.precio) + "</b> " + p.per;
+        d.innerHTML = p.k === "mensual"
+          ? "<b>" + (+promo.descuento) + "% de descuento " + (+x.meses > 0 ? "los primeros " + x.meses + (x.meses == 1 ? " mes" : " meses") : "mientras sigas suscrita") + "</b>." + (+x.meses > 0 ? " Después se cobra solo el precio normal, " + pz(x.normal) + " al mes." : "") + " Lo cancelas cuando quieras."
+          : "<b>" + (+promo.descuento) + "% de descuento</b> con el código. Un solo pago (normal " + pz(x.normal) + ").";
+      });
+      if (promo) {
+        var ks = Object.keys(promo.planes), sel = root.querySelector("input[name=plan]:checked");
+        if (ks.indexOf(sel.value) < 0) { var r0 = root.querySelector('input[name=plan][value="' + ks[0] + '"]'); if (r0) { r0.checked = true; upd(); } }
+        var nom = { mensual: "mensual", semestral: "semestral", anual: "anual" };
+        cm.className = "plcm ok"; cm.innerHTML = "✓ Código <b>" + esc2(promo.codigo) + "</b> aplicado: " + (+promo.descuento) + "% en el plan " + ks.map(function (k) { return nom[k]; }).join(", ").replace(/, ([^,]*)$/, " y $1") +
+          (promo.hasta ? ". Válido hasta el " + String(promo.hasta).split("-").reverse().join("-") : "") + '. <button type="button" class="lnk" id="pcodx">Quitar</button>';
+        cm.hidden = false; ci.value = promo.codigo;
+        var bx = root.querySelector("#pcodx"); if (bx) bx.onclick = function () { promo = null; ci.value = ""; cm.hidden = true; pintar(); };
+      }
+    }
+    async function aplicar(cod, silencioso) {
+      try {
+        var r = await sb.rpc("promo_ver", { p_codigo: cod || null });
+        if (r.error) throw r.error;
+        var d = r.data || {};
+        if (d.pagado) { root.querySelector(".plcod").hidden = true; promo = null; pintar(); return; }
+        if (d.error !== undefined || !d.planes) { if (!silencioso) { promo = null; pintar(); cm.className = "plcm err"; cm.textContent = d.error || "Ese código no sirve"; cm.hidden = false; } return; }
+        promo = d; pintar();
+      } catch (e) { if (!silencioso) { cm.className = "plcm err"; cm.textContent = "No pudimos revisar el código. Intenta de nuevo."; cm.hidden = false; } }
+    }
+    root.querySelector("#pcodb").onclick = function () { var v = ci.value.trim().toUpperCase(); if (!v) { ci.focus(); return; } aplicar(v, false); };
+    ci.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); root.querySelector("#pcodb").click(); } };
+    aplicar(refGet(), true);
     root.querySelector("#pg").onclick = async function () {
-      var b = this, plan = root.querySelector("input[name=plan]:checked").value; busy(b, true); var PV = { mensual: 5990, semestral: 29990, anual: 54990 }; pxPendiente(plan); if (window.dulciaEvent) dulciaEvent("begin_checkout", { currency: "CLP", value: PV[plan] || 0, items: [{ item_id: plan, item_name: "Dulcia " + plan, price: PV[plan] || 0, quantity: 1 }] });
+      var b = this, plan = root.querySelector("input[name=plan]:checked").value; busy(b, true); var PV = { mensual: 5990, semestral: 29990, anual: 54990 }; if (promo && promo.planes[plan]) PV[plan] = promo.planes[plan].precio; pxPendiente(plan); if (window.dulciaEvent) dulciaEvent("begin_checkout", { currency: "CLP", value: PV[plan] || 0, items: [{ item_id: plan, item_name: "Dulcia " + plan, price: PV[plan] || 0, quantity: 1 }] });
       try {
         var cfgd = window.DULCIA_CONFIG || {}, s = await sb.auth.getSession(), tk = s.data.session.access_token;
-        var r = await fetch(cfgd.url + "/functions/v1/crear-pago", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: cfgd.key, "Content-Type": "application/json" }, body: JSON.stringify({ plan: plan, email: root.querySelector("#mpmail").value.trim() }) });
+        var r = await fetch(cfgd.url + "/functions/v1/crear-pago", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: cfgd.key, "Content-Type": "application/json" }, body: JSON.stringify({ plan: plan, email: root.querySelector("#mpmail").value.trim(), codigo: promo && promo.planes[plan] ? promo.codigo : "" }) });
         var d = await r.json();
         if (d.activo) { location.reload(); return; }
         if (!r.ok || !d.url) throw new Error(d.error || "No pudimos abrir el pago");
         location.href = d.url;
       } catch (err) { busy(b, false); onErr(msg(err)); }
+    };
+  }
+  /* Cuenta eliminada: puede recuperarla dentro de 30 días */
+  function showBaja(b) {
+    var cfgd = window.DULCIA_CONFIG || {}, c = cfgd.contacto || "", plan = b.plan, v = b.vence_en && new Date(b.vence_en) > new Date() ? fd(b.vence_en) : "";
+    show('<h1>Tu cuenta está eliminada</h1><p>Se borra definitivamente el <b>' + fd(b.eliminar_en) + '</b>. Hasta esa fecha puedes recuperarla con todos tus datos' +
+      (v && plan !== "mensual" && plan !== "prueba" ? ' y tu plan ' + (PLN[plan] || plan) + ' hasta el ' + v : v && plan === "mensual" ? ' (tu mes pagado sigue hasta el ' + v + '; la suscripción quedó cancelada, así que después eliges un plan de nuevo)' : '') + '.</p>' +
+      '<div class="msg" hidden></div>' +
+      (b.duena ? '<button class="btn" id="recu" type="button">Recuperar mi cuenta</button>' : '<p class="note">Solo la dueña de la cuenta puede recuperarla.</p>') +
+      '<button type="button" class="lnk" id="lo">Cerrar sesión</button>' + (c ? '<p class="note">¿Dudas? Escribe a ' + c + '</p>' : ''));
+    document.getElementById("lo").onclick = doLogout;
+    var rb = document.getElementById("recu");
+    if (rb) rb.onclick = async function () {
+      busy(rb, true);
+      var r = await sb.rpc("recuperar_mi_cuenta");
+      if (r.error) { busy(rb, false); note(msg(r.error)); return; }
+      var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session);
+      if (typeof toast === "function") toast("¡Bienvenida de vuelta! Recuperaste tu cuenta.");
+    };
+  }
+  /* Eliminar la cuenta desde Ajustes */
+  var MOTIVOS = ["Es caro para mí", "No la uso lo suficiente", "Le falta algo que necesito", "Es difícil de usar", "Cierro o pauso mi negocio", "Otro motivo"];
+  function bajaCaso(c) {
+    var v = c.vence_en && new Date(c.vence_en) > new Date() ? fd(c.vence_en) : "", sub = c.suscripcion_estado === "authorized" || c.suscripcion_estado === "pending";
+    if (c.plan === "mensual" && sub) return "Tienes la <b>suscripción mensual</b> activa. Al eliminar tu cuenta la <b>cancelamos en Mercado Pago</b>: no se harán más cobros." + (v ? " Los días que quedan de tu mes pagado (hasta el " + v + ") se pierden." : "");
+    if (c.plan === "mensual") return v ? "Tu mes pagado dura hasta el " + v + ". Al eliminar tu cuenta, esos días se pierden. No tienes cobros automáticos." : "No tienes cobros automáticos.";
+    if (c.plan === "semestral" || c.plan === "anual") return v ? "Tu plan <b>" + PLN[c.plan] + "</b> está pagado hasta el <b>" + v + "</b>. Al eliminar tu cuenta <b>pierdes los " + mesesQuedan(c.vence_en) + " que quedan</b>, sin devolución del dinero." : "Tu plan " + PLN[c.plan] + " ya venció.";
+    if (c.plan === "regalo") return v ? "Tus meses de regalo (hasta el " + v + ") se pierden." : "";
+    if (c.plan === "vitalicio") return "Tu plan <b>de por vida</b> se pierde.";
+    return "Estás en tu prueba gratis: no tienes cobros pendientes.";
+  }
+  function mesesQuedan(f) { var d = Math.ceil((new Date(f) - Date.now()) / 864e5); if (d < 31) return d === 1 ? "1 día" : d + " días"; var m = Math.floor(d / 30.4); return m + (m === 1 ? " mes" : " meses") + (d - Math.round(m * 30.4) > 3 ? " y " + (d - Math.round(m * 30.4)) + " días" : ""); }
+  function bajaOpen() {
+    var d = document.getElementById("dlg"), c = window.CUENTA || {}, fin = fd(Date.now() + 30 * 864e5);
+    var v = c.vence_en && new Date(c.vence_en) > new Date() && c.plan !== "prueba" && c.plan !== "mensual";
+    d.innerHTML = '<div class="dlg bajadlg"><header><h2 style="font-size:1.5rem">Eliminar mi cuenta</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>' +
+      '<div class="bajacaso">' + bajaCaso(c) + '</div>' +
+      '<ul class="bajalist"><li>Tu cuenta se cierra <b>al instante</b>.</li><li>Tienes <b>30 días para arrepentirte</b>: si entras antes del ' + fin + ' y tocas <b>Recuperar mi cuenta</b>, vuelves con todo' + (v ? ' y con tu plan hasta el ' + fd(c.vence_en) : '') + '.</li><li>Después se borran definitivamente tus recetas, pedidos, clientes, gastos e inventario.</li><li>Te enviamos un correo con este detalle.</li></ul>' +
+      '<div class="bajares"><div><b>Antes de irte, guarda tus datos</b><div class="note" style="margin:0">Un Excel con tus recetas, ingredientes, pedidos, clientes y gastos.</div></div><button type="button" class="btn ghost sm" data-respaldo>Descargar respaldo</button></div>' +
+      '<fieldset class="bajamot"><legend>¿Por qué te vas? <span class="note" style="margin:0;display:inline">(opcional)</span></legend>' + MOTIVOS.map(function (m) { return '<label><input type="radio" name="bmot" value="' + m + '"> ' + m + '</label>'; }).join("") +
+      '<textarea id="bdet" rows="2" maxlength="600" placeholder="Cuéntanos más, nos ayuda a mejorar"></textarea></fieldset>' +
+      '<label class="bajaok"><span>Para confirmar, escribe <b>ELIMINAR</b></span><input type="text" id="bconf" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>' +
+      '<div class="msg" id="bmsg" hidden></div>' +
+      '<div class="bajabtns"><button type="button" class="btn ghost" data-close>No, volver</button><button type="button" class="btn danger-f" id="bgo" disabled>Eliminar mi cuenta</button></div></div>';
+    if (!d.open) d.showModal();
+    var conf = d.querySelector("#bconf"), go = d.querySelector("#bgo");
+    conf.oninput = function () { go.disabled = conf.value.trim().toUpperCase() !== "ELIMINAR"; };
+    go.onclick = async function () {
+      busy(go, true); go.textContent = "Eliminando…";
+      var m = d.querySelector("input[name=bmot]:checked"), em = d.querySelector("#bmsg");
+      try {
+        var cfgd = window.DULCIA_CONFIG || {}, s = await sb.auth.getSession(), tk = s.data.session.access_token;
+        try { await save(); } catch (e) {}
+        var r = await fetch(cfgd.url + "/functions/v1/crear-pago", { method: "POST", headers: { Authorization: "Bearer " + tk, apikey: cfgd.key, "Content-Type": "application/json" },
+          body: JSON.stringify({ accion: "eliminar_cuenta", confirmar: conf.value.trim(), motivo: m ? m.value : "", detalle: d.querySelector("#bdet").value.trim() }) });
+        var dd = await r.json(); if (!r.ok || !dd.ok) throw new Error(dd.error || "No pudimos eliminar la cuenta");
+        d.close();
+        show('<h1>Eliminamos tu cuenta</h1>' + (dd.suscripcion_cancelada ? '<p>Cancelamos tu suscripción en Mercado Pago: no se harán más cobros.</p>' : '') +
+          '<p>Si cambias de opinión, entra con tu correo y clave antes del <b>' + fd(dd.eliminar_en) + '</b> y toca <b>Recuperar mi cuenta</b>. Te enviamos un correo con el detalle.</p><p>Gracias por haber usado Dulcia. 🍒</p><button type="button" class="btn ghost" id="lo">Salir</button>');
+        document.getElementById("lo").onclick = async function () { await sb.auth.signOut(); location.href = "/"; };
+      } catch (err) { busy(go, false); go.textContent = "Eliminar mi cuenta"; em.textContent = msg(err); em.hidden = false; }
     };
   }
   function showPending(info) {
@@ -541,6 +638,8 @@
     else if (t.hasAttribute("data-caloff")) { if (!t.dataset.sure) { t.dataset.sure = "1"; t.textContent = "Toca de nuevo para desactivar"; return; } calSet(false); }
     else if (t.hasAttribute("data-calcopy")) { var ci = document.getElementById("calu"); var done = function () { if (typeof toast === "function") toast("Enlace copiado"); }; if (navigator.clipboard) navigator.clipboard.writeText(ci.value).then(done, function () { ci.select(); document.execCommand("copy"); done(); }); else { ci.select(); document.execCommand("copy"); done(); } }
     else if (t.hasAttribute("data-cancelsub")) { cancelSub(t); }
+    else if (t.hasAttribute("data-baja")) { bajaOpen(); }
+    else if (t.hasAttribute("data-respaldo")) { if (typeof respaldoExcel === "function") respaldoExcel(); }
     else if (t.dataset.act) { t.disabled = true; var r = await sb.rpc("admin_activar", { p_negocio: t.dataset.act }); if (r.error) alert_msg(r.error); adminOpen(); }
   });
   function alert_msg(e) { var b = document.getElementById("adm"); if (b) b.insertAdjacentHTML("afterbegin", '<p class="note">' + esc2(msg(e)) + "</p>"); }
@@ -583,7 +682,10 @@
     if (r.error) { show('<h1>Error</h1><p>' + msg(r.error) + '</p><button class="btn" onclick="location.reload()">Reintentar</button>'); return; }
     if (!r.data || !r.data.length) { window.__refMeta = (session && session.user && session.user.user_metadata && session.user.user_metadata.ref) || ""; showOnboard(); return; }
     window.CUENTA = r.data[0]; pxRevisar();
-    if (!r.data[0].activo) { showPending(r.data[0]); return; }
+    if (!r.data[0].activo) {
+      try { var bj = await sb.rpc("mi_baja"); if (!bj.error && bj.data) { showBaja(bj.data); return; } } catch (e) {}
+      showPending(r.data[0]); return;
+    }
     if (window.__pv) { clearInterval(window.__pv); window.__pv = 0; }
     NEG = r.data[0].negocio_id; await enter();
     if (/[?&]pago=ok/.test(location.search)) {

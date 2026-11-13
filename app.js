@@ -808,6 +808,20 @@ function ventasExcel(alcance){
   }).catch(function(e){toast(e.message||"No se pudo crear el Excel")});
 }
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-vxls]");if(t)ventasExcel(t.dataset.vxls)});
+/* Respaldo completo en Excel (antes de eliminar la cuenta, o cuando quiera) */
+function respaldoExcel(){xlsxLib().then(function(X){
+  var wb=X.utils.book_new(),hoja=function(n,H,rows,w){var ws=X.utils.aoa_to_sheet([H].concat(rows));ws["!cols"]=w.map(function(x){return {wch:x}});X.utils.book_append_sheet(wb,ws,n)};
+  var rr=[];recipes.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,"es")}).forEach(function(r){var it=r.items||[];if(!it.length)rr.push([r.nombre,r.un||1,"","","","","",0,+r.ta||0,+r.te||0,+r.precio||0,+r.pm||0]);
+    it.forEach(function(x,i){rr.push([r.nombre,i?"":(r.un||1),x.g,x.n,+x.q||0,x.u,+x.c||0,Math.round((+x.q||0)*(+x.c||0)),i?"":(+r.ta||0),i?"":(+r.te||0),i?"":(+r.precio||0),i?"":(+r.pm||0)])})});
+  hoja("Recetas",["Receta","Porciones que rinde","Categoría de costo","Ítem","Cantidad","Unidad","Costo por unidad","Subtotal","Trabajo con manos (min)","Horno o reposo (min)","Precio minorista (con IVA)","Precio mayorista (neto)"],rr,[26,10,20,24,10,8,12,10,12,12,14,14]);
+  hoja("Ingredientes",["Ingrediente","Categoría","Unidad","Costo por unidad","Tengo","Stock mínimo","Merma %"],ings.map(function(x){return [x.n,x.g,x.u,+x.c||0,Math.round((+x.st||0)*100)/100,+x.mn||0,+x.mm||0]}),[26,20,8,14,10,12,9]);
+  hoja("Pedidos",["Fecha","Hora","Tipo","Cliente","Tipo de cliente","WhatsApp","Instagram","Categoría","Canal","Productos","Despacho","Descuento","Total con IVA","Pagado","Saldo","Documento","N° documento","Listo","Personas","Descripción"],
+    orders.slice().sort(function(a,b){return (a.fecha+a.hora)<(b.fecha+b.hora)?-1:1}).map(function(o){var pr=(o.items||[]).map(function(it){var r=recipes.find(function(q){return q.id===it.rid});return r?fq(it.q)+" "+r.nombre:""}).filter(Boolean).join(" · ");
+      return [dmy(o.fecha),o.hora||"",o.cot?"Cotización":"Pedido",o.cliente,o.tc==="mayorista"?"Mayorista":"Minorista",o.wa?waFmt(o.wa):"",o.ig?"@"+o.ig:"",o.cat||"",o.canal||"",pr,+o.desp||0,oDsc(o,oSub(o)),Math.round(+o.total||0),Math.round(+o.pagado||0),Math.round((+o.total||0)-(+o.pagado||0)),DOCL[o.doct||""],o.docn||"",o.listo?"Sí":"No",o.personas||"",o.desc==="Sin descripción."?"":o.desc]}),[12,7,11,24,12,15,16,16,12,40,10,10,13,12,11,12,12,7,9,40]);
+  hoja("Clientes",["Cliente","Tipo","WhatsApp","Instagram","Correo","Razón social","RUT","Giro","Dirección","Comuna","Notas"],clis.map(function(c){return [c.n,c.tipo==="mayorista"?"Mayorista":"Minorista",c.wa?waFmt(c.wa):"",c.ig?"@"+c.ig:"",c.mail||"",c.rs||"",c.rut||"",c.giro||"",c.dir||"",c.com||"",c.notas||""]}),[24,11,15,16,24,24,13,16,26,14,30]);
+  hoja("Gastos",["Fecha","Gasto","Categoría","Monto","IVA"],gastos.slice().sort(function(a,b){return a.fecha<b.fecha?-1:1}).map(function(g){return [dmy(g.fecha),g.nombre,g.cat,+g.monto||0,GIVA[g.iva]||"Incluido"]}),[12,30,18,12,12]);
+  X.writeFile(wb,"Respaldo_Dulcia_"+TODAY+".xlsx");toast("Respaldo descargado");
+}).catch(function(e){toast(e.message||"No se pudo crear el respaldo")})}
 function pTemplate(){xlsxLib().then(function(X){
   var y=cur.y, m=String(cur.m+1).padStart(2,"0"), r1=recipes[0]?recipes[0].nombre:"", c1=pcats[0]?pcats[0].n:"Tortas";
   xBook(X,PCOLS,[["18-"+m+"-"+y,"15:00","Ejemplo: Fernanda Rojas","@fer.rojas","+56 9 8765 4321",c1,"Instagram",r1,1,39000,19500,"Tres leches con frambuesas","Pedido",20],
@@ -1403,6 +1417,7 @@ function vCfg(){
   '<section class="card"><h2 style="font-size:1.38rem">Tu plan</h2>'+(window.planBox?window.planBox():"")+'</section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Tu cuenta</h2><p class="note" style="margin-top:2px">Sesión iniciada como <b>'+esc(window.USER_EMAIL||"")+'</b>.</p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn ghost sm" data-logout>Cerrar sesión</button>'+(window.IS_ADMIN?'<a class="btn sm" href="/admin" target="_blank" rel="noopener">Panel de administración</a>':'')+'</div></section>'+
 '<section class="card"><h2 style="font-size:1.38rem">Instala Dulcia en tu celular</h2><p class="note" style="margin-top:2px">Así la abres con un toque, como cualquier app, sin buscar el link.</p><p style="margin:10px 0 4px"><b>iPhone (Safari)</b></p><ol class="note" style="margin:0;padding-left:1.2em"><li>Abre Dulcia en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li><li>Elige <b>Agregar a pantalla de inicio</b> y toca <b>Agregar</b>.</li></ol><p style="margin:10px 0 4px"><b>Android (Chrome)</b></p><ol class="note" style="margin:0;padding-left:1.2em"><li>Abre Dulcia en <b>Chrome</b>.</li><li>Toca los <b>tres puntos</b> de arriba a la derecha.</li><li>Elige <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</li></ol></section>'+
+  '<section class="card bajacard"><h2 style="font-size:1.38rem">Eliminar mi cuenta</h2><p class="note" style="margin-top:2px">Cierra tu cuenta y cancela los cobros. Tienes 30 días para arrepentirte; después se borran tus datos.</p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn ghost sm" data-respaldo>Descargar respaldo en Excel</button><button class="btn ghost sm danger" data-baja>Eliminar mi cuenta</button></div></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Próximamente</h2><p class="note" style="margin-top:2px">Conexión con la tienda web de tu pastelería, ayudantes con acceso propio e inventario.</p></section>'+
   '</div>';
 }

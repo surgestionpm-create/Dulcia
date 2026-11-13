@@ -392,7 +392,7 @@ input[type=search]{background:var(--surface);border:1.5px solid var(--line);bord
 .plandlg .msg{font-size:.9rem;border-radius:10px;padding:.6em .8em;background:var(--accent-soft);color:var(--accent)}
 .plandlg .msg[hidden]{display:none}
 .plandlg input[type=email]{border:1.5px solid var(--line);border-radius:12px;padding:.55em .8em}
-#auth .pls{margin-bottom:12px}#auth .plmail{margin-bottom:12px}#auth #pg{width:100%;margin-bottom:8px}#auth #rv{width:100%;margin:12px 0 8px}
+#auth .pls{margin-bottom:12px}#auth .plcod{margin-bottom:12px}#auth .plmail{margin-bottom:12px}#auth #pg{width:100%;margin-bottom:8px}#auth #rv{width:100%;margin:12px 0 8px}
 /* calendario: día completo */
 .cal .more{border:0;background:none;padding:0 2px;text-align:left;font-weight:600;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .cal .d[data-nd]{cursor:pointer}
@@ -929,3 +929,29 @@ td.ro{color:var(--soft)}
 .kct tr.kctt td:nth-child(3){font-size:1.1rem;color:var(--accent)}
 /* montos: el $ nunca queda arriba del número */
 td.r{white-space:nowrap}
+
+/* Código de descuento en los planes */
+.plcod[hidden]{display:none!important}
+.plcod{display:flex;flex-direction:column;gap:6px;font-size:.85rem;color:var(--soft)}
+.plcr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.plcr input{text-transform:uppercase;width:100%;box-sizing:border-box}
+.plcm{font-size:.85rem;border-radius:12px;padding:8px 10px}
+.plcm.ok{background:var(--ok-bg);color:var(--ok)}
+.plcm.err{background:var(--bad-bg);color:var(--bad)}
+.plcm .lnk{font-size:.85rem}
+.plold{color:var(--soft);font-size:.85em;margin-right:2px}
+
+/* Eliminar cuenta */
+.bajadlg{max-width:560px}
+.bajacaso{background:var(--warn-bg);color:var(--warn);border-radius:14px;padding:12px 14px;line-height:1.5}
+.bajalist{margin:0;padding-left:1.2em;line-height:1.55;font-size:.95rem}
+.bajares{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px}
+.bajamot{border:1.5px solid var(--line);border-radius:14px;padding:8px 12px 12px;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.bajamot legend{font-weight:600;padding:0 6px}
+.bajamot label{display:flex;align-items:center;gap:7px;font-size:.92rem;cursor:pointer}
+.bajamot input[type=radio]{width:auto;margin:0;accent-color:var(--accent)}
+.bajamot textarea{grid-column:1/-1;width:100%;box-sizing:border-box}
+.bajaok{display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+.bajabtns{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+@media(max-width:520px){.bajamot{grid-template-columns:1fr}}
+#auth #recu{width:100%;margin:12px 0 8px}
