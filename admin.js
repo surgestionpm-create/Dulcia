@@ -1,5 +1,6 @@
 /* Dulcia · Panel de administración. Solo funciona para usuarios de la tabla "admins": cada acción la revisa la base de datos. */
 (function () {
+  function aNorm(v) { return String(v == null ? "" : v).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
   var C = window.DULCIA_CONFIG || {};
   var sb = window.__FAKE_SB__ || supabase.createClient(C.url, C.key);
   var $ = function (s) { return document.querySelector(s); };
@@ -96,12 +97,15 @@
     var q = $("#aq"); if (q && S._focus) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); S._focus = false; }
   }
   function lista() {
-    var q = S.q.toLowerCase().trim();
+    var q = S.q.trim();
     var l = S.cuentas.filter(function (c) {
       var e = estado(c);
       if (S.f === "pronto") { if (!(c.vigente && c.dias_restantes != null && c.dias_restantes <= 7 && c.plan !== "vitalicio")) return false; }
       else if (S.f !== "todas" && e !== S.f) return false;
-      return !q || (c.nombre + " " + c.correo + " " + (c.telefono || "") + " " + (c.nota || "") + " " + (c.codigo || "") + " " + (c.influencer || "")).toLowerCase().indexOf(q) >= 0;
+      if (!q) return true;
+      var txt = aNorm(c.nombre + " " + c.correo + " " + (c.nota || "") + " " + (c.codigo || "") + " " + (c.influencer || ""));
+      var dq = q.replace(/\D/g, ""), tel = String(c.telefono || "").replace(/\D/g, "");
+      return txt.indexOf(aNorm(q)) >= 0 || (dq.length >= 4 && dq.length === q.replace(/[\s+()-]/g, "").length && tel.indexOf(dq) >= 0);
     });
     var o = S.ord;
     l.sort(function (a, b) {
