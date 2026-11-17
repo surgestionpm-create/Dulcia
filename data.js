@@ -345,7 +345,9 @@
       (mode === "up" ? '<p class="note" style="margin:0">7 días gratis, sin tarjeta. Después eliges tu plan desde $ 4.583 al mes.</p>' : "") +
       '<div class="msg" hidden></div><button class="btn" type="submit">' + (mode === "in" ? "Ingresar" : "Crear cuenta") + '</button>' +
       (mode === "in" ? '<button type="button" class="lnk" id="forgot">Olvidé mi clave</button>' : "") + '</form>');
-    A.querySelectorAll(".tabs button").forEach(function (b) { b.onclick = function () { showAuth(b.dataset.mode); }; });
+    A.querySelectorAll(".tabs button").forEach(function (b) { b.onclick = function () {
+      if (b.dataset.mode === "up") { var r = refGet(); location.href = "/empezar" + (r ? "?ref=" + encodeURIComponent(r) : ""); return; }
+      showAuth(b.dataset.mode); }; });
     var f = document.getElementById("af");
     f.onsubmit = async function (e) {
       e.preventDefault(); var btn = f.querySelector(".btn"), em = f.querySelector("#ae").value.trim(), pw = f.querySelector("#ap").value; busy(btn, true);
