@@ -36,7 +36,6 @@
     }
     F = FASES[clave];
     if (clave === "black") document.body.classList.add("black");
-    lsSet("dulcia_ref", F.codigo);
   } else {
     clave = "normal";
     F = { codigo: "", tag: "7 días gratis · sin tarjeta", h1: 'Empieza a ordenar tu pastelería <em>hoy</em>',
@@ -46,13 +45,14 @@
 
   /* ---------- Código de descuento (página normal): ?ref=CODIGO o se escribe ---------- */
   var promo = null;                     // { codigo, descuento, hasta, planes: { k: { precio, normal, meses } } }
-  var codRef = "";                      // código válido para registrar la cuenta (con o sin descuento)
+  var codRef = "";                      // código escrito por la persona (con o sin descuento)
+  var codInv = "";                      // invitación de influencer que llegó por link (sin descuento): se registra sin mostrarse
   function precio(k) {
     if (MODO === "black") return Math.round(NORMAL[k] * (100 - F.dcto) / 100);
     return promo && promo.planes[k] ? promo.planes[k].precio : NORMAL[k];
   }
   function codigoPago(k) { return MODO === "black" ? F.codigo : (promo && promo.planes[k] ? promo.codigo : ""); }
-  function codigoCuenta() { return MODO === "black" ? F.codigo : codRef; }
+  function codigoCuenta() { return MODO === "black" ? F.codigo : (codRef || codInv); }
   function detalle(k) {
     if (MODO === "black") return { anual: "12 meses. Equivale a " + pz(precio("anual") / 12) + " al mes.", semestral: "6 meses. Equivale a " + pz(precio("semestral") / 6) + " al mes.",
       mensual: F.dcto + "% los primeros 3 meses; después " + pz(NORMAL.mensual) + " al mes. Lo cancelas cuando quieras." }[k];
@@ -178,10 +178,14 @@
   if (MODO !== "black") {
     $("#codb").onclick = function () { aplicarCodigo($("#cod").value, false); };
     $("#cod").onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); aplicarCodigo($("#cod").value, false); } };
-    var refUrl = (q.get("ref") || "").toUpperCase();
-    var refLs = lsGet("dulcia_ref").toUpperCase();
-    if (/^[A-Z0-9_-]{3,30}$/.test(refUrl)) aplicarCodigo(refUrl, false);
-    else if (/^[A-Z0-9_-]{3,30}$/.test(refLs)) aplicarCodigo(refLs, true);
+    // El campo del código va siempre cerrado y vacío: cada persona escribe su código.
+    // Si llegó por link de influencer (?ref=) y ese código NO tiene descuento, solo se registra la invitación, sin mostrar nada.
+    var refIn = (q.get("ref") || lsGet("dulcia_ref") || "").toUpperCase();
+    if (/^[A-Z0-9_-]{3,30}$/.test(refIn)) cargarSb().then(async function () {
+      var v = await sb.rpc("codigo_valido", { p_codigo: refIn }); if (v.error || !v.data) return;
+      var r = await sb.rpc("promo_publico", { p_codigo: refIn }); var d = r.data || {};
+      if (!r.error && !d.planes && /no tiene descuento/i.test(d.error || "")) codInv = refIn;
+    }).catch(function () {});
   }
 
   /* ---------- Si ya tiene sesión en este celular ---------- */

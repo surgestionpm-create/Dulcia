@@ -680,7 +680,7 @@ html,body{overflow-x:clip}
     el.innerHTML=(a.titulo?"<b>"+e(a.titulo)+":</b> ":"")+"<b>"+(+a.descuento)+"% de descuento</b>"+dur+" en el plan "+e(pl.join(", ").replace(/, ([^,]*)$/," y $1"))+
       " con el código <span class=\"pcode\">"+e(a.codigo)+"</span> · solo cuentas nuevas"+(h?" · hasta el "+(+h[2])+" de "+MES[+h[1]-1]:"")+
       (h?'<span class="pleft" id="pleft"></span>':"")+
-      (/^(PRE)?BLACKDULCIA$/.test(a.codigo)?'<a href="black">Ver la oferta →</a>':'<a href="empezar?ref='+encodeURIComponent(a.codigo)+'">Crear mi cuenta →</a>');
+      (/^(PRE)?BLACKDULCIA$/.test(a.codigo)?'<a href="black">Ver la oferta →</a>':'<a href="empezar">Crear mi cuenta →</a>');
     el.hidden=false;
     /* cuenta regresiva (hora de Chile): días, y el último día horas y minutos */
     if(h){

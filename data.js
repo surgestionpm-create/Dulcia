@@ -327,7 +327,8 @@
   function busy(b, on) { if (b) { b.disabled = on; } }
   /* Código de invitación (influencer): llega por ?ref=CODIGO o se escribe al crear la cuenta */
   function refGet() { try { return localStorage.getItem("dulcia_ref") || ""; } catch (e) { return ""; } }
-  (function () { var m = /[?&]ref=([A-Za-z0-9_-]{3,30})/.exec(location.search); if (m) try { localStorage.setItem("dulcia_ref", m[1].toUpperCase()); } catch (e) {} })();
+  var REF_PAGO = "";  // código que la persona escribió en /empezar y viene a pagar (?ref=&pagar=)
+  (function () { var m = /[?&]ref=([A-Za-z0-9_-]{3,30})/.exec(location.search); if (m) { try { localStorage.setItem("dulcia_ref", m[1].toUpperCase()); } catch (e) {} if (/[?&]pagar=/.test(location.search)) REF_PAGO = m[1].toUpperCase(); } })();
   // Link de campaña (dulcia.cl/black): ?pagar=anual|semestral|mensual abre los planes apenas entra, con el código ya aplicado
   (function () { var m = /[?&]pagar=(mensual|semestral|anual)\b/.exec(location.search); if (m) try { localStorage.setItem("dulcia_pagar", m[1]); } catch (e) {} })();
   function pagarLeer() { try { return localStorage.getItem("dulcia_pagar") || ""; } catch (e) { return ""; } }
@@ -341,7 +342,7 @@
       '<div class="tabs"><button data-mode="in" aria-pressed="' + (mode === "in") + '">Ingresar</button><button data-mode="up" aria-pressed="' + (mode === "up") + '">Crear cuenta</button></div>' +
       '<form id="af"><label>Correo<input type="email" id="ae" required autocomplete="email"></label>' +
       '<label>Clave<input type="password" id="ap" required minlength="8" autocomplete="' + (mode === "in" ? "current-password" : "new-password") + '" placeholder="Mínimo 8 caracteres"></label>' +
-      (mode === "up" ? refCampo(refGet()) : "") +
+      (mode === "up" ? refCampo("") : "") +
       (mode === "up" ? '<p class="note" style="margin:0">7 días gratis, sin tarjeta. Después eliges tu plan desde $ 4.583 al mes.</p>' : "") +
       '<div class="msg" hidden></div><button class="btn" type="submit">' + (mode === "in" ? "Ingresar" : "Crear cuenta") + '</button>' +
       (mode === "in" ? '<button type="button" class="lnk" id="forgot">Olvidé mi clave</button>' : "") + '</form>');
@@ -447,7 +448,7 @@
     }
     root.querySelector("#pcodb").onclick = function () { var v = ci.value.trim().toUpperCase(); if (!v) { ci.focus(); return; } aplicar(v, false); };
     ci.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); root.querySelector("#pcodb").click(); } };
-    aplicar(refGet(), true);
+    aplicar(REF_PAGO || "~", true);  // nunca se pone un código solo; "~" solo revisa si la cuenta ya pagó
     root.querySelector("#pg").onclick = async function () {
       var b = this, plan = root.querySelector("input[name=plan]:checked").value; busy(b, true); var PV = { mensual: 5990, semestral: 29990, anual: 54990 }; if (promo && promo.planes[plan]) PV[plan] = promo.planes[plan].precio; pxPendiente(plan); if (window.dulciaEvent) dulciaEvent("begin_checkout", { currency: "CLP", value: PV[plan] || 0, items: [{ item_id: plan, item_name: "Dulcia " + plan, price: PV[plan] || 0, quantity: 1 }] });
       try {
@@ -663,11 +664,11 @@
   });
   function alert_msg(e) { var b = document.getElementById("adm"); if (b) b.insertAdjacentHTML("afterbegin", '<p class="note">' + esc2(msg(e)) + "</p>"); }
   function showOnboard() {
-    show('<h1>Bienvenida a Dulcia</h1><p>Un último paso: ¿cómo se llama tu pastelería? Tus 7 días gratis parten al tocar Empezar.</p><form id="af"><label>Nombre de tu pastelería<input type="text" id="an" required maxlength="80" placeholder="Ej.: Ufa Trufa"></label>' + refCampo(window.__refMeta || refGet()) + '<div class="msg" hidden></div><button class="btn" type="submit">Empezar</button><button type="button" class="lnk" id="lo">Cerrar sesión</button></form>');
+    show('<h1>Bienvenida a Dulcia</h1><p>Un último paso: ¿cómo se llama tu pastelería? Tus 7 días gratis parten al tocar Empezar.</p><form id="af"><label>Nombre de tu pastelería<input type="text" id="an" required maxlength="80" placeholder="Ej.: Ufa Trufa"></label>' + refCampo("") + '<div class="msg" hidden></div><button class="btn" type="submit">Empezar</button><button type="button" class="lnk" id="lo">Cerrar sesión</button></form>');
     document.getElementById("lo").onclick = doLogout;
     document.getElementById("af").onsubmit = async function (e) {
       e.preventDefault(); var b = e.target.querySelector(".btn"); busy(b, true);
-      try { var r = await sb.rpc("crear_negocio", { p_nombre: document.getElementById("an").value.trim(), p_codigo: refLeer() || null }); if (r.error) throw r.error; try { localStorage.removeItem("dulcia_ref"); } catch (e3) {} if (window.dulciaEvent) dulciaEvent("sign_up", { method: "correo" }); if (window.dulciaPixel) dulciaPixel("CompleteRegistration", { content_name: "Cuenta Dulcia", status: true }); var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session); }
+      try { var r = await sb.rpc("crear_negocio", { p_nombre: document.getElementById("an").value.trim(), p_codigo: refLeer() || window.__refMeta || refGet() || null }); if (r.error) throw r.error; try { localStorage.removeItem("dulcia_ref"); } catch (e3) {} if (window.dulciaEvent) dulciaEvent("sign_up", { method: "correo" }); if (window.dulciaPixel) dulciaPixel("CompleteRegistration", { content_name: "Cuenta Dulcia", status: true }); var s2 = await sb.auth.getSession(); await afterLogin(s2.data.session); }
       catch (err) { note(msg(err)); busy(b, false); }
     };
   }
