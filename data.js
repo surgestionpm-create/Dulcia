@@ -727,7 +727,8 @@
     try {
       var s = await sb.auth.getSession();
       if (s.data && s.data.session && !/type=recovery/.test(location.hash)) await afterLogin(s.data.session);
-      else if (!/type=recovery/.test(location.hash)) showAuth(/[?&]crear=1/.test(location.search) ? "up" : "in");
+      else if (/[?&]crear=1/.test(location.search) && !/type=recovery/.test(location.hash)) { location.replace("/empezar" + location.search.replace(/([?&])crear=1&?/, "$1").replace(/[?&]$/, "")); return; }
+      else if (!/type=recovery/.test(location.hash)) showAuth("in");
     } catch (e) { showAuth("in"); note(msg(e)); }
   })();
 })();

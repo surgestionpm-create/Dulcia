@@ -18,7 +18,7 @@
     var a = e.target.closest && e.target.closest("a"); if (!a) return;
     var h = a.getAttribute("href") || "", sec = a.closest("section,header,footer,nav,.plan"), donde = sec ? (sec.id || sec.className || sec.tagName).toString().split(" ")[0] : "";
     var plan = a.closest(".plan"), pn = plan && plan.querySelector(".pn") ? plan.querySelector(".pn").textContent.trim().toLowerCase() : "";
-    if (/crear=1/.test(h)) dulciaEvent("clic_prueba_gratis", { ubicacion: donde, plan: pn || "sin_plan", texto: a.textContent.trim().slice(0, 40) });
+    if (/crear=1|(^|\/)empezar/.test(h)) dulciaEvent("clic_prueba_gratis", { ubicacion: donde, plan: pn || "sin_plan", texto: a.textContent.trim().slice(0, 40) });
     else if (/(^|\/)app\/?$/.test(h)) dulciaEvent("clic_entrar", { ubicacion: donde });
     else if (/wa\.me|whatsapp/.test(h)) dulciaEvent("clic_whatsapp", { ubicacion: donde });
     else if (/^mailto:/.test(h)) dulciaEvent("clic_correo", { ubicacion: donde });

@@ -499,7 +499,7 @@
     try {
       var msg = await rpc("admin_invitar", { p_email: em, p_meses: m, p_nombre: nom || null, p_nota: nota || null });
       var txt = "¡Hola" + (nom ? " " + nom : "") + "! 🍒 Te regalamos " + m + (m === 1 ? " mes" : " meses") + " de Dulcia, la app para ordenar tu pastelería: costeo de recetas, pedidos con anticipo, calendario y cuánto ganas cada mes.\n\n" +
-        "Para activarlo, crea tu cuenta con este mismo correo (" + em + ") en:\nhttps://www.dulcia.cl/app/?crear=1\n\nLos meses de regalo se activan solos al crear la cuenta. Cualquier duda, nos escribes.";
+        "Para activarlo, crea tu cuenta con este mismo correo (" + em + ") en:\nhttps://www.dulcia.cl/empezar\ny toca “Crear cuenta y probar 7 días gratis”. Los meses de regalo se activan solos: no pagas nada. Cualquier duda, nos escribes.";
       S.invRes = { msg: msg, texto: txt, email: em }; await load();
     } catch (er) { S.invRes = { err: errTxt(er) }; render(); }
   });
