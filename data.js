@@ -328,6 +328,11 @@
   /* Código de invitación (influencer): llega por ?ref=CODIGO o se escribe al crear la cuenta */
   function refGet() { try { return localStorage.getItem("dulcia_ref") || ""; } catch (e) { return ""; } }
   (function () { var m = /[?&]ref=([A-Za-z0-9_-]{3,30})/.exec(location.search); if (m) try { localStorage.setItem("dulcia_ref", m[1].toUpperCase()); } catch (e) {} })();
+  // Link de campaña (dulcia.cl/black): ?pagar=anual|semestral|mensual abre los planes apenas entra, con el código ya aplicado
+  (function () { var m = /[?&]pagar=(mensual|semestral|anual)\b/.exec(location.search); if (m) try { localStorage.setItem("dulcia_pagar", m[1]); } catch (e) {} })();
+  function pagarLeer() { try { return localStorage.getItem("dulcia_pagar") || ""; } catch (e) { return ""; } }
+  function pagarBorrar() { try { localStorage.removeItem("dulcia_pagar"); } catch (e) {} }
+  function selPlan(root, k) { var r = root && k && root.querySelector('input[name=plan][value="' + k + '"]'); if (r) { r.checked = true; r.dispatchEvent(new Event("change")); } }
   function refCampo(v) { return '<label><span>Código de invitación o descuento <span style="font-weight:400;opacity:.8">(opcional)</span></span><input type="text" id="aref" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Si alguien te recomendó Dulcia" value="' + String(v || "").replace(/[^A-Za-z0-9_-]/g, "") + '"></label>'; }
   function refLeer() { var i = document.getElementById("aref"); return i ? i.value.trim().toUpperCase() : ""; }
   function showAuth(mode) {
@@ -529,7 +534,7 @@
       '<button class="btn ghost" id="rv" type="button">Ya pagué, revisar mi cuenta</button><button type="button" class="lnk" id="lo">Cerrar sesión</button>' +
       (c ? '<p class="note">¿Problemas con el pago? Escribe a ' + c + '</p>' : ''));
     document.getElementById("lo").onclick = doLogout;
-    if (!back) bindPlanes(A, function (m) { note("No pudimos abrir el pago. " + m); });
+    if (!back) { bindPlanes(A, function (m) { note("No pudimos abrir el pago. " + m); }); var pk0 = pagarLeer(); if (pk0) { pagarBorrar(); selPlan(A, pk0); } }
     var check = async function () {
       var s3 = await sb.auth.getSession(); await afterLogin(s3.data.session);
       return !document.getElementById("appwrap").hidden;
@@ -671,6 +676,8 @@
     document.getElementById("boot").hidden = true; document.getElementById("appwrap").hidden = false; render();
     var d = document.getElementById("syncst"); if (d) d.textContent = window.SYNC_TXT;
     installTip();
+    var pk = pagarLeer(), cu = window.CUENTA || {};
+    if (pk) { pagarBorrar(); if (cu.plan === "prueba" || cu.plan === "regalo") { planesOpen(); selPlan(document.getElementById("dlg"), pk); } }
   }
   /* Aviso para instalar la app en el celular (una vez por dispositivo) */
   function installTip() {

@@ -1314,9 +1314,13 @@ async function toData(u){
   if(!u)return null; if(/^data:/.test(u))return u;
   try{var r=await fetch(u),b=await r.blob();return await new Promise(function(ok){var fr=new FileReader();fr.onload=function(){ok(fr.result)};fr.onerror=function(){ok(null)};fr.readAsDataURL(b)})}catch(e){return null}
 }
+/* La librería del PDF (360 KB) se carga solo cuando se necesita: la app abre más rápido en el celular */
+function cargarJsPDF(){if(window.jspdf)return Promise.resolve();if(window.__jspdfP)return window.__jspdfP;
+  window.__jspdfP=new Promise(function(ok){var s=document.createElement("script");s.src="jspdf.umd.min.js";s.onload=ok;s.onerror=function(){window.__jspdfP=null;ok()};document.head.appendChild(s)});return window.__jspdfP}
 async function genPdf(id){
   var x=orders.find(function(q){return q.id===id}); if(!x)return;
-  if(!window.jspdf){toast("No se pudo preparar el PDF");return}
+  await cargarJsPDF();
+  if(!window.jspdf){toast("No se pudo preparar el PDF. Revisa tu conexión e intenta de nuevo.");return}
   if(!x.num)x.num=nextQ();
   var J=window.jspdf.jsPDF, doc=new J({unit:"mm",format:"a4"}), W=210, M=18, y=18, AC=[179,34,79], INK=[42,30,46], SOFT=[110,100,115];
   function chk(h){if(y+h>282){doc.addPage();y=18}}

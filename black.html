@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><script src="ga.js"></script><script src="pixel.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Black Friday Dulcia: hasta 60% en cualquier plan. Costeo, precios y pedidos para pastelerías. Crea tu cuenta y paga con descuento, más 7 días gratis.">
+<meta name="theme-color" content="#1C1420">
+<meta property="og:title" content="Black Friday Dulcia: hasta 60% en cualquier plan">
+<meta property="og:description" content="Costeo, precios y pedidos para tu pastelería. Paga hoy con descuento y además tienes 7 días gratis.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Black Friday Dulcia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://rliibqyyugqdvncldibl.supabase.co">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Página de la campaña Black Friday: una sola columna, oferta + planes + registro en la primera pantalla del celular. */
+:root{
+  --bg:#FBF6EE; --card:#FFFFFF; --ink:#2A1E2E; --soft:#6B5F70; --line:#E9DFD0; --accent:#B3224F; --accent-ink:#FFFFFF;
+  --hi:#F8DCE5; --tag:#2A1E2E; --tag-fg:#FBF6EE; --ok:#3E7A4B; --bad:#B3261E;
+  --display:'Cormorant Garamond',Georgia,serif; --body:'Jost',system-ui,sans-serif;
+}
+body.black{--bg:#1C1420; --card:#2A1E2E; --ink:#FBF6EE; --soft:#CDBFCE; --line:#47384C; --accent:#F07AA0; --accent-ink:#1C1420; --hi:#4A2433; --tag:#F07AA0; --tag-fg:#1C1420; --ok:#8FD19E; --bad:#FF8A80; color-scheme:dark}
+@media (prefers-color-scheme:dark){body:not(.black){--bg:#231A26; --card:#33263A; --ink:#FBF6EE; --soft:#C9BDCB; --line:#4A3B50; --accent:#F29BB6; --accent-ink:#231A26; --hi:#4A2A3A; --tag:#F29BB6; --tag-fg:#231A26; --ok:#8FD19E; --bad:#FF8A80; color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--body);padding:0 max(16px,env(safe-area-inset-left,0px)) 40px max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:560px;margin:0 auto}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 6px}
+.top .logo{height:30px;display:block}.top .logo svg{height:30px;width:auto}
+.top a.in{font-size:.9rem;color:var(--soft);text-underline-offset:3px}
+.tag{display:inline-block;background:var(--tag);color:var(--tag-fg);font:600 .78rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;border-radius:999px;padding:7px 12px}
+h1{font:600 clamp(2.1rem,9vw,3.1rem)/1.02 var(--display);margin:12px 0 8px;text-wrap:balance}
+h1 em{font-style:italic;color:var(--accent)}
+.sub{color:var(--soft);margin:0 0 12px}
+.cd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.92rem;margin:0 0 14px}
+.cd b{font-variant-numeric:tabular-nums;background:var(--hi);border-radius:8px;padding:3px 8px}
+.pls{display:grid;gap:8px;margin:0 0 14px}
+.pl{position:relative;display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:4px 12px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;cursor:pointer}
+.pl input{width:20px;height:20px;margin:0;accent-color:var(--accent);grid-row:span 2}
+.pl:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.pl .n{font-weight:600}
+.pl .n em{font-style:normal;font-size:.72rem;font-weight:600;background:var(--accent);color:var(--accent-ink);border-radius:99px;padding:3px 8px;margin-left:6px;vertical-align:2px;white-space:nowrap}
+.pl .p{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pl .p s{color:var(--soft);font-size:.85rem;margin-right:6px}
+.pl .p b{font:600 1.35rem/1 var(--display)}
+.pl .d{grid-column:2 / 4;color:var(--soft);font-size:.82rem;line-height:1.35}
+.gift{display:flex;gap:10px;align-items:flex-start;background:var(--hi);border-radius:14px;padding:10px 14px;font-size:.9rem;margin:0 0 16px}
+form{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;display:grid;gap:12px}
+label{display:grid;gap:5px;font-size:.88rem;font-weight:500}
+input[type=email],input[type=password],input[type=text]{width:100%;min-width:0;font:400 16px/1.2 var(--body);color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:13px 14px}
+input:focus{border-color:var(--accent);outline:none}
+.hint{font-weight:400;color:var(--soft);font-size:.8rem}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:600 17px/1.2 var(--body);padding:16px 20px;cursor:pointer;text-decoration:none;text-align:center}
+.btn[disabled]{opacity:.6;cursor:wait}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.msg{border-radius:12px;padding:10px 12px;font-size:.9rem;background:var(--hi)}
+.msg.err{color:var(--bad)}
+.small{font-size:.8rem;color:var(--soft);text-align:center;margin:0}
+.lnk{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.mp{display:none}.mp.on{display:grid}
+.yo{display:none;gap:10px}.yo.on{display:grid}
+.ben{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:10px}
+.ben li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.ben li span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--hi);color:var(--accent);font-weight:600}
+details{border-top:1px solid var(--line);padding:12px 0}
+details:last-of-type{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;font-weight:500}
+details p{color:var(--soft);margin:8px 0 0;font-size:.95rem}
+h2{font:600 1.7rem/1.1 var(--display);margin:28px 0 8px}
+footer{margin-top:28px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:.85rem;color:var(--soft)}
+.bd{display:none}
+.fin{text-align:center;padding:40px 0}
+.fin p{color:var(--soft);margin:8px 0 18px}
+@media(min-width:900px){.bd{display:grid}.bm{display:none}.wrap{max-width:980px}.grid{display:grid;grid-template-columns:1fr 420px;gap:36px;align-items:start}.ofe{position:sticky;top:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><a class="logo" href="/" aria-label="Dulcia"><span id="logo">Dulcia</span></a><a class="in" id="ingresar" href="/app/">¿Ya tienes cuenta? Ingresa</a></header>
+  <main id="main"></main>
+  <footer><a href="/">dulcia.cl</a><a href="terminos.html">Términos</a><a href="privacidad.html">Privacidad</a><a href="mailto:contacto.dulcia@gmail.com">contacto.dulcia@gmail.com</a></footer>
+</div>
+<script src="config.js"></script>
+<script src="brand.js"></script>
+<script>
+(function () {
+  "use strict";
+  var NORMAL = { mensual: 5990, semestral: 29990, anual: 54990 };
+  var FASES = {
+    pre: { codigo: "PREBLACKDULCIA", dcto: 30, desde: "2026-11-23", hasta: "2026-11-25", fin: "2026-11-25T23:59:59-03:00", inicio: "2026-11-23T00:00:00-03:00",
+      tag: "Pre Black · 23 al 25 nov", h1: 'Nos adelantamos al Black: <em>30%</em> en cualquier plan',
+      sub: "Antes que todos, conoce Dulcia: costea tus recetas, pon precios que sí dejan ganancia y ordena tus pedidos. Paga hoy con descuento." },
+    black: { codigo: "BLACKDULCIA", dcto: 60, desde: "2026-11-26", hasta: "2026-11-29", fin: "2026-11-29T23:59:59-03:00", inicio: "2026-11-26T00:00:00-03:00",
+      tag: "Black Friday · 26 al 29 nov", h1: 'Black Friday Dulcia: <em>60%</em> en cualquier plan',
+      sub: "El precio más bajo del año para ordenar tu pastelería: costeo de recetas, precios con ganancia, pedidos y producción en un solo lugar." }
+  };
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  var pz = function (n) { return "$ " + Math.round(n).toLocaleString("es-CL"); };
+  var ev = function (n, p) { try { window.dulciaEvent && dulciaEvent(n, p || {}); } catch (e) {} };
+  var px = function (n, p) { try { window.dulciaPixel && dulciaPixel(n, p || {}); } catch (e) {} };
+  try { if (window.DULCIA_LOGO) $("#logo").innerHTML = window.DULCIA_LOGO; } catch (e) {}
+
+  // Fase según la fecha de Chile (para revisar antes: ?fase=pre o ?fase=black)
+  var hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+  var q = new URLSearchParams(location.search), fz = q.get("fase");
+  var clave = fz === "pre" || fz === "black" ? fz : hoy < FASES.black.desde ? "pre" : hoy <= FASES.black.hasta ? "black" : "fin";
+  var antes = !fz && hoy < FASES.pre.desde;
+  var F = FASES[clave];
+  if (clave === "black") { document.body.classList.add("black"); document.querySelector('meta[name=theme-color]').content = "#1C1420"; }
+  else document.querySelector('meta[name=theme-color]').content = "#B3224F";
+  var main = $("#main");
+
+  if (clave === "fin") {
+    main.innerHTML = '<div class="fin"><span class="tag">Black Friday terminó</span><h1>Gracias por acompañarnos</h1><p>La campaña terminó el domingo 29 de noviembre. Igual puedes probar Dulcia 7 días gratis, sin tarjeta.</p><a class="btn" href="/app/?crear=1">Crear mi cuenta gratis</a></div>';
+    ev("view_promo", { fase: "fin" });
+    return;
+  }
+  try { localStorage.setItem("dulcia_ref", F.codigo); } catch (e) {}
+  var precio = function (k) { return Math.round(NORMAL[k] * (100 - F.dcto) / 100); };
+  var PL = [
+    { k: "anual", n: "Anual", best: true, per: "un pago", d: "12 meses. Equivale a " + pz(precio("anual") / 12) + " al mes." },
+    { k: "semestral", n: "Semestral", per: "un pago", d: "6 meses. Equivale a " + pz(precio("semestral") / 6) + " al mes." },
+    { k: "mensual", n: "Mensual", per: "al mes", d: F.dcto + "% los primeros 3 meses; después " + pz(NORMAL.mensual) + " al mes. Lo cancelas cuando quieras." }
+  ];
+  var pre = q.get("plan"); if (!NORMAL[pre]) pre = "anual";
+
+  main.innerHTML = '<div class="grid"><div class="ofe">' +
+    '<span class="tag">' + F.tag + '</span><h1>' + F.h1 + '</h1><p class="sub">' + F.sub + '</p>' +
+    '<div class="cd" id="cd" aria-live="off"></div>' +
+    '<ul class="ben bd">' +
+      '<li><span>1</span><div><b>Costeo real</b> de cada receta, con ingredientes, mano de obra y empaque.</div></li>' +
+      '<li><span>2</span><div><b>Precios</b> minorista y mayorista que sí dejan ganancia.</div></li>' +
+      '<li><span>3</span><div><b>Pedidos, calendario y producción</b> en el celular, con cotizaciones en PDF.</div></li>' +
+    '</ul>' +
+    '</div><div>' +
+    '<div class="pls" role="radiogroup" aria-label="Elige tu plan">' + PL.map(function (p) {
+      return '<label class="pl"><input type="radio" name="plan" value="' + p.k + '"' + (p.k === pre ? " checked" : "") + '><span class="n">' + p.n + (p.best ? "<em>Más conveniente</em>" : "") + '</span>' +
+        '<span class="p"><s>' + pz(NORMAL[p.k]) + '</s><b>' + pz(precio(p.k)) + '</b></span><span class="d">' + p.d + '</span></label>';
+    }).join("") + '</div>' +
+    '<div class="gift"><span aria-hidden="true">🎁</span><div><b>Además, 7 días gratis:</b> tu plan empieza a contar cuando terminan. Código <b>' + F.codigo + '</b> ya aplicado · solo cuentas nuevas.</div></div>' +
+    '<form id="f" novalidate>' +
+      '<div class="yo" id="yo"></div>' +
+      '<div id="nuevos" style="display:grid;gap:12px">' +
+        '<label>Tu correo<input type="email" id="em" autocomplete="email" inputmode="email" required placeholder="nombre@correo.cl"></label>' +
+        '<label>Crea una clave<input type="password" id="pw" autocomplete="new-password" minlength="8" required placeholder="Mínimo 8 caracteres"></label>' +
+      '</div>' +
+      '<label id="lnom">Nombre de tu pastelería<input type="text" id="nom" autocomplete="organization" maxlength="80" required placeholder="Ej.: Dulces de Mía"></label>' +
+      '<label class="mp" id="mp">Correo de tu Mercado Pago <span class="hint">Solo si es distinto: la suscripción mensual queda a nombre de ese correo.</span><input type="email" id="mpm" autocomplete="off" inputmode="email" placeholder="Igual al de arriba"></label>' +
+      '<div class="msg" id="msg" hidden></div>' +
+      '<button class="btn" id="go" type="submit">Crear cuenta y pagar</button>' +
+      '<p class="small">Pago seguro en Mercado Pago. Al crear tu cuenta aceptas los <a href="terminos.html">términos</a>.</p>' +
+    '</form>' +
+    '<ul class="ben bm" id="ben1">' +
+      '<li><span>1</span><div><b>Costeo real</b> de cada receta, con ingredientes, mano de obra y empaque.</div></li>' +
+      '<li><span>2</span><div><b>Precios</b> minorista y mayorista que sí dejan ganancia.</div></li>' +
+      '<li><span>3</span><div><b>Pedidos, calendario y producción</b> en el celular, con cotizaciones en PDF.</div></li>' +
+    '</ul></div></div>' +
+    '<h2>Preguntas rápidas</h2>' +
+    '<details><summary>¿Qué pasa con los 7 días gratis?</summary><p>Los tienes igual. Pagas hoy con el descuento y tu plan empieza a contar cuando terminan tus 7 días de prueba.</p></details>' +
+    '<details><summary>¿El plan mensual se queda con descuento?</summary><p>El descuento dura los primeros 3 meses. Después se cobra el precio normal de ' + pz(NORMAL.mensual) + ' al mes, solo con Mercado Pago. Lo cancelas cuando quieras desde la app.</p></details>' +
+    '<details><summary>¿Ya tengo cuenta, sirve el código?</summary><p>Sí, si nunca has pagado un plan: <a href="/app/?ref=' + F.codigo + '&amp;pagar=anual">ingresa aquí</a> y el código se aplica solo al elegir tu plan.</p></details>' +
+    '<details><summary>¿Cómo pago?</summary><p>Con tarjeta o saldo en el sitio seguro de Mercado Pago. Nosotros no vemos tus datos de pago.</p></details>';
+
+  if (antes) { var g = $("#go"); g.textContent = "Disponible desde el lunes 23"; g.disabled = true;
+    var m0 = $("#msg"); m0.hidden = false; m0.textContent = "La campaña empieza el lunes 23 de noviembre a las 00:00. Vuelve ese día para pagar con el descuento."; }
+
+  // Cuenta regresiva (hora de Chile)
+  var finT = Date.parse(F.fin), iniT = Date.parse(F.inicio);
+  function tick() {
+    var ahora = Date.now(), objetivo = ahora < iniT ? iniT : finT, s = Math.max(0, Math.floor((objetivo - ahora) / 1000));
+    var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), mi = Math.floor(s % 3600 / 60), se = s % 60, p2 = function (n) { return (n < 10 ? "0" : "") + n; };
+    $("#cd").innerHTML = (ahora < iniT ? "Empieza en" : "Termina en") + " <b>" + (d ? d + "d " : "") + p2(h) + "h " + p2(mi) + "m " + p2(se) + "s</b>" + (ahora < iniT ? "" : " · hasta el " + (clave === "pre" ? "miércoles 25" : "domingo 29") + " a las 23:59");
+  }
+  tick(); setInterval(tick, 1000);
+
+  // Plan elegido → texto del botón y correo de Mercado Pago (solo mensual)
+  function plan() { return (document.querySelector("input[name=plan]:checked") || {}).value || "anual"; }
+  function upd() {
+    var k = plan(); if (!antes) $("#go").textContent = (cuenta ? "Pagar " : "Crear cuenta y pagar ") + pz(precio(k)) + (k === "mensual" ? " al mes" : "");
+    $("#mp").classList.toggle("on", k === "mensual");
+    $("#ingresar").href = "/app/?ref=" + F.codigo + "&pagar=" + k;
+  }
+  document.querySelectorAll("input[name=plan]").forEach(function (r) { r.addEventListener("change", function () { upd(); ev("elige_plan_promo", { plan: plan(), fase: clave }); }); });
+
+  ev("view_promo", { fase: clave }); px("ViewContent", { content_name: "Black Friday " + clave, content_category: "promo" });
+  var empezo = false; $("#f").addEventListener("focusin", function () { if (!empezo) { empezo = true; ev("form_start_promo", { fase: clave }); } });
+
+  // Supabase se carga después de mostrar la página (no frena la primera pantalla)
+  var sb = null, cuenta = null, cfg = window.DULCIA_CONFIG || {};
+  function cargarSb() {
+    return new Promise(function (ok, no) {
+      if (window.supabase) return ok();
+      var s = document.createElement("script"); s.src = "supabase.js"; s.onload = ok; s.onerror = function () { no(new Error("Sin conexión. Revisa tu internet e intenta de nuevo.")); }; document.head.appendChild(s);
+    }).then(function () {
+      if (!sb) sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+      return sb;
+    });
+  }
+  // Si ya tiene sesión en este celular, no pide correo ni clave
+  cargarSb().then(async function () {
+    var s = await sb.auth.getSession(); if (!s.data.session) return;
+    var r = await sb.rpc("mi_cuenta"); var c = r.data && r.data[0];
+    cuenta = { email: s.data.session.user.email, negocio: c || null };
+    $("#nuevos").style.display = "none"; $("#em").required = false; $("#pw").required = false;
+    if (c) { $("#lnom").style.display = "none"; $("#nom").required = false; }
+    var yo = $("#yo"); yo.classList.add("on");
+    yo.innerHTML = '<div class="msg">Entraste como <b>' + esc(cuenta.email) + '</b>' + (c ? " (" + esc(c.nombre || "tu pastelería") + ")" : "") + '. <button type="button" class="lnk" id="otra">Usar otra cuenta</button></div>';
+    $("#otra").onclick = async function () { await sb.auth.signOut(); location.reload(); };
+    upd();
+  }).catch(function () {});
+  upd();
+
+  function msg(t, err) { var m = $("#msg"); m.hidden = false; m.className = "msg" + (err ? " err" : ""); m.innerHTML = t; }
+  function txtErr(e) {
+    var m = String(e && (e.message || e.error_description || e) || "");
+    if (/already registered|already been registered|User already/i.test(m)) return "YA";
+    if (/Password should|at least/i.test(m)) return "La clave debe tener al menos 8 caracteres.";
+    if (/invalid.*email|Unable to validate email/i.test(m)) return "Revisa tu correo: parece que está mal escrito.";
+    if (/rate limit|too many/i.test(m)) return "Hubo muchos intentos seguidos. Espera un minuto e intenta de nuevo.";
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Sin conexión. Revisa tu internet e intenta de nuevo.";
+    return m || "Algo salió mal. Intenta de nuevo.";
+  }
+  function yaTiene() {
+    var k = plan();
+    msg('Ese correo ya tiene cuenta en Dulcia. <a href="/app/?ref=' + F.codigo + '&amp;pagar=' + k + '"><b>Ingresa aquí</b></a> y se abre el pago con el código ' + F.codigo + ' ya aplicado.', true);
+  }
+
+  $("#f").addEventListener("submit", async function (e) {
+    e.preventDefault(); if (antes) return;
+    var b = $("#go"), k = plan(), em = $("#em").value.trim().toLowerCase(), pw = $("#pw").value, nom = $("#nom").value.trim(), mpm = $("#mpm").value.trim();
+    $("#msg").hidden = true;
+    if (!cuenta) {
+      if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(em)) { msg("Escribe tu correo completo, por ejemplo nombre@gmail.com.", true); $("#em").focus(); return; }
+      if (pw.length < 8) { msg("La clave debe tener al menos 8 caracteres.", true); $("#pw").focus(); return; }
+    }
+    if ((!cuenta || !cuenta.negocio) && nom.length < 2) { msg("Escribe el nombre de tu pastelería.", true); $("#nom").focus(); return; }
+    if (k === "mensual" && mpm && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(mpm)) { msg("Revisa el correo de Mercado Pago.", true); $("#mpm").focus(); return; }
+    b.disabled = true; var t0 = b.textContent; b.textContent = "Preparando tu cuenta…";
+    try {
+      await cargarSb();
+      var ses;
+      if (!cuenta) {
+        var s = await sb.auth.signUp({ email: em, password: pw, options: { emailRedirectTo: location.origin + "/app/?ref=" + F.codigo + "&pagar=" + k, data: { ref: F.codigo } } });
+        if (s.error) { if (txtErr(s.error) === "YA") { yaTiene(); b.disabled = false; b.textContent = t0; return; } throw s.error; }
+        if (!s.data.session) {
+          if (s.data.user && s.data.user.identities && s.data.user.identities.length === 0) { yaTiene(); b.disabled = false; b.textContent = t0; return; }
+          try { localStorage.setItem("dulcia_pagar", k); } catch (e2) {}
+          msg("Te enviamos un correo a <b>" + esc(em) + "</b> para confirmar tu cuenta. Ábrelo y se abre el pago con tu descuento ya aplicado.");
+          b.textContent = "Revisa tu correo"; ev("sign_up", { method: "email", fase: clave, confirmar: "si" }); return;
+        }
+        ses = s.data.session; cuenta = { email: em, negocio: null };
+        ev("sign_up", { method: "email", fase: clave }); px("CompleteRegistration", { content_name: "Dulcia " + clave, status: true });
+      } else { ses = (await sb.auth.getSession()).data.session; }
+      if (!cuenta.negocio) {
+        var r = await sb.rpc("crear_negocio", { p_nombre: nom, p_codigo: F.codigo });
+        if (r.error && !/Ya tienes una cuenta/i.test(r.error.message || "")) throw r.error;
+        var c = await sb.rpc("mi_cuenta"); cuenta.negocio = c.data && c.data[0] || {};
+      }
+      b.textContent = "Abriendo Mercado Pago…";
+      var n = cuenta.negocio || {};
+      try { localStorage.setItem("dulcia_px_pend", JSON.stringify({ plan: k, t: Date.now(), neg: n.negocio_id || "", vence: n.vence_en || "", sus: n.suscripcion_estado || "", ref: "" })); localStorage.removeItem("dulcia_pagar"); } catch (e3) {}
+      ev("begin_checkout", { currency: "CLP", value: precio(k), coupon: F.codigo, items: [{ item_id: k, item_name: "Dulcia " + k, price: precio(k), quantity: 1 }] });
+      px("InitiateCheckout", { value: precio(k), currency: "CLP", content_ids: [k], content_type: "product" });
+      var rp = await fetch(cfg.url + "/functions/v1/crear-pago", { method: "POST", headers: { Authorization: "Bearer " + ses.access_token, apikey: cfg.key, "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: k, email: k === "mensual" ? (mpm || cuenta.email) : cuenta.email, codigo: F.codigo }) });
+      var d = await rp.json().catch(function () { return {}; });
+      if (d.activo) { location.href = "/app/"; return; }
+      if (!rp.ok || !d.url) {
+        var em2 = d.error || "No pudimos abrir el pago.";
+        msg(esc(em2) + ' Tu cuenta ya está creada: puedes <a href="/app/?ref=' + F.codigo + '&amp;pagar=' + k + '">entrar a Dulcia</a> y pagar desde ahí, o usar tus 7 días gratis.', true);
+        b.disabled = false; b.textContent = t0; upd(); return;
+      }
+      location.href = d.url;
+    } catch (err) {
+      var t = txtErr(err); if (t === "YA") yaTiene(); else msg(esc(t), true);
+      b.disabled = false; b.textContent = t0; upd();
+    }
+  });
+})();
+</script>
+</body>
+</html>
