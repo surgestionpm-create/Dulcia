@@ -27,11 +27,13 @@ h1 em{font-style:italic;color:var(--accent)}
 .pl input{width:20px;height:20px;margin:0;accent-color:var(--accent);grid-row:span 2}
 .pl:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .pl .n{font-weight:600}
-.pl .n em{font-style:normal;font-size:.72rem;font-weight:600;background:var(--accent);color:var(--accent-ink);border-radius:99px;padding:3px 8px;margin-left:6px;vertical-align:2px;white-space:nowrap}
+.pl .n em{font-style:normal;font-size:.75rem;font-weight:600;background:var(--accent);color:var(--accent-ink);border-radius:99px;padding:3px 8px;margin-left:6px;vertical-align:2px;white-space:nowrap}
 .pl .p{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pl .p s{color:var(--soft);font-size:.85rem;margin-right:6px}
 .pl .p b{font:600 1.35rem/1 var(--display)}
 .pl .d{grid-column:2 / 4;color:var(--soft);font-size:.82rem;line-height:1.35}
+.pl .n{min-width:0}
+@media (max-width:420px){.pl .p s{display:block;margin:0 0 3px}}
 .gift{display:flex;gap:10px;align-items:flex-start;background:var(--hi);border-radius:14px;padding:10px 14px;font-size:.9rem;margin:0 0 16px}
 form{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;display:grid;gap:12px}
 label{display:grid;gap:5px;font-size:.88rem;font-weight:500}

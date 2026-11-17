@@ -233,6 +233,7 @@ section.alt{margin-left:calc(-1*var(--g));margin-right:calc(-1*var(--g))}
 .badge b{font-family:var(--display);font-weight:600;font-size:clamp(22px,2.6vw,32px);line-height:1;font-variant-numeric:lining-nums}
 .badge small{font-size:12px;line-height:1.2;margin-top:2px}
 @media(max-width:900px){.hero .wrap{grid-template-columns:1fr;gap:40px}.hero{padding-block:40px 110px}.stage{margin:12px auto 0;max-width:440px}}
+@media(min-width:901px){.stage .paper{left:2%}.hero .wrap{gap:40px}}
 @media(max-width:480px){.stage .paper{left:-2%;width:64%;padding:12px 14px}.stage .paper h3{font-size:19px}.stage .paper .cost-rows .r{font-size:12px;padding:3px 0}.stage .paper .price-box b{font-size:26px}.stage .paper .tag{display:none}}
 
 /* problema: etiquetas */
@@ -308,6 +309,7 @@ footer{position:relative}
 .plan.best .amt{color:var(--accent)}
 .plan .stamp{position:absolute;right:-10px;top:-24px;background:var(--accent);color:#FBF6EE;border-radius:50%;width:88px;height:88px;display:grid;place-content:center;text-align:center;font-size:12.5px;line-height:1.15;transform:rotate(12deg);box-shadow:0 12px 24px -14px rgba(42,30,46,.6)}
 .plan .stamp b{font-family:var(--display);font-size:22px;font-weight:600;display:block}
+@media(max-width:1100px){.plan .stamp{right:2px}}
 .incl{margin-top:30px;background:var(--card);border-radius:28px;padding:24px 28px}
 .incl b{font-family:var(--display);font-size:24px;font-weight:600}
 .incl ul{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 24px}

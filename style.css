@@ -1014,3 +1014,25 @@ td.r{white-space:nowrap}
   .gtab td.empty{display:block}
 }
 @media(max-width:560px){.filters>select{flex:1 1 100%}}
+
+/* ===== Revisión 17-11: letra mínima en celular/iPad y campos sin zoom en iPhone ===== */
+@media(max-width:1024px){
+  .nav{font-size:.78rem}
+  .thumb{font-size:.78rem}
+  .sgt,.st{font-size:.78rem}
+  .tg{font-size:.76rem}
+  .ingcard .ingc,.ingcard .ingl,.cal .dh,.nln.nlh,.ln.lnh,.cprs .cpr.cph{font-size:.78rem}
+  .ev{font-size:.68rem}
+  .brand small{font-size:.78rem}
+}
+@media(pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{font-size:16px!important}
+  .app .lnk,#dlg .lnk{padding:6px 4px;margin:-6px -4px}
+  .btn.sm{min-height:34px}
+}
+@media(min-width:561px) and (max-width:1000px){
+  .itab th:nth-child(2),.itab th:nth-child(3){width:118px}.itab th:nth-child(4){width:100px}.itab th:nth-child(5){width:84px}.itab th:nth-child(6){width:96px}
+  .itab .iu input{width:68px}
+}
+@media(min-width:1025px){.thumb{font-size:.75rem}.tg{font-size:.75rem}.brand small{font-size:.75rem}}
+.nprod .ntr:has(> b:last-child),.ntr:has(> b:last-child){grid-template-columns:minmax(0,1fr) auto}
