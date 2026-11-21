@@ -200,7 +200,22 @@
   var _render = window.render; window.render = function () { _render.apply(this, arguments); scheduleSave(); };
 
   /* ---------- cargar ---------- */
-  function sel(t, f) { var q = sb.from(t).select("*"); return f ? f(q) : q.eq("negocio_id", NEG); }
+  // Supabase entrega como máximo 1.000 filas por consulta: se piden por páginas para no perder datos (ej. ingredientes de recetas)
+  function sel(t, f) {
+    if (f) return f(sb.from(t).select("*"));
+    return (async function () {
+      var out = [], desde = 0, ordenar = true, P = 1000;
+      for (;;) {
+        var q = sb.from(t).select("*").eq("negocio_id", NEG);
+        if (ordenar) q = q.order("id", { ascending: true });
+        var r = await q.range(desde, desde + P - 1);
+        if (r.error) { if (ordenar && desde === 0) { ordenar = false; continue; } return r; }
+        var d = r.data || []; out = out.concat(d);
+        if (d.length < P) return { data: out, error: null };
+        desde += P;
+      }
+    })();
+  }
   /* Fotos: miniatura aparte (_t.jpg) y enlaces firmados que se reutilizan, para no volver a descargar lo mismo */
   function tpath(p) { return String(p).replace(/\.jpg$/i, "_t.jpg"); }
   function thumbBlob(src) {
