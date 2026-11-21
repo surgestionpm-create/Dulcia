@@ -1036,3 +1036,13 @@ td.r{white-space:nowrap}
 }
 @media(min-width:1025px){.thumb{font-size:.75rem}.tg{font-size:.75rem}.brand small{font-size:.75rem}}
 .nprod .ntr:has(> b:last-child),.ntr:has(> b:last-child){grid-template-columns:minmax(0,1fr) auto}
+/* Tienda web */
+.s-canc{background:#ECE7EE;color:#6E6474;text-decoration:line-through}
+.p-canc{background:#8A7F8E}
+.webbox{background:var(--accent-soft);color:var(--ink);border-radius:12px;padding:10px 12px;font-size:.9rem;line-height:1.45}
+.webbox.canc{background:var(--bad-bg);color:var(--bad)}
+.tcred{background:var(--accent-soft);border-radius:14px;padding:14px;margin:8px 0 12px;display:flex;flex-direction:column;gap:8px}
+.tcred label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);font-weight:500}
+.tcred input{font-family:ui-monospace,Menlo,monospace;font-size:.85rem}
+.tev{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:8px;font-size:.88rem}
+.ord.canc-o{opacity:.6}

@@ -335,6 +335,7 @@
       '<div class="blk"><h3>Nota interna</h3><textarea id="gn" rows="3" placeholder="Solo la ves tú">' + esc(c.nota || "") + '</textarea><div style="margin-top:8px"><button class="btn ghost sm" data-nota>Guardar nota</button></div></div>' +
       '<div class="blk"><h3>Pagos</h3><div id="gpagos" class="note">Cargando…</div></div>' +
       '<div class="blk"><h3>Correos de aviso enviados</h3><div id="gavisos" class="note">Cargando…</div></div>' +
+      '<div class="blk"><h3>Tienda web (pedidos automáticos)</h3><div id="gtienda" class="note">Cargando…</div></div>' +
       (c.es_admin ? '' : '<div class="blk"><h3 class="danger">Eliminar cuenta</h3><p class="note" style="margin:0 0 8px">Borra la pastelería, sus recetas, pedidos, gastos, clientes y su usuario. <b>No se puede deshacer.</b>' + (sub ? ' Antes se cancela su suscripción mensual en Mercado Pago.' : '') + ' Para confirmar, escribe el correo <b>' + esc(c.correo || c.nombre) + '</b>.</p><div class="row2"><input type="text" id="gdel" autocomplete="off" placeholder="' + esc(c.correo || c.nombre) + '"><button class="btn bad sm" data-del disabled>Eliminar para siempre</button></div></div>') +
       '</div>';
     dlg.dataset.id = id; if (!dlg.open) dlg.showModal();
@@ -353,6 +354,11 @@
       var AVL = { prueba_2d: "Quedan 2 días de prueba", prueba_hoy: "La prueba termina hoy", prueba_fin: "La prueba terminó", plan_7d: "El plan vence en 7 días", plan_fin: "El plan venció" };
       ga.innerHTML = av && av.length ? '<table class="pg"><tbody>' + av.map(function (a) { return '<tr><td>' + fd(a.enviado_en, 1) + '</td><td>' + esc(AVL[a.tipo] || a.tipo) + '</td><td class="note" style="margin:0">' + esc(a.correo || "") + '</td></tr>'; }).join("") + '</tbody></table>' : 'Todavía no se le ha enviado ningún aviso.';
     } catch (e) { var g3 = $("#gavisos"); if (g3) g3.textContent = "Falta ejecutar el SQL de los avisos."; }
+    try {
+      var tw = await rpc("admin_tienda_ver", { p_negocio: id }), gt = $("#gtienda"); if (!gt || dlg.dataset.id !== id) return;
+      gt.innerHTML = '<p style="margin:0 0 8px">' + (tw.habilitada ? (tw.conectada ? 'Activada y <b>conectada</b>' + (tw.ultimo_aviso ? '. Último aviso: ' + fd(tw.ultimo_aviso, 1) + ' · ' + esc(tw.ultimo_resultado || "") : '. Aún no llegan avisos') : 'Activada: la pastelería ya ve “Conectar tienda web” en Ajustes, pero todavía no conecta.') + ' · Pedidos web: ' + (tw.pedidos_web || 0) : 'Desactivada: la pastelería no ve esta opción.') + '</p>' +
+        '<button class="btn ghost sm" data-tienda="' + (tw.habilitada ? 0 : 1) + '">' + (tw.habilitada ? 'Desactivar tienda web' : 'Activar tienda web') + '</button>' + (tw.habilitada ? '<p class="note" style="margin:6px 0 0">Desactivar borra la clave: la web deja de enviar pedidos. Los pedidos ya recibidos se quedan.</p>' : '');
+    } catch (e) { var g4 = $("#gtienda"); if (g4) g4.textContent = "Falta ejecutar el SQL de la tienda web (tienda_web.sql)."; }
   }
   async function avisos(accion, extra) {
     var s = await sb.auth.getSession(), tk = s.data.session.access_token;
@@ -463,6 +469,7 @@
     if (t.hasAttribute("data-plan")) { var pl = $("#gplan").value; return accion(t, function (id) { return rpc("admin_plan", { p_negocio: id, p_plan: pl }); }); }
     if (t.hasAttribute("data-fecha")) { var f = $("#gfecha").value; if (!f) { toast("Elige una fecha", true); return; } return accion(t, function (id) { return rpc("admin_vence", { p_negocio: id, p_fecha: f }); }); }
     if (t.dataset.pausa !== undefined) { var pa = t.dataset.pausa === "1"; return accion(t, function (id) { return rpc("admin_pausar", { p_negocio: id, p_pausar: pa }); }); }
+    if (t.dataset.tienda !== undefined) { var on = t.dataset.tienda === "1"; return accion(t, function (id) { return rpc("admin_tienda_web", { p_negocio: id, p_on: on }).then(function () { return on ? "Tienda web activada para esta cuenta" : "Tienda web desactivada"; }); }); }
     if (t.hasAttribute("data-nota")) { var n = $("#gn").value; return accion(t, function (id) { return rpc("admin_nota", { p_negocio: id, p_nota: n }); }); }
     if (t.hasAttribute("data-subx")) { if (!t.dataset.sure) { t.dataset.sure = 1; t.textContent = "Toca de nuevo para cancelar"; return; } return accion(t, cancelarSub); }
     if (t.hasAttribute("data-del")) {

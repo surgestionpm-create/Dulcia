@@ -41,7 +41,7 @@ function gN(g){return g.iva==="incl"?g.monto/IVA:g.monto}
 function gI(g){return g.iva==="incl"?g.monto-g.monto/IVA:(g.iva==="mas"?g.monto*(IVA-1):0)}
 /* Buscadores de Pedidos y Gastos: buscan en todos los meses */
 var GQ="";
-function pedHit(o,q){return xNorm([o.cliente,o.desc,o.cat,o.ig,o.wa,o.docn,o.cot&&o.num?"cotizacion "+o.num:"",o.doct].join(" ")).indexOf(q)>=0||String(o.docn||"")===String(filtro.q).trim()}
+function pedHit(o,q){return xNorm([o.cliente,o.desc,o.cat,o.ig,o.wa,o.docn,o.cot&&o.num?"cotizacion "+o.num:"",o.wnum?"web "+o.wnum:"",o.doct].join(" ")).indexOf(q)>=0||String(o.docn||"")===String(filtro.q).trim()}
 function gasHit(g,q){return xNorm([g.nombre,g.cat].join(" ")).indexOf(q)>=0}
 function bqInput(id,ph,val){return '<label class="rsearch bq"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" id="'+id+'" placeholder="'+ph+'" aria-label="'+ph+'" value="'+esc(val)+'"></label>'}
 document.addEventListener("input",function(e){var t=e.target;if(t.id!=="pedq"&&t.id!=="gasq")return;
@@ -70,9 +70,10 @@ var MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","se
 var DIAS=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 function pd(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
 function fechaLarga(s){var d=pd(s);return DIAS[d.getDay()]+" "+d.getDate()+" de "+MESES[d.getMonth()]}
-function real(){return orders.filter(function(o){return !o.cot})}
-function st(x){return x.cot?"cot":(x.pagado>=x.total?"pagado":(x.pagado>0?"anticipo":"sin"))}
-var STL={cot:"Cotizado",pagado:"Pagado",anticipo:"Falta saldo",sin:"Sin pago"};
+function real(){return orders.filter(function(o){return !o.cot&&!o.canc})}
+function st(x){return x.canc?"canc":x.cot?"cot":(x.pagado>=x.total?"pagado":(x.pagado>0?"anticipo":"sin"))}
+var WEBST={pagado:"Pagado",en_preparacion:"En preparación",en_camino:"En camino",entregado:"Entregado",cancelado:"Cancelado"};
+var STL={canc:"Cancelado",cot:"Cotizado",pagado:"Pagado",anticipo:"Falta saldo",sin:"Sin pago"};
 function inMonth(x){var d=pd(x.fecha);return d.getFullYear()===cur.y&&d.getMonth()===cur.m}
 var CCOL=[["verde","Verde"],["amarillo","Amarillo"],["rosado","Rosado"],["lila","Lila"],["celeste","Celeste"],["naranjo","Naranjo"],["rojo","Rojo"],["gris","Gris"]];
 function catCol(n){var i=pcats.findIndex(function(c){return c.n===n});if(i>=0&&pcats[i].col)return pcats[i].col;
@@ -159,7 +160,7 @@ function clientes(){
   var by={}, alias={}, list=[];
   function nk(v){return "n:"+xNorm(v)}
   orders.slice().sort(function(a,b){return (a.fecha+a.hora)<(b.fecha+b.hora)?-1:1}).forEach(function(o){
-    var nm=String(o.cliente||"").trim(); if(!nm)return;
+    var nm=String(o.cliente||"").trim(); if(!nm||o.canc)return;
     var ks=[o.wa?"w:"+o.wa:null,o.ig?"i:"+o.ig.toLowerCase():null,nk(nm)].filter(Boolean), key=null;
     ks.forEach(function(k){if(key||!alias[k])return;var c0=by[alias[k]];if(k.charAt(0)==="n"&&o.wa&&c0.wa&&c0.wa!==o.wa)return;key=alias[k]});
     ks=ks.filter(function(k){return !(k.charAt(0)==="n"&&alias[k]&&alias[k]!==key&&by[alias[k]].wa&&by[alias[k]].wa!==o.wa)});
@@ -248,7 +249,7 @@ function vPed(){
   var pq=xNorm(filtro.q);
   var l=orders.filter(pq?function(x){return pedHit(x,pq)}:inMonth).filter(function(x){return (!filtro.cat||x.cat===filtro.cat)&&(!filtro.est||st(x)===filtro.est)}).sort(function(a,b){var k=(a.fecha+a.hora)<(b.fecha+b.hora)?-1:1;return pq?-k:k});
   var opts='<option value="">Todas las categorías</option>'+pcats.map(function(p){return p.n}).concat(orders.some(function(x){return x.cat==="Sin categoría"})?["Sin categoría"]:[]).map(function(c){return '<option'+(filtro.cat===c?' selected':'')+'>'+esc(c)+'</option>'}).join("");
-  var es='<option value="">Todos los pagos</option>'+["pagado","anticipo","sin"].map(function(k){return '<option value="'+k+'"'+(filtro.est===k?' selected':'')+'>'+STL[k]+'</option>'}).join("");
+  var es='<option value="">Todos los pagos</option>'+["pagado","anticipo","sin"].concat(orders.some(function(o){return o.canc})?["canc"]:[]).map(function(k){return '<option value="'+k+'"'+(filtro.est===k?' selected':'')+'>'+STL[k]+'</option>'}).join("");
   window._pvis=l.map(function(x){return x.id}); Object.keys(sel).forEach(function(k){if(!orders.some(function(o){return o.id===+k}))delete sel[k]});
   var ns=Object.keys(sel).length;
   var bar=selMode?'<div class="selbar"><b>'+ns+' seleccionado'+(ns===1?'':'s')+'</b><div class="sb"><button class="btn ghost sm" data-selall>'+(l.length&&l.every(function(x){return sel[x.id]})?'Quitar todos':'Seleccionar todos ('+l.length+')')+'</button><button class="btn sm danger-f" data-seldel'+(ns?'':' disabled')+'>Eliminar '+ns+'</button><button class="btn ghost sm" data-selmode>Listo</button></div></div>':'';
@@ -256,8 +257,8 @@ function vPed(){
    '<div class="filters">'+bqInput("pedq","Cliente, descripción o N°",filtro.q)+'<select id="fcat" aria-label="Categoría">'+opts+'</select><select id="fest" aria-label="Estado de pago">'+es+'</select></div>'+
    (pq?'<p class="note bqnote">'+(l.length?l.length+(l.length===1?' pedido encontrado':' pedidos encontrados'):'Ningún pedido')+' en todos los meses, del más reciente al más antiguo.</p>':'')+
    '<div class="grid">'+(l.length?l.map(function(x){
-     return '<button class="ord'+(selMode?' selm'+(sel[x.id]?' on':''):'')+'" '+(selMode?'data-selo="'+x.id+'" aria-pressed="'+!!sel[x.id]+'"':'data-o="'+x.id+'"')+'>'+(selMode?'<span class="sck" aria-hidden="true"></span>':'')+(x.fotos[0]?'<img class="thumb" loading="lazy" decoding="async" src="'+th(x.fotos[0])+'" alt="">':'<div class="thumb">sin foto</div>')+
-     '<div style="min-width:0"><h3>'+esc(x.cliente)+(x.cot&&x.num?' <span class="onum">N° '+x.num+'</span>':'')+'</h3><p>'+fechaLarga(x.fecha)+(pq&&x.fecha.slice(0,4)!==TODAY.slice(0,4)?' de '+x.fecha.slice(0,4):'')+' · '+x.hora+' · '+esc(x.cat)+(x.personas?' · '+persTxt(x):'')+'</p><p>'+esc(x.desc)+'</p></div>'+
+     return '<button class="ord'+(x.canc?' canc-o':'')+(selMode?' selm'+(sel[x.id]?' on':''):'')+'" '+(selMode?'data-selo="'+x.id+'" aria-pressed="'+!!sel[x.id]+'"':'data-o="'+x.id+'"')+'>'+(selMode?'<span class="sck" aria-hidden="true"></span>':'')+(x.fotos[0]?'<img class="thumb" loading="lazy" decoding="async" src="'+th(x.fotos[0])+'" alt="">':'<div class="thumb">sin foto</div>')+
+     '<div style="min-width:0"><h3>'+esc(x.cliente)+(x.cot&&x.num?' <span class="onum">N° '+x.num+'</span>':'')+(x.ext?' <span class="onum">Web'+(x.wnum?' N° '+x.wnum:'')+'</span>':'')+'</h3><p>'+fechaLarga(x.fecha)+(pq&&x.fecha.slice(0,4)!==TODAY.slice(0,4)?' de '+x.fecha.slice(0,4):'')+' · '+x.hora+' · '+esc(x.cat)+(x.personas?' · '+persTxt(x):'')+'</p><p>'+esc(x.desc)+'</p></div>'+
      '<div class="rt"><b>'+$$(x.total)+'</b>'+chipS(x)+'</div></button>'}).join(""):'<div class="card empty">'+(pq?'No encontramos pedidos con “'+esc(filtro.q)+'”.':'No hay pedidos con estos filtros. Crea uno con “Nuevo pedido”.')+'</div>')+'</div>';
 }
 
@@ -1486,6 +1487,7 @@ function vCfg(){
   '<div class="f" style="margin-top:10px"><label>Teléfono o WhatsApp<input type="text" id="ct" value="'+esc(cfg.tel)+'"></label><label>Correo<input type="text" id="cm" value="'+esc(cfg.mail)+'" placeholder="contacto@tupasteleria.cl"></label><label>Validez (días)<input type="number" id="cv" min="1" value="'+cfg.vig+'"></label><label>Abono para reservar (%)<input type="number" id="ca" min="0" max="100" value="'+cfg.abono+'"></label></div>'+
   '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--soft);margin-top:12px">Condiciones (una por línea)<textarea id="cc" rows="8">'+esc(cfg.cond)+'</textarea></label></section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Google Calendar automático</h2>'+(window.calBox?window.calBox():"")+'</section>'+
+  (window.tiendaBox?window.tiendaBox():"")+
   '<section class="card"><h2 style="font-size:1.38rem">Tu plan</h2>'+(window.planBox?window.planBox():"")+'</section>'+
   '<section class="card"><h2 style="font-size:1.38rem">Tu cuenta</h2><p class="note" style="margin-top:2px">Sesión iniciada como <b>'+esc(window.USER_EMAIL||"")+'</b>.</p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn ghost sm" data-logout>Cerrar sesión</button>'+(window.IS_ADMIN?'<a class="btn sm" href="/admin" target="_blank" rel="noopener">Panel de administración</a>':'')+'</div></section>'+
 '<section class="card"><h2 style="font-size:1.38rem">Instala Dulcia en tu celular</h2><p class="note" style="margin-top:2px">Así la abres con un toque, como cualquier app, sin buscar el link.</p><p style="margin:10px 0 4px"><b>iPhone (Safari)</b></p><ol class="note" style="margin:0;padding-left:1.2em"><li>Abre Dulcia en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li><li>Elige <b>Agregar a pantalla de inicio</b> y toca <b>Agregar</b>.</li></ol><p style="margin:10px 0 4px"><b>Android (Chrome)</b></p><ol class="note" style="margin:0;padding-left:1.2em"><li>Abre Dulcia en <b>Chrome</b>.</li><li>Toca los <b>tres puntos</b> de arriba a la derecha.</li><li>Elige <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</li></ol></section>'+
@@ -1779,6 +1781,7 @@ function openOrder(id){
     (PM?'<input type="text" class="money" inputmode="numeric" data-lp="'+x.id+':'+i+'" value="'+mfmt(pVer(lnP(l,x.tc),x.tc))+'" aria-label="'+(x.tc==="mayorista"?'Precio neto por unidad':'Precio por unidad con IVA')+'" title="'+(x.tc==="mayorista"?'Precio por unidad (neto, + IVA)':'Precio por unidad (con IVA)')+'"><span class="lsub" id="lsub'+i+'">'+$$((+l.q||0)*pVer(lnP(l,x.tc),x.tc))+'</span>':'')+
     '<button class="x" data-ldel="'+x.id+':'+i+'" aria-label="Quitar receta">✕</button></div>'}).join("");
   d.innerHTML='<div class="dlg"><header><div><h2 style="font-size:1.62rem">'+esc(x.cliente)+'</h2><div class="note" style="margin:2px 0 0">'+fechaLarga(x.fecha)+' · '+x.hora+'</div></div><div style="display:flex;gap:8px;flex:none"><button class="ib" data-edito="'+x.id+'" aria-label="Editar pedido" title="Editar pedido"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ib" data-close aria-label="Cerrar">✕</button></div></header>'+
+  (x.ext?'<div class="webbox'+(x.canc?' canc':'')+'"><b>Pedido de la tienda web'+(x.wnum?' N° '+x.wnum:'')+'</b> · Estado en la web: '+esc(WEBST[x.estw]||x.estw||"Pagado")+(x.canc?'<br>Cancelado en la web: se guarda, pero no cuenta en el calendario, la producción ni las ventas.':'')+'</div>':'')+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="'+gcalUrl(x)+'">Agregar a Google Calendar</a><button class="btn ghost sm" data-ics="'+x.id+'">Descargar para otro calendario</button></div>'+
   '<dl class="kv"><dt>Categoría</dt><dd>'+esc(x.cat)+'</dd>'+(!window.NO_DOC&&x.doct?'<dt>Documento</dt><dd>'+DOCL[x.doct]+(x.docn?' N° '+esc(x.docn):'')+'</dd>':'')+(PM?'<dt>Tipo de cliente</dt><dd>'+(x.tc==="mayorista"?'Mayorista':'Minorista')+'</dd>':'')+(x.personas?'<dt>Personas</dt><dd>'+x.personas+'</dd>':'')+'<dt>Canal</dt><dd>'+esc(x.canal)+'</dd>'+(+x.desp?'<dt>Despacho</dt><dd>'+$$(x.desp)+' <span class="note" style="margin:0">'+(x.despi==="sin"?'(neto '+$$(x.desp/IVA)+' + IVA)':'(con IVA)')+'</span></dd>':'')+(+x.dsc?'<dt>Descuento</dt><dd>'+(x.dsct==="porcentaje"?fq(x.dsc)+'% ('+$$(oDsc(x,oSub(x)))+')':$$(oDsc(x,0))+(x.tc==="mayorista"?' <span class="note" style="margin:0">('+$$(x.dsc)+' neto + IVA)</span>':''))+'</dd>':'')+'<dt>Neto</dt><dd>'+$$(ivaDe(x.total).neto)+'</dd><dt>IVA 19%</dt><dd>'+$$(ivaDe(x.total).iva)+'</dd><dt>Total con IVA</dt><dd><b>'+$$(x.total)+'</b></dd><dt>Pagado</dt><dd>'+$$(x.pagado)+'</dd><dt>Saldo</dt><dd>'+$$(x.total-x.pagado)+' '+chipS(x)+'</dd></dl>'+
   '<div class="contact"><b>Contacto</b>'+

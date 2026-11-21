@@ -302,6 +302,7 @@
     orders.length = 0;
     R[6].data.forEach(function (p) {
       var o = { id: nextId++, uid: p.id, cot: p.es_cotizacion, num: p.numero_cotizacion || 0, cliente: p.cliente, ig: p.instagram || "", wa: p.whatsapp || "", fecha: p.fecha, hora: t5(p.hora), cat: p.categoria, canal: p.canal, desc: p.descripcion || "", personas: p.personas || null, total: +p.total, pagado: +p.pagado, listo: p.listo, cond: p.condiciones, vig: p.validez_dias, origen: p.origen, desc_st: p.descontado || null, cuid: p.cliente_id || null, doct: p.doc_tipo || "", docn: p.doc_num || "", despi: p.despacho_iva === "sin" ? "sin" : "con", desp: +p.despacho || 0, dsc: +p.descuento || 0, dsct: p.descuento_tipo === "porcentaje" ? "porcentaje" : "monto", tc: p.tipo_cliente === "mayorista" ? "mayorista" : "minorista", items: [], fotos: [] };
+      if (p.id_externo) { o.ext = p.id_externo; o.wnum = p.web_numero || null; o.estw = p.estado_web || ""; o.canc = !!p.cancelado; o.wf = +p.web_fecha || 0; }
       if (o.cond == null) delete o.cond; if (o.vig == null) delete o.vig;
       R[7].data.filter(function (x) { return x.pedido_id === p.id; }).forEach(function (x) { if (rmap[x.receta_id]) o.items.push({ rid: rmap[x.receta_id], q: +x.cantidad, p: x.precio == null ? null : +x.precio }); });
       R[8].data.filter(function (x) { return x.pedido_id === p.id && urls[x.path]; }).forEach(function (x) { o.fotos.push(urls[x.path]); });
@@ -579,6 +580,65 @@
       if (typeof toast === "function") toast(on ? (nuevo ? "Enlace nuevo creado. Agrégalo otra vez a tu calendario." : "Calendario automático activado") : "Calendario automático desactivado");
     } catch (err) { if (typeof toast === "function") toast(msg(err)); }
   }
+  /* Tienda web: pedidos automáticos desde la web de la pastelería (solo cuentas activadas por Dulcia) */
+  window.TIENDA = null; window.TIENDA_CRED = null; var tiendaMax = -1, tiendaTimer = 0;
+  function tiendaUrl() { var c = window.DULCIA_CONFIG || {}; return c.url + "/functions/v1/tienda-web"; }
+  async function tiendaCargar(sinRender) {
+    try { var r = await sb.rpc("tienda_estado", { p_negocio: NEG }); window.TIENDA = r.error ? null : r.data; } catch (e) { window.TIENDA = null; }
+    if (tiendaMax < 0) tiendaMax = orders.reduce(function (a, o) { return Math.max(a, o.wf || 0); }, 0);
+    if (window.TIENDA && window.TIENDA.conectada) { if (!tiendaTimer) tiendaTimer = setInterval(tiendaRevisar, 60000); }
+    else if (tiendaTimer) { clearInterval(tiendaTimer); tiendaTimer = 0; }
+    if (!sinRender && typeof view !== "undefined" && view === "cfg" && typeof render === "function") render();
+  }
+  // Cada minuto revisa si llegó o cambió un pedido web; si no hay cambios sin guardar ni ventanas abiertas, recarga los datos
+  async function tiendaRevisar() {
+    if (document.hidden || !loaded) return;
+    try {
+      var r = await sb.from("pedidos").select("web_fecha").eq("negocio_id", NEG).not("id_externo", "is", null).order("web_fecha", { ascending: false }).limit(1);
+      if (r.error) return; var m = r.data && r.data[0] ? +r.data[0].web_fecha || 0 : 0;
+      if (m <= tiendaMax) return;
+      var abierto = [].some.call(document.querySelectorAll("dialog"), function (d) { return d.open; });
+      var cc = current(), sucio = Object.keys(cc).some(function (k) { return cc[k].json !== snap[k]; }) || Object.keys(snap).some(function (k) { return !cc[k]; });
+      if (saving || sucio || abierto) return;
+      var antes = {}; orders.forEach(function (o) { if (o.ext) antes[o.ext] = 1; });
+      await loadAll(); tiendaMax = m;
+      var nuevos = orders.filter(function (o) { return o.ext && !antes[o.ext]; }).length;
+      if (typeof render === "function") render();
+      if (typeof toast === "function") toast(nuevos ? (nuevos === 1 ? "Llegó 1 pedido nuevo de la tienda web" : "Llegaron " + nuevos + " pedidos nuevos de la tienda web") : "Se actualizó un pedido de la tienda web");
+      tiendaCargar(true);
+    } catch (e) {}
+  }
+  var EVL = { "pedido.prueba": "Aviso de prueba", "pedido.pagado": "Pedido pagado", "pedido.actualizado": "Pedido actualizado", "pedido.cancelado": "Pedido cancelado" };
+  function fh(d) { try { return new Date(d).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } }
+  window.tiendaBox = function () {
+    var T = window.TIENDA; if (!T || !T.habilitada) return "";
+    var h = '<section class="card" id="tiendacard"><h2 style="font-size:1.38rem">Tienda web</h2>';
+    var C = window.TIENDA_CRED;
+    if (C) h += '<div class="tcred"><p style="margin:0 0 8px"><b>Guarda estos 3 datos ahora.</b> La clave no se vuelve a mostrar. Entrégalos a quien maneja tu web por un canal privado (no por chat ni correo abierto).</p>' +
+      '<label>Dirección (DULCIA_URL)<span class="calurl"><input type="text" readonly value="' + esc2(tiendaUrl()) + '"></span></label>' +
+      '<label>Identificador de cuenta (DULCIA_CUENTA)<span class="calurl"><input type="text" readonly value="' + esc2(C.cuenta) + '"></span></label>' +
+      '<label>Clave secreta (DULCIA_SECRET)<span class="calurl"><input type="text" readonly value="' + esc2(C.clave) + '"></span></label>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" type="button" data-tcopy>Copiar los 3 datos</button><button class="btn ghost sm" type="button" data-tlisto>Ya los guardé</button></div></div>';
+    if (!T.conectada) return h + '<p class="note" style="margin-top:2px">Cada pedido pagado en tu página web aparece solo en Dulcia: en el calendario, en Pedidos y en Producción. Si la web lo cambia o lo cancela, Dulcia también se actualiza.</p>' +
+      '<div style="margin-top:10px"><button class="btn sm" type="button" data-ton>Conectar tienda web</button></div></section>';
+    var ev = (T.eventos || []).map(function (x) { return '<li><span>' + fh(x.recibido_en) + '</span> · ' + esc2(EVL[x.evento] || x.evento || "") + (x.numero ? ' N° ' + x.numero : '') + '<br><span class="note" style="margin:0">' + esc2(x.resultado || "") + '</span></li>'; }).join("");
+    var rech = /^Rechazado/.test(T.ultimo_resultado || "");
+    h += '<p style="margin:2px 0 0"><span class="chip s-pagado">Conectada</span></p>' +
+      '<p class="note" style="margin:8px 0 0">' + (T.ultimo_aviso ? 'Último aviso: ' + fh(T.ultimo_aviso) + ' · ' + esc2(EVL[T.ultimo_evento] || T.ultimo_evento || "") + (rech ? '<br><b style="color:var(--bad)">' + esc2(T.ultimo_resultado) + '.</b> Revisa que la web tenga la clave correcta.' : '') : 'Todavía no llega ningún aviso. Pide que envíen un “aviso de prueba” desde el panel de tu web.') + '</p>' +
+      (ev ? '<details class="calsteps"><summary><b>Últimos avisos recibidos</b></summary><ul class="tev">' + ev + '</ul></details>' : '') +
+      '<p class="note" style="margin:8px 0 0">Los pedidos de la web llegan con la categoría <b>Tienda web</b> y se unen solos a la receta que se llama igual que el producto. Los cancelados se ven en Pedidos, pero no cuentan en el calendario, la producción ni las ventas.</p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn ghost sm" type="button" data-trefresh>Actualizar</button><button class="btn ghost sm" type="button" data-tnew>Generar clave nueva</button><button class="btn ghost sm danger" type="button" data-toff>Desconectar</button></div>' +
+      '<p class="note" style="margin:6px 0 0">Si generas una clave nueva o desconectas, la web deja de poder enviar pedidos hasta que cargue los datos nuevos.</p></section>';
+    return h;
+  };
+  async function tiendaConectar() {
+    try { var r = await sb.rpc("tienda_conectar", { p_negocio: NEG }); if (r.error) throw r.error; window.TIENDA_CRED = r.data; await tiendaCargar(true); if (typeof render === "function") render(); var c = document.getElementById("tiendacard"); if (c) c.scrollIntoView({ block: "start" }); }
+    catch (err) { if (typeof toast === "function") toast(msg(err)); }
+  }
+  async function tiendaDesconectar() {
+    try { var r = await sb.rpc("tienda_desconectar", { p_negocio: NEG }); if (r.error) throw r.error; window.TIENDA_CRED = null; await tiendaCargar(true); if (typeof render === "function") render(); if (typeof toast === "function") toast("Tienda web desconectada"); }
+    catch (err) { if (typeof toast === "function") toast(msg(err)); }
+  }
   /* Aviso arriba en la app y recuadro "Tu plan" en Ajustes */
   window.planBanner = function () {
     var c = window.CUENTA; if (!c) return "";
@@ -658,6 +718,12 @@
     else if (t.hasAttribute("data-caloff")) { if (!t.dataset.sure) { t.dataset.sure = "1"; t.textContent = "Toca de nuevo para desactivar"; return; } calSet(false); }
     else if (t.hasAttribute("data-calcopy")) { var ci = document.getElementById("calu"); var done = function () { if (typeof toast === "function") toast("Enlace copiado"); }; if (navigator.clipboard) navigator.clipboard.writeText(ci.value).then(done, function () { ci.select(); document.execCommand("copy"); done(); }); else { ci.select(); document.execCommand("copy"); done(); } }
     else if (t.hasAttribute("data-cancelsub")) { cancelSub(t); }
+    else if (t.hasAttribute("data-ton")) { t.disabled = true; tiendaConectar(); }
+    else if (t.hasAttribute("data-tnew")) { if (!t.dataset.sure) { t.dataset.sure = "1"; t.textContent = "Toca de nuevo para confirmar"; return; } t.disabled = true; tiendaConectar(); }
+    else if (t.hasAttribute("data-toff")) { if (!t.dataset.sure) { t.dataset.sure = "1"; t.textContent = "Toca de nuevo para desconectar"; return; } t.disabled = true; tiendaDesconectar(); }
+    else if (t.hasAttribute("data-trefresh")) { t.disabled = true; tiendaCargar(); tiendaRevisar(); }
+    else if (t.hasAttribute("data-tlisto")) { window.TIENDA_CRED = null; if (typeof render === "function") render(); }
+    else if (t.hasAttribute("data-tcopy")) { var C = window.TIENDA_CRED || {}; var txt = "DULCIA_URL=" + tiendaUrl() + "\nDULCIA_CUENTA=" + C.cuenta + "\nDULCIA_SECRET=" + C.clave; var ok2 = function () { if (typeof toast === "function") toast("Datos copiados"); }; if (navigator.clipboard) navigator.clipboard.writeText(txt).then(ok2, function () {}); }
     else if (t.hasAttribute("data-baja")) { bajaOpen(); }
     else if (t.hasAttribute("data-respaldo")) { if (typeof respaldoExcel === "function") respaldoExcel(); }
     else if (t.dataset.act) { t.disabled = true; var r = await sb.rpc("admin_activar", { p_negocio: t.dataset.act }); if (r.error) alert_msg(r.error); adminOpen(); }
@@ -677,6 +743,7 @@
     try { await loadAll(); }
     catch (e) { console.error(e); show('<h1>No pudimos cargar tus datos</h1><p>' + msg(e) + '</p><button class="btn" onclick="location.reload()">Reintentar</button>'); return; }
     document.getElementById("boot").hidden = true; document.getElementById("appwrap").hidden = false; render();
+    tiendaCargar();
     var d = document.getElementById("syncst"); if (d) d.textContent = window.SYNC_TXT;
     installTip();
     var pk = pagarLeer(), cu = window.CUENTA || {};
