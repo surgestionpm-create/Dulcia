@@ -535,7 +535,7 @@ function openNewR(){
   var d=$("#dlg");
   d.innerHTML='<form class="dlg" id="newrf"><header><h2 style="font-size:1.62rem">Nueva receta</h2><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></header>'+
   '<div class="f"><label class="w">Nombre<input type="text" id="nr_n" required placeholder="Ej.: Brownies (bandeja)"></label><label class="w">Porciones que rinde la receta<input type="number" id="nr_r" min="1" step="1" inputmode="numeric" value="1"></label>'+
-  '<label class="w">Copiar ingredientes de<select id="nr_c"><option value="">Empezar en blanco</option>'+recipes.map(function(r){return '<option value="'+r.id+'">'+esc(r.nombre)+'</option>'}).join("")+'</select></label></div>'+
+  '<label class="w">Copiar ingredientes de<select id="nr_c"><option value="">Empezar en blanco</option>'+recAbc().map(function(r){return '<option value="'+r.id+'">'+esc(r.nombre)+'</option>'}).join("")+'</select></label></div>'+
   '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit">Crear receta</button></div></form>';
   d.showModal();
 }
@@ -1766,7 +1766,8 @@ function lnP(l,tc){return l.p==null||l.p===""?precioStd(recipes.find(function(r)
 function lnTot(x){return (x.items||[]).reduce(function(a,l){return a+(+l.q||0)*lnP(l,x.tc)},0)}
 function lnSync(x){var tot=lnTot(x),e=$("#lntot");if(e)e.innerHTML=lnTotHtml(x);(x.items||[]).forEach(function(l,i){var s=$("#lsub"+i);if(s)s.textContent=$$((+l.q||0)*pVer(lnP(l,x.tc),x.tc))})}
 function lnTotHtml(x){var t=oTot(x),v=ivaDe(t);return (+x.desp||+x.dsc?'Total calculado (productos + despacho − descuento): <b>':'Total de los productos: <b>')+''+$$(t)+'</b> <span class="note" style="margin:0">(neto '+$$(v.neto)+' + IVA '+$$(v.iva)+')</span>'+(t&&Math.round(t)!==Math.round(+x.total||0)?' <button class="btn ghost sm" data-ltot="'+x.id+'">Usar como total del pedido</button>':(t?' <span class="note" style="margin:0">= total del pedido</span>':''))}
-function recOpts(sel){return recipes.map(function(r){return '<option value="'+r.id+'"'+(r.id===sel?' selected':'')+'>'+esc(r.nombre)+'</option>'}).join("")}
+function recAbc(){return recipes.slice().sort(function(a,b){return String(a.nombre||"").localeCompare(String(b.nombre||""),"es",{numeric:true,sensitivity:"base"})})}
+function recOpts(sel){return recAbc().map(function(r){return '<option value="'+r.id+'"'+(r.id===sel?' selected':'')+'>'+esc(r.nombre)+'</option>'}).join("")}
 function evTimes(x){var d=x.fecha.replace(/-/g,""),h=(x.hora||"12:00").split(":"),a=+h[0]||0,m=h[1]||"00",z=function(n){return String(n).padStart(2,"0")};
   return {s:d+"T"+z(a)+m+"00",e:d+"T"+z(Math.min(23,a+1))+m+"00"}}
 function evTitle(x){return "Pedido: "+x.cliente+" ("+x.cat+")"}
