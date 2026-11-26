@@ -344,7 +344,7 @@
   /* Código de invitación (influencer): llega por ?ref=CODIGO o se escribe al crear la cuenta */
   function refGet() { try { return localStorage.getItem("dulcia_ref") || ""; } catch (e) { return ""; } }
   var REF_PAGO = "";  // código que la persona escribió en /empezar y viene a pagar (?ref=&pagar=)
-  (function () { var m = /[?&]ref=([A-Za-z0-9_-]{3,30})/.exec(location.search); if (m) { try { localStorage.setItem("dulcia_ref", m[1].toUpperCase()); } catch (e) {} if (/[?&]pagar=/.test(location.search)) REF_PAGO = m[1].toUpperCase(); } })();
+  (function () { var m = /[?&]ref=([A-Za-z0-9_-]{3,30})/.exec(location.search); if (m) { try { localStorage.setItem("dulcia_ref", m[1].toUpperCase()); } catch (e) {} REF_PAGO = m[1].toUpperCase(); } })();  // link explícito (correo de campaña o /empezar): el código se usa al pagar
   // Link de campaña (dulcia.cl/black): ?pagar=anual|semestral|mensual abre los planes apenas entra, con el código ya aplicado
   (function () { var m = /[?&]pagar=(mensual|semestral|anual)\b/.exec(location.search); if (m) try { localStorage.setItem("dulcia_pagar", m[1]); } catch (e) {} })();
   function pagarLeer() { try { return localStorage.getItem("dulcia_pagar") || ""; } catch (e) { return ""; } }
@@ -354,17 +354,20 @@
   function refLeer() { var i = document.getElementById("aref"); return i ? i.value.trim().toUpperCase() : ""; }
   function showAuth(mode) {
     mode = mode || "in";
-    show('<h1 style="margin:0">' + (window.DULCIA_LOGO || "Dulcia") + '<span style="position:absolute;left:-9999px">Dulcia</span></h1><p class="tag">Tu pastelería, en orden.</p>' +
+    show('<h1 style="margin:0">' + (window.DULCIA_LOGO || "Dulcia") + '<span style="position:absolute;left:-9999px">Dulcia</span></h1><p class="tag">La app que ordena tu pastelería.</p><p style="margin:-10px 0 16px;font-size:.92rem">Costeo de recetas, precios, pedidos e inventario en un solo lugar.</p>' +
       '<div class="tabs"><button data-mode="in" aria-pressed="' + (mode === "in") + '">Ingresar</button><button data-mode="up" aria-pressed="' + (mode === "up") + '">Crear cuenta</button></div>' +
+      (window.DULCIA_GOOGLE ? DULCIA_GOOGLE.boton("Ingresar con Google") + '<p class="gsep" data-google-sep hidden><span>o con tu correo</span></p>' : "") +
       '<form id="af"><label>Correo<input type="email" id="ae" required autocomplete="email"></label>' +
-      '<label>Clave<input type="password" id="ap" required minlength="8" autocomplete="' + (mode === "in" ? "current-password" : "new-password") + '" placeholder="Mínimo 8 caracteres"></label>' +
+      '<label>Clave<input type="password" id="ap" required minlength="6" autocomplete="' + (mode === "in" ? "current-password" : "new-password") + '"' + (mode === "in" ? "" : ' placeholder="Mínimo 6 caracteres"') + '></label>' +
       (mode === "up" ? refCampo("") : "") +
       (mode === "up" ? '<p class="note" style="margin:0">7 días gratis, sin tarjeta. Después eliges tu plan desde $ 4.583 al mes.</p>' : "") +
       '<div class="msg" hidden></div><button class="btn" type="submit">' + (mode === "in" ? "Ingresar" : "Crear cuenta") + '</button>' +
       (mode === "in" ? '<button type="button" class="lnk" id="forgot">Olvidé mi clave</button>' : "") + '</form>');
     A.querySelectorAll(".tabs button").forEach(function (b) { b.onclick = function () {
-      if (b.dataset.mode === "up") { var r = refGet(); location.href = "/empezar" + (r ? "?ref=" + encodeURIComponent(r) : ""); return; }
+      if (b.dataset.mode === "up") { var r = refGet(); location.href = "/prueba" + (r ? "?ref=" + encodeURIComponent(r) : ""); return; }
       showAuth(b.dataset.mode); }; });
+    if (window.DULCIA_GOOGLE) DULCIA_GOOGLE.activar(function () { return Promise.resolve(sb); }, { ref: refGet(), origen: "app" }, function (t) { note(t); });
+    if (/[?&#](error_description|error)=/.test(location.search + location.hash) && /google|provider|oauth|access_denied/i.test(decodeURIComponent(location.search + location.hash))) note("No se pudo ingresar con Google. Intenta de nuevo o usa tu correo.");
     var f = document.getElementById("af");
     f.onsubmit = async function (e) {
       e.preventDefault(); var btn = f.querySelector(".btn"), em = f.querySelector("#ae").value.trim(), pw = f.querySelector("#ap").value; busy(btn, true);
@@ -389,7 +392,7 @@
     };
   }
   function showNewPass() {
-    show('<h1>Clave nueva</h1><p>Escribe la clave que quieres usar desde ahora.</p><form id="af"><label>Clave nueva<input type="password" id="ap" required minlength="8" autocomplete="new-password"></label><div class="msg" hidden></div><button class="btn" type="submit">Guardar clave</button></form>');
+    show('<h1>Clave nueva</h1><p>Escribe la clave que quieres usar desde ahora.</p><form id="af"><label>Clave nueva<input type="password" id="ap" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></label><div class="msg" hidden></div><button class="btn" type="submit">Guardar clave</button></form>');
     document.getElementById("af").onsubmit = async function (e) {
       e.preventDefault(); var r = await sb.auth.updateUser({ password: document.getElementById("ap").value });
       if (r.error) note(msg(r.error)); else { var s = await sb.auth.getSession(); await afterLogin(s.data.session); }
@@ -464,7 +467,9 @@
     }
     root.querySelector("#pcodb").onclick = function () { var v = ci.value.trim().toUpperCase(); if (!v) { ci.focus(); return; } aplicar(v, false); };
     ci.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); root.querySelector("#pcodb").click(); } };
-    aplicar(REF_PAGO || "~", true);  // nunca se pone un código solo; "~" solo revisa si la cuenta ya pagó
+    // Se inscribió gratis durante el Black (/black o /prueba): su 60% queda guardado y se aplica al pagar hasta el 29
+    var bfCod = (function () { try { var o = JSON.parse(localStorage.getItem("dulcia_bf") || "null"); var hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date()); if (o && o.c && hoy <= o.hasta) return o.c; if (o) localStorage.removeItem("dulcia_bf"); } catch (e) {} return ""; })();
+    aplicar(REF_PAGO || bfCod || "~", true);  // nunca se pone un código solo (salvo el del Black guardado al inscribirse); "~" solo revisa si la cuenta ya pagó
     root.querySelector("#pg").onclick = async function () {
       var b = this, plan = root.querySelector("input[name=plan]:checked").value; busy(b, true); var PV = { mensual: 5990, semestral: 29990, anual: 54990 }; if (promo && promo.planes[plan]) PV[plan] = promo.planes[plan].precio; pxPendiente(plan); if (window.dulciaEvent) dulciaEvent("begin_checkout", { currency: "CLP", value: PV[plan] || 0, items: [{ item_id: plan, item_name: "Dulcia " + plan, price: PV[plan] || 0, quantity: 1 }] });
       try {
@@ -763,6 +768,7 @@
     installTip();
     var pk = pagarLeer(), cu = window.CUENTA || {};
     if (pk) { pagarBorrar(); if (cu.plan === "prueba" || cu.plan === "regalo") { planesOpen(); selPlan(document.getElementById("dlg"), pk); } }
+    else if (REF_PAGO && (cu.plan === "prueba" || cu.plan === "regalo")) { planesOpen(); }  // llegó por el botón de un correo de campaña
   }
   /* Aviso para instalar la app en el celular (una vez por dispositivo) */
   function installTip() {
@@ -784,7 +790,20 @@
     try { var ad = await sb.rpc("es_admin"); window.IS_ADMIN = !!(ad && ad.data); } catch (e) { window.IS_ADMIN = false; }
     var r = await sb.rpc("mi_cuenta");
     if (r.error) { show('<h1>Error</h1><p>' + msg(r.error) + '</p><button class="btn" onclick="location.reload()">Reintentar</button>'); return; }
-    if (!r.data || !r.data.length) { window.__refMeta = (session && session.user && session.user.user_metadata && session.user.user_metadata.ref) || ""; showOnboard(); return; }
+    if (!r.data || !r.data.length) {
+      window.__refMeta = (session && session.user && session.user.user_metadata && session.user.user_metadata.ref) || "";
+      var au = null; try { au = JSON.parse(localStorage.getItem("dulcia_auto") || "null"); localStorage.removeItem("dulcia_auto"); } catch (e) {}
+      if (au && Date.now() - (+au.t || 0) < 3600e3) {  // vino de "Continuar con Google": se crea la cuenta sola, el nombre se cambia después en Ajustes
+        var cn = await sb.rpc("crear_negocio", { p_nombre: "Mi pastelería", p_codigo: au.ref || window.__refMeta || refGet() || null });
+        if (!cn.error || /Ya tienes una cuenta/i.test(cn.error.message || "")) {
+          try { localStorage.removeItem("dulcia_ref"); } catch (e) {}
+          if (window.dulciaEvent) { dulciaEvent("sign_up", { method: "google", fase: au.origen || "" }); dulciaEvent("start_trial", { fase: au.origen || "" }); }
+          if (window.dulciaPixel) dulciaPixel("CompleteRegistration", { content_name: "Cuenta Dulcia", status: true });
+          return afterLogin(session);
+        }
+      }
+      showOnboard(); return;
+    }
     window.CUENTA = r.data[0]; pxRevisar();
     if (!r.data[0].activo) {
       try { var bj = await sb.rpc("mi_baja"); if (!bj.error && bj.data) { showBaja(bj.data); return; } } catch (e) {}

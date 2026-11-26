@@ -1,7 +1,7 @@
 {
  "name": "Dulcia",
  "short_name": "Dulcia",
- "description": "Tu pastelería, en orden.",
+ "description": "La app que ordena tu pastelería: costeo, pedidos e inventario.",
  "start_url": "/app/",
  "scope": "/",
  "display": "standalone",

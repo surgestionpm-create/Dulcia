@@ -177,7 +177,7 @@
       '<form id="codf">' + codCampos(null) + '<div class="row2" style="margin-top:12px"><button class="btn sm" type="submit">Crear código</button></div></form></section>';
     var tabla = '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem;margin-bottom:8px">Códigos</h2>' + (S.cod.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Código</th><th>Influencer</th><th class="r">Comisión</th><th>Descuento</th><th class="r">Usos</th><th class="r">Clientes</th><th class="r">Pagando hoy</th><th class="r">Total pagado</th><th>Link para compartir</th><th></th></tr></thead><tbody>' +
       S.cod.map(function (k) { return '<tr><td><b>' + esc(k.codigo) + '</b>' + (k.activo ? '' : ' <span class="st pausada">inactivo</span>') + '</td><td>' + (k.influencer ? esc(k.influencer) : '<span class="note" style="margin:0">Campaña</span>') + (k.contacto ? '<div class="note" style="margin:0">' + esc(k.contacto) + '</div>' : '') + '</td><td class="r">' + (+k.comision ? (+k.comision) + '%' : '—') + '</td><td>' + dctoTxt(k) + '</td><td class="r">' + (+k.descuento ? (k.usos || 0) + (k.usos_max ? ' de ' + k.usos_max : '') + (k.usos_activos ? '<div class="note" style="margin:0">' + k.usos_activos + ' con descuento hoy</div>' : '') : '—') + '</td><td class="r">' + k.clientes + '</td><td class="r">' + k.pagando + '</td><td class="r">' + $$(k.pagado_total) + '</td>' +
-        '<td><button class="btn ghost sm" data-clink="' + esc(link(k.codigo)) + '">Copiar link</button></td><td class="r"><div class="cacts"><button class="btn ghost sm" data-cedit="' + esc(k.codigo) + '">Editar</button>' + (+k.descuento ? '<button class="btn ghost sm" data-cmail="' + esc(k.codigo) + '">Enviar correo</button>' : '') + '<button class="btn ghost sm danger" data-cdel="' + esc(k.codigo) + '">Eliminar</button></div></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">Todavía no hay códigos.</p>') + '</section>';
+        '<td><button class="btn ghost sm" data-clink="' + esc(link(k.codigo)) + '">Copiar link</button></td><td class="r"><div class="cacts"><button class="btn ghost sm" data-cedit="' + esc(k.codigo) + '">Editar</button>' + (k.activo ? '<button class="btn ghost sm" data-cmail="' + esc(k.codigo) + '">Enviar correo</button>' : '') + '<button class="btn ghost sm danger" data-cdel="' + esc(k.codigo) + '">Eliminar</button></div></td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="empty">Todavía no hay códigos.</p>') + '</section>';
     var res = S.com ? comResumen() : [], tot = res.reduce(function (a, x) { return a + x.monto; }, 0);
     var com = '<section class="card"><h2 style="font-size:1.4rem">Comisiones del mes</h2><p class="note" style="margin:4px 0 10px">Suma los pagos del mes de los clientes de cada código (los planes semestral y anual cuentan completos el mes en que se pagan) y resta las devoluciones hechas ese mes.</p>' +
       '<div class="row2" style="margin-bottom:12px"><input type="month" id="cmes" value="' + mesAct() + '" style="max-width:200px"><button class="btn ghost sm" data-cver>Ver mes</button><button class="btn sm" data-cxls>Descargar Excel del mes</button></div>' +
@@ -252,24 +252,28 @@
     var pl = k.planes || [], d = +k.descuento || 0, m = +k.meses_desc || 0, P = { mensual: 5990, semestral: 29990, anual: 54990 };
     var lineas = pl.map(function (p) { var v = Math.round(P[p] * (100 - d) / 100);
       return p === "mensual" ? "• Plan mensual: " + $$(v) + " al mes" + (m ? " los primeros " + m + (m === 1 ? " mes" : " meses") + " (después " + $$(P.mensual) + ")" : " mientras sigas suscrita") : "• Plan " + p + ": " + $$(v) + " (precio normal " + $$(P[p]) + ")"; }).join("\n");
+    if (!d) return "Hola, {nombre}:\n\n" + (k.aviso_texto ? "¡Llegó " + k.aviso_texto + " a Dulcia! " : "Tenemos una novedad para ti. ") + "Usa el código " + k.codigo + " al elegir tu plan." +
+      (k.hasta ? "\n\nVálido hasta el " + fdd(k.hasta) + "." : "") + "\n\nTus recetas, pedidos y gastos siguen guardados: eliges tu plan y sigues donde quedaste. Toca el botón o escribe el código en Ajustes → Tu plan.";
     return "Hola, {nombre}:\n\n" + (k.aviso_texto ? "¡Llegó " + k.aviso_texto + " a Dulcia! " : "Tenemos un descuento especial para ti. ") + "Con el código " + k.codigo + " tienes " + d + "% de descuento:\n\n" + lineas +
       (k.hasta ? "\n\nVálido hasta el " + fdd(k.hasta) + "." : "") +
       "\n\nTus recetas, pedidos y gastos siguen guardados: eliges tu plan y sigues donde quedaste. Toca el botón y el código se aplica solo, o escríbelo en Ajustes → Tu plan.";
   }
   async function campDlg(cod) {
     var k = S.cod.find(function (x) { return x.codigo === cod; }); if (!k) return;
-    var asunto = (k.aviso_texto ? k.aviso_texto + ": " : "") + (+k.descuento) + "% de descuento en Dulcia";
+    var asunto = (k.aviso_texto ? k.aviso_texto + ": " : "") + (+k.descuento ? (+k.descuento) + "% de descuento en Dulcia" : "una novedad de Dulcia para ti");
     dlg.innerHTML = '<div class="dlg"><header><div><h2 style="font-size:1.6rem">Correo de campaña · ' + esc(k.codigo) + '</h2><div class="note" style="margin:2px 0 0" id="cpinfo">Contando destinatarias…</div></div><button class="ib" data-close aria-label="Cerrar">✕</button></header>' +
       '<div class="campf"><label>Asunto<input type="text" id="cpa" maxlength="150" value="' + esc(asunto) + '"></label>' +
       '<label>Texto<textarea id="cpt" rows="13">' + esc(campTexto(k)) + '</textarea></label>' +
       '<p class="note" style="margin:0">Se envía a las clientas que <b>nunca han pagado</b>: las que están en su prueba gratis y las que la terminaron sin pagar. Escribe <b>{nombre}</b> donde quieras el nombre de su pastelería. El correo muestra el código y un botón que lo deja aplicado. Cada clienta recibe esta campaña una sola vez.</p>' +
       (k.activo ? '' : '<p class="errmsg" style="margin:0">El código está inactivo: actívalo en Editar antes de enviar.</p>') +
-      '<div class="row2"><button class="btn ghost sm" data-cptest>Enviarme una prueba</button><button class="btn sm" data-cpsend disabled>Enviar</button></div><p class="note" id="cpp" style="margin:0"></p></div></div>';
+      '<div class="row2"><button class="btn ghost sm" data-cptest>Enviarme una prueba</button><button class="btn sm" data-cpsend disabled>Enviar</button></div>' +
+      '<button class="btn ghost sm" data-cpreset hidden>Volver a enviar a todas (recordatorio)</button><p class="note" id="cpp" style="margin:0"></p></div></div>';
     dlg.dataset.id = ""; dlg.dataset.cod = cod; if (!dlg.open) dlg.showModal();
     try {
       var inf = await rpc("admin_campana_info", { p_codigo: cod }), b = dlg.querySelector("[data-cpsend]");
       $("#cpinfo").textContent = inf.pendientes + (inf.pendientes === 1 ? " clienta la recibirá" : " clientas la recibirán") + (inf.enviados ? " · " + inf.enviados + " ya la recibieron" : "");
       if (b) { b.dataset.n = inf.pendientes; b.textContent = inf.pendientes ? "Enviar a " + inf.pendientes + (inf.pendientes === 1 ? " clienta" : " clientas") : "No hay clientas por enviar"; b.disabled = !inf.pendientes || !k.activo; }
+      var rs = dlg.querySelector("[data-cpreset]"); if (rs) rs.hidden = !(inf.enviados > 0 && k.activo);
     } catch (er) { $("#cpinfo").textContent = errTxt(er); }
   }
   function campDatos() { var k = S.cod.find(function (x) { return x.codigo === dlg.dataset.cod; }) || {}; return { codigo: dlg.dataset.cod, asunto: $("#cpa").value.trim(), texto: $("#cpt").value, titulo: k.aviso_texto || "Un descuento para ti" }; }
@@ -438,6 +442,13 @@
     if (t.hasAttribute("data-cptest")) {
       var dd0 = campDatos(); if (!dd0.asunto || !dd0.texto.trim()) { toast("Escribe el asunto y el texto", true); return; }
       t.disabled = true; t.textContent = "Enviando prueba…"; try { var rp = await avisos("campana_probar", dd0); if (!rp.a) throw new Error("La función “avisos” de Supabase no está actualizada: vuelve a pegar su código y presiona Deploy"); toast("Prueba enviada a " + rp.a + (rp.id ? " (Resend " + rp.id + ")" : "") + ". Revisa también Spam y Promociones."); } catch (er) { toast(errTxt(er), true); } t.disabled = false; t.textContent = "Enviarme una prueba"; return;
+    }
+    if (t.hasAttribute("data-cpreset")) {
+      if (!t.dataset.sure) { t.dataset.sure = 1; t.textContent = "Toca de nuevo: las que ya lo recibieron quedarán para enviar otra vez"; return; }
+      t.disabled = true;
+      try { var nr = await rpc("admin_campana_reiniciar", { p_codigo: dlg.dataset.cod }); toast((nr || 0) + " listas para recibirlo de nuevo"); campDlg(dlg.dataset.cod); }
+      catch (er) { toast(/admin_campana_reiniciar/.test(errTxt(er)) ? "Falta ejecutar el SQL campanas_reenviar.sql en Supabase" : errTxt(er), true); t.disabled = false; delete t.dataset.sure; t.textContent = "Volver a enviar a todas (recordatorio)"; }
+      return;
     }
     if (t.hasAttribute("data-cpsend")) {
       var dd1 = campDatos(); if (!dd1.asunto || !dd1.texto.trim()) { toast("Escribe el asunto y el texto", true); return; }

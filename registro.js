@@ -14,6 +14,10 @@
   var lsSet = function (k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} };
   try { if (window.DULCIA_LOGO) $("#logo").innerHTML = window.DULCIA_LOGO; } catch (e) {}
   var q = new URLSearchParams(location.search), main = $("#main"), cfg = window.DULCIA_CONFIG || {};
+  // Links de campaña del Black Friday (correo con ?ref=BLACKDULCIA o PREBLACKDULCIA): van a la página del Black, donde el descuento ya va aplicado
+  if (MODO === "normal" && /^(PRE)?BLACKDULCIA$/i.test(q.get("ref") || "")) {
+    var plB = q.get("plan"); location.replace("/black" + (/^(mensual|semestral|anual)$/.test(plB || "") ? "?plan=" + plB : "")); return;
+  }
   var hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
 
   /* ---------- La oferta de la página ---------- */
@@ -21,11 +25,13 @@
   if (MODO === "black") {
     var FASES = {
       pre: { codigo: "PREBLACKDULCIA", dcto: 30, desde: "2026-11-23", hasta: "2026-11-25", fin: "2026-11-25T23:59:59-03:00", inicio: "2026-11-23T00:00:00-03:00",
-        tag: "Pre Black · 23 al 25 nov", h1: 'Nos adelantamos al Black: <em>30%</em> en cualquier plan', dia: "miércoles 25",
-        sub: "Antes que todos, conoce Dulcia: costea tus recetas, pon precios que sí dejan ganancia y ordena tus pedidos. Paga hoy con descuento." },
+        tag: "Pre Black · 23 al 25 nov", h1: 'Pre Black: <em>30%</em> en la app que ordena tu pastelería', dia: "miércoles 25",
+        sub: "Costea tus recetas, pon precios con ganancia, organiza tus pedidos y controla tu inventario. Todo en un solo lugar.",
+        l3: "Pruébala gratis 7 días y, si te gusta, paga con 30% hasta el miércoles 25." },
       black: { codigo: "BLACKDULCIA", dcto: 60, desde: "2026-11-26", hasta: "2026-11-29", fin: "2026-11-29T23:59:59-03:00", inicio: "2026-11-26T00:00:00-03:00",
-        tag: "Black Friday · 26 al 29 nov", h1: 'Black Friday Dulcia: <em>60%</em> en cualquier plan', dia: "domingo 29",
-        sub: "El precio más bajo del año para ordenar tu pastelería: costeo de recetas, precios con ganancia, pedidos y producción en un solo lugar." }
+        tag: "Black Friday · 26 al 29 nov", h1: '<em>60% off</em> en la app que ordena tu pastelería', dia: "domingo 29",
+        sub: "Costea tus recetas, pon precios con ganancia, organiza tus pedidos y controla tu inventario. Todo en un solo lugar.",
+        l3: "Pruébala gratis 7 días, sin tarjeta, y si te gusta paga con 60% hasta el domingo 29." }
     };
     var fz = q.get("fase");
     clave = fz === "pre" || fz === "black" ? fz : hoy < FASES.black.desde ? "pre" : hoy <= FASES.black.hasta ? "black" : "fin";
@@ -38,8 +44,9 @@
     if (clave === "black") document.body.classList.add("black");
   } else {
     clave = "normal";
-    F = { codigo: "", tag: "7 días gratis · sin tarjeta", h1: 'Empieza a ordenar tu pastelería <em>hoy</em>',
-      sub: "Costeo de recetas, precios que sí dejan ganancia, pedidos y producción en un solo lugar. Elige tu plan y paga ahora, o pruébala 7 días gratis." };
+    F = { codigo: "", tag: "7 días gratis · sin tarjeta", h1: 'La app que <em>ordena tu pastelería</em>',
+      sub: "Costea tus recetas, pon precios con ganancia, organiza tus pedidos y controla tu inventario. Todo en un solo lugar.",
+      l3: "Elige tu plan y paga hoy, o pruébala gratis 7 días, sin tarjeta." };
   }
   var tm = document.querySelector("meta[name=theme-color]"); if (tm) tm.content = clave === "black" ? "#1C1420" : "#B3224F";
 
@@ -69,16 +76,18 @@
     return '<label class="pl"><input type="radio" name="plan" value="' + p.k + '"' + (p.k === pre ? " checked" : "") + '><span class="n">' + p.n + (p.best ? "<em>Más conveniente</em>" : "") + '</span>' +
       '<span class="p" data-p="' + p.k + '">' + (rebajado ? "<s>" + pz(NORMAL[p.k]) + "</s>" : "") + "<b>" + pz(precio(p.k)) + "</b>" + (p.k === "mensual" ? '<i>/mes</i>' : "") + '</span><span class="d" data-d="' + p.k + '">' + detalle(p.k) + '</span></label>';
   }
-  var ben = '<li><span>1</span><div><b>Costeo real</b> de cada receta, con ingredientes, mano de obra y empaque.</div></li>' +
-    '<li><span>2</span><div><b>Precios</b> minorista y mayorista que sí dejan ganancia.</div></li>' +
-    '<li><span>3</span><div><b>Pedidos, calendario y producción</b> en el celular, con cotizaciones en PDF.</div></li>';
+  var ben = '<li><span>1</span><div><b>Costeo y precios:</b> el costo real de cada receta y su precio con ganancia, minorista y mayorista.</div></li>' +
+    '<li><span>2</span><div><b>Pedidos y calendario:</b> fechas, abonos, saldos y cotizaciones en PDF.</div></li>' +
+    '<li><span>3</span><div><b>Inventario y compras:</b> stock de ingredientes y productos, y qué comprar según tus pedidos.</div></li>' +
+    '<li><span>4</span><div><b>Producción y ganancias:</b> qué hornear cada día, tus gastos y cuánto te queda.</div></li>';
   var gift = MODO === "black"
-    ? '<div class="gift"><span aria-hidden="true">🎁</span><div><b>Además, 7 días gratis:</b> tu plan empieza a contar cuando terminan. Código <b>' + F.codigo + '</b> ya aplicado · solo cuentas nuevas.</div></div>'
+    ? '<div class="gift"><span aria-hidden="true">🎁</span><div><b>Pruébala gratis 7 días, sin tarjeta.</b> Si te gusta, pagas con el ' + F.dcto + '% hasta el ' + F.dia + ' desde la app (código <b>' + F.codigo + '</b> ya guardado). Y si pagas hoy, tus 7 días igual se suman.</div></div>'
     : '<div class="gift"><span aria-hidden="true">🎁</span><div><b>Si pagas hoy, no pierdes tus 7 días gratis:</b> el plan empieza a contar cuando terminan.</div></div>';
   var codBox = MODO === "black" ? "" :
     '<details class="cod" id="codbox"><summary>¿Tienes un código de descuento o de invitación?</summary><div class="codr"><input type="text" id="cod" maxlength="30" autocapitalize="characters" spellcheck="false" autocomplete="off" placeholder="Ej.: DULCE10"><button type="button" class="btn ghost sm" id="codb">Aplicar</button></div><div class="codm" id="codm" hidden></div></details>';
   var faq = MODO === "black"
-    ? '<details><summary>¿Qué pasa con los 7 días gratis?</summary><p>Los tienes igual. Pagas hoy con el descuento y tu plan empieza a contar cuando terminan tus 7 días de prueba.</p></details>' +
+    ? '<details><summary>¿Puedo probar antes de pagar?</summary><p>Sí. Toca <b>Probar 7 días gratis</b>: no pedimos tarjeta y no se cobra nada. El descuento queda guardado en tu cuenta: si decides pagar antes del ' + F.dia + ', lo haces desde la app en Ajustes → Tu plan con el ' + F.dcto + '% aplicado.</p></details>' +
+      '<details><summary>¿Qué pasa con los 7 días gratis?</summary><p>Los tienes igual. Pagas hoy con el descuento y tu plan empieza a contar cuando terminan tus 7 días de prueba.</p></details>' +
       '<details><summary>¿El plan mensual se queda con descuento?</summary><p>El descuento dura los primeros 3 meses. Después se cobra el precio normal de ' + pz(NORMAL.mensual) + ' al mes, solo con Mercado Pago. Lo cancelas cuando quieras desde la app.</p></details>' +
       '<details><summary>¿Ya tengo cuenta, sirve el código?</summary><p>Sí, si nunca has pagado un plan: <a href="/app/?ref=' + F.codigo + '&amp;pagar=anual">ingresa aquí</a> y el código se aplica solo al elegir tu plan.</p></details>'
     : '<details><summary>¿Puedo probar antes de pagar?</summary><p>Sí. Toca <b>Crear cuenta y probar 7 días gratis</b>: no pides tarjeta y no se cobra nada. Cuando quieras, eliges tu plan desde la app.</p></details>' +
@@ -87,38 +96,29 @@
   faq += '<details><summary>¿Cómo pago?</summary><p>Con tarjeta o saldo en el sitio seguro de Mercado Pago. Nosotros no vemos tus datos de pago.</p></details>';
 
   main.innerHTML = '<div class="grid"><div class="ofe">' +
-    '<span class="tag">' + F.tag + '</span><h1>' + F.h1 + '</h1><p class="sub">' + F.sub + '</p>' +
-    '<div class="cd" id="cd" aria-live="off"' + (MODO === "black" ? "" : " hidden") + '></div>' +
+    '<span class="tag">' + F.tag + '</span><h1>' + F.h1 + '</h1><p class="sub">' + F.sub + '</p>' + (F.l3 ? '<p class="l3">' + F.l3 + '</p>' : '') +
+    (MODO === "black" ? '<a class="btn quick" href="#f" id="quick">Probar gratis 7 días</a>' : '') +
     '<ul class="ben bd">' + ben + '</ul></div><div>' +
     '<div class="pls" role="radiogroup" aria-label="Elige tu plan">' + PL.map(planHTML).join("") + '</div>' + gift +
     '<form id="f" novalidate>' + codBox +
       '<div class="yo" id="yo"></div>' +
+      (window.DULCIA_GOOGLE ? '<div id="gwrap" style="display:grid;gap:12px">' + DULCIA_GOOGLE.boton(MODO === "black" ? "Probar gratis con Google" : "Continuar con Google") + '<p class="gsep" data-google-sep hidden><span>o con tu correo</span></p></div>' : '') +
       '<div id="nuevos" style="display:grid;gap:12px">' +
         '<label>Tu correo<input type="email" id="em" autocomplete="email" inputmode="email" required placeholder="nombre@correo.cl"></label>' +
-        '<label>Crea una clave<input type="password" id="pw" autocomplete="new-password" minlength="8" required placeholder="Mínimo 8 caracteres"></label>' +
+        '<label>Crea una clave<input type="password" id="pw" autocomplete="new-password" minlength="6" required placeholder="Mínimo 6 caracteres"></label>' +
       '</div>' +
-      '<label id="lnom">Nombre de tu pastelería<input type="text" id="nom" autocomplete="organization" maxlength="80" required placeholder="Ej.: Dulces de Mía"></label>' +
+      '<label id="lnom">Nombre de tu pastelería <span class="hint">(opcional, lo puedes cambiar después)</span><input type="text" id="nom" autocomplete="organization" maxlength="80" placeholder="Ej.: Dulces de Mía"></label>' +
       '<label class="mp" id="mp">Correo de tu Mercado Pago <span class="hint">Solo si es distinto: la suscripción mensual queda a nombre de ese correo.</span><input type="email" id="mpm" autocomplete="off" inputmode="email" placeholder="Igual al de arriba"></label>' +
       '<div class="msg" id="msg" hidden></div>' +
-      '<button class="btn" id="go" type="submit">Crear cuenta y pagar</button>' +
-      (MODO === "black" ? "" : '<button class="btn ghost" id="free" type="button">Crear cuenta y probar 7 días gratis</button>') +
-      '<p class="small">Pago seguro en Mercado Pago. Al crear tu cuenta aceptas los <a href="terminos.html">términos</a> y la <a href="privacidad.html">privacidad</a>.</p>' +
+      (MODO === "black" ? '<button class="btn" id="free" type="submit">Probar 7 días gratis</button><button class="btn ghost" id="go" type="button">Crear cuenta y pagar</button>'
+        : '<button class="btn" id="go" type="submit">Crear cuenta y pagar</button><button class="btn ghost" id="free" type="button">Crear cuenta y probar 7 días gratis</button>') +
+      '<p class="small">' + (MODO === "black" ? "Probar no tiene costo ni pide tarjeta. " : "") + 'Pago seguro en Mercado Pago. Al crear tu cuenta aceptas los <a href="terminos.html">términos</a> y la <a href="privacidad.html">privacidad</a>.</p>' +
     '</form><ul class="ben bm">' + ben + '</ul></div></div>' +
     '<h2>Preguntas rápidas</h2>' + faq;
 
   if (antes) { var g = $("#go"); g.textContent = "Disponible desde el lunes 23"; g.disabled = true;
     var m0 = $("#msg"); m0.hidden = false; m0.textContent = "La campaña empieza el lunes 23 de noviembre a las 00:00. Vuelve ese día para pagar con el descuento."; }
 
-  /* ---------- Cuenta regresiva (black) ---------- */
-  if (MODO === "black") {
-    var finT = Date.parse(F.fin), iniT = Date.parse(F.inicio);
-    var tick = function () {
-      var ahora = Date.now(), objetivo = ahora < iniT ? iniT : finT, s = Math.max(0, Math.floor((objetivo - ahora) / 1000));
-      var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), mi = Math.floor(s % 3600 / 60), se = s % 60, p2 = function (n) { return (n < 10 ? "0" : "") + n; };
-      $("#cd").innerHTML = (ahora < iniT ? "Empieza en" : "Termina en") + " <b>" + (d ? d + "d " : "") + p2(h) + "h " + p2(mi) + "m " + p2(se) + "s</b>" + (ahora < iniT ? "" : " · hasta el " + F.dia + " a las 23:59");
-    };
-    tick(); setInterval(tick, 1000);
-  }
 
   /* ---------- Plan elegido ---------- */
   var cuenta = null, sb = null;
@@ -132,7 +132,7 @@
   }
   function upd() {
     var k = plan();
-    if (!antes) $("#go").textContent = (cuenta ? "Pagar " : "Crear cuenta y pagar ") + pz(precio(k)) + (k === "mensual" ? " al mes" : "");
+    if (!antes) $("#go").textContent = (cuenta ? "Pagar " : (MODO === "black" ? "O paga hoy " : "Crear cuenta y pagar ")) + pz(precio(k)) + (k === "mensual" ? " al mes" : "") + (MODO === "black" && !cuenta ? " con " + F.dcto + "%" : "");
     $("#mp").classList.toggle("on", k === "mensual");
     var cc = codigoCuenta();
     $("#ingresar").href = "/app/?" + (cc ? "ref=" + encodeURIComponent(cc) + "&" : "") + "pagar=" + k;
@@ -193,7 +193,7 @@
     var s = await sb.auth.getSession(); if (!s.data.session) return;
     var r = await sb.rpc("mi_cuenta"); var c = r.data && r.data[0];
     cuenta = { email: s.data.session.user.email, negocio: c || null };
-    $("#nuevos").style.display = "none"; $("#em").required = false; $("#pw").required = false;
+    $("#nuevos").style.display = "none"; var gw = $("#gwrap"); if (gw) gw.style.display = "none"; $("#em").required = false; $("#pw").required = false;
     if (c) { $("#lnom").style.display = "none"; $("#nom").required = false; var fr = $("#free"); if (fr) { fr.textContent = "Ir a mi cuenta"; fr.dataset.ir = "1"; } }
     var yo = $("#yo"); yo.classList.add("on");
     yo.innerHTML = '<div class="msg">Entraste como <b>' + esc(cuenta.email) + '</b>' + (c ? " (" + esc(c.nombre || "tu pastelería") + ")" : "") + '. <button type="button" class="lnk" id="otra">Usar otra cuenta</button></div>';
@@ -207,7 +207,7 @@
   function txtErr(e) {
     var m = String(e && (e.message || e.error_description || e) || "");
     if (/already registered|already been registered|User already/i.test(m)) return "YA";
-    if (/Password should|at least/i.test(m)) return "La clave debe tener al menos 8 caracteres.";
+    if (/Password should|at least/i.test(m)) return "La clave es muy corta: usa al menos " + ((/(\d+)/.exec(m) || [])[1] || 6) + " caracteres.";
     if (/invalid.*email|Unable to validate email/i.test(m)) return "Revisa tu correo: parece que está mal escrito.";
     if (/rate limit|too many/i.test(m)) return "Hubo muchos intentos seguidos. Espera un minuto e intenta de nuevo.";
     if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Sin conexión. Revisa tu internet e intenta de nuevo.";
@@ -225,9 +225,9 @@
     if (gratis && cuenta && cuenta.negocio) { location.href = "/app/"; return; }
     if (!cuenta) {
       if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(em)) { msg("Escribe tu correo completo, por ejemplo nombre@gmail.com.", true); $("#em").focus(); return; }
-      if (pw.length < 8) { msg("La clave debe tener al menos 8 caracteres.", true); $("#pw").focus(); return; }
+      if (pw.length < 6) { msg("La clave debe tener al menos 6 caracteres.", true); $("#pw").focus(); return; }
     }
-    if ((!cuenta || !cuenta.negocio) && nom.length < 2) { msg("Escribe el nombre de tu pastelería.", true); $("#nom").focus(); return; }
+    if (nom.length < 2) nom = "Mi pastelería";
     if (!gratis && k === "mensual" && mpm && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(mpm)) { msg("Revisa el correo de Mercado Pago.", true); $("#mpm").focus(); return; }
     var otros = [$("#go"), $("#free")].filter(Boolean); otros.forEach(function (x) { x.disabled = true; });
     var t0 = b.textContent; b.textContent = "Preparando tu cuenta…";
@@ -256,6 +256,7 @@
       // Invitación con meses de regalo o cuenta de por vida: no se cobra nada
       if (gratis || n.plan === "regalo" || n.plan === "vitalicio") {
         if (gratis) ev("start_trial", { fase: clave });
+        if (MODO === "black") lsSet("dulcia_bf", JSON.stringify({ c: F.codigo, hasta: F.hasta }));
         location.href = "/app/"; return;
       }
       b.textContent = "Abriendo Mercado Pago…";
@@ -276,6 +277,19 @@
       listo();
     }
   }
-  $("#f").addEventListener("submit", function (e) { e.preventDefault(); enviar(false); });
-  var fb = $("#free"); if (fb) fb.addEventListener("click", function () { enviar(true); });
+  // Google: en el Black entra a probar gratis con el 60% guardado; en /empezar abre el pago del plan elegido al llegar a la app
+  if (window.DULCIA_GOOGLE) DULCIA_GOOGLE.activar(cargarSb, function () {
+    if (MODO === "black") return { ref: F.codigo, origen: "black", bf: { c: F.codigo, hasta: F.hasta } };
+    lsSet("dulcia_pagar", plan());
+    return { ref: codRef || codInv, origen: "empezar", bf: promo && promo.codigo ? { c: promo.codigo, hasta: String(promo.hasta || "2099-12-31").slice(0, 10) } : null };
+  }, function (t) { msg(esc(t), true); });
+  // En el Black la acción principal (y la tecla Enter) es probar gratis; pagar hoy es el botón secundario
+  if (MODO === "black") {
+    $("#f").addEventListener("submit", function (e) { e.preventDefault(); enviar(true); });
+    $("#go").addEventListener("click", function () { enviar(false); });
+  } else {
+    $("#f").addEventListener("submit", function (e) { e.preventDefault(); enviar(false); });
+    var fb = $("#free"); if (fb) fb.addEventListener("click", function () { enviar(true); });
+  }
+  var qk = $("#quick"); if (qk) qk.addEventListener("click", function (e) { e.preventDefault(); $("#f").scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(function () { var x = $("#em"); if (x && x.offsetParent) x.focus({ preventScroll: true }); }, 450); });
 })();
