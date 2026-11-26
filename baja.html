@@ -16,19 +16,48 @@ body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--
 .logo{font:600 34px/1 var(--display);color:var(--accent)}
 h1{font:500 30px/1.1 var(--display);margin:18px 0 10px}
 p{margin:0 0 12px;color:var(--soft)}
+form{margin:16px 0 6px;padding:16px;border:1px solid var(--line);border-radius:16px;display:grid;gap:8px}
+form[hidden]{display:none}form b{font-weight:500}form label{display:flex;gap:10px;align-items:flex-start;font-size:15px;cursor:pointer}
+form input[type=radio]{width:18px;height:18px;margin:3px 0 0;accent-color:var(--accent);flex:0 0 auto}
+form textarea{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:var(--ink);width:100%}
+form button{justify-self:start;border:0;background:var(--accent);color:var(--btn-fg);font:500 15px var(--body);border-radius:999px;padding:10px 20px;cursor:pointer}
+form button[disabled]{opacity:.6}.ok{color:var(--accent);font-weight:500}
 a.btn{display:inline-block;margin-top:8px;background:var(--accent);color:var(--btn-fg);text-decoration:none;font-weight:500;border-radius:999px;padding:13px 24px}
 </style></head>
 <body><main class="card">
 <div class="logo">Dulcia.</div>
 <h1 id="t">Listo, te dimos de baja</h1>
 <p id="m">No te enviaremos más correos de promociones ni campañas. Los avisos de tu cuenta, como el fin de tu prueba o el vencimiento de tu plan, te seguirán llegando.</p>
+<form id="f" hidden><b>¿Nos cuentas por qué? Nos ayuda a mejorar</b>
+<label><input type="radio" name="m" value="Recibo demasiados correos">Recibo demasiados correos</label>
+<label><input type="radio" name="m" value="No me interesan las promociones">No me interesan las promociones</label>
+<label><input type="radio" name="m" value="Ya no uso Dulcia">Ya no uso Dulcia</label>
+<label><input type="radio" name="m" value="No tengo o cerré mi pastelería">No tengo o cerré mi pastelería</label>
+<label><input type="radio" name="m" value="Nunca me inscribí">Nunca me inscribí</label>
+<label><input type="radio" name="m" value="Otro motivo">Otro motivo</label>
+<textarea id="d" rows="2" maxlength="1000" placeholder="Cuéntanos más (opcional)"></textarea>
+<button type="submit" id="b" disabled>Enviar</button></form>
+<p class="ok" id="gr" hidden>¡Gracias por contarnos! Lo vamos a tener en cuenta.</p>
 <p>¿Fue un error? Escríbenos a <b>contacto.dulcia@gmail.com</b>.</p>
 <a class="btn" href="https://www.dulcia.cl/app/">Ir a Dulcia</a>
 </main>
+<script src="config.js"></script>
 <script>
 (function(){var q=location.search;
   if(/error=1/.test(q)){document.getElementById("t").textContent="No pudimos darte de baja";document.getElementById("m").textContent="El enlace no es válido o venció. Escríbenos y te sacamos de la lista a mano.";}
-  else if(/prueba=1/.test(q)){document.getElementById("t").textContent="Así se ve la baja";document.getElementById("m").textContent="Este es el correo de prueba: no se dio de baja a nadie. Cuando una clienta toca este enlace, deja de recibir campañas.";}
+  else { var f=document.getElementById("f"); f.hidden=false;
+    var em=(new URLSearchParams(q).get("e")||"").trim();
+    f.addEventListener("change",function(){document.getElementById("b").disabled=!f.querySelector("input[name=m]:checked")});
+    f.addEventListener("submit",function(ev){ev.preventDefault();var b=document.getElementById("b");b.disabled=true;b.textContent="Enviando…";
+      var c=window.DULCIA_CONFIG||{},m=f.querySelector("input[name=m]:checked");
+      var fin=function(){f.hidden=true;document.getElementById("gr").hidden=false;};
+      if(/prueba=1/.test(q)){fin();return;}
+      fetch(c.url+"/rest/v1/rpc/enviar_opinion",{method:"POST",headers:{apikey:c.key,"Content-Type":"application/json"},
+        body:JSON.stringify({p_tipo:"baja_correo",p_motivo:m?m.value:null,p_detalle:document.getElementById("d").value.trim()||null,p_pagina:"baja",p_correo:/^[^\s@]+@[^\s@]+$/.test(em)?em:null})})
+        .then(fin,fin);
+    });
+  }
+  if(/prueba=1/.test(q)){document.getElementById("t").textContent="Así se ve la baja";document.getElementById("m").textContent="Este es el correo de prueba: no se dio de baja a nadie. Cuando una clienta toca este enlace, deja de recibir campañas.";}
 })();
 </script>
 </body></html>

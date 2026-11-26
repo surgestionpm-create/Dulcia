@@ -501,7 +501,7 @@
     };
   }
   /* Eliminar la cuenta desde Ajustes */
-  var MOTIVOS = ["Es caro para mí", "No la uso lo suficiente", "Le falta algo que necesito", "Es difícil de usar", "Cierro o pauso mi negocio", "Otro motivo"];
+  var MOTIVOS = ["Es caro para mí", "No la uso lo suficiente", "Le falta algo que necesito", "Es difícil de usar", "No entendí cómo usarla", "Uso otra app o planilla", "Cierro o pauso mi negocio", "Otro motivo"];
   function bajaCaso(c) {
     var v = c.vence_en && new Date(c.vence_en) > new Date() ? fd(c.vence_en) : "", sub = c.suscripcion_estado === "authorized" || c.suscripcion_estado === "pending";
     if (c.plan === "mensual" && sub) return "Tienes la <b>suscripción mensual</b> activa. Al eliminar tu cuenta la <b>cancelamos en Mercado Pago</b>: no se harán más cobros." + (v ? " Los días que quedan de tu mes pagado (hasta el " + v + ") se pierden." : "");
@@ -519,17 +519,19 @@
       '<div class="bajacaso">' + bajaCaso(c) + '</div>' +
       '<ul class="bajalist"><li>Tu cuenta se cierra <b>al instante</b>.</li><li>Tienes <b>30 días para arrepentirte</b>: si entras antes del ' + fin + ' y tocas <b>Recuperar mi cuenta</b>, vuelves con todo' + (v ? ' y con tu plan hasta el ' + fd(c.vence_en) : '') + '.</li><li>Después se borran definitivamente tus recetas, pedidos, clientes, gastos e inventario.</li><li>Te enviamos un correo con este detalle.</li></ul>' +
       '<div class="bajares"><div><b>Antes de irte, guarda tus datos</b><div class="note" style="margin:0">Un Excel con tus recetas, ingredientes, pedidos, clientes y gastos.</div></div><button type="button" class="btn ghost sm" data-respaldo>Descargar respaldo</button></div>' +
-      '<fieldset class="bajamot"><legend>¿Por qué te vas? <span class="note" style="margin:0;display:inline">(opcional)</span></legend>' + MOTIVOS.map(function (m) { return '<label><input type="radio" name="bmot" value="' + m + '"> ' + m + '</label>'; }).join("") +
+      '<fieldset class="bajamot"><legend>¿Por qué te vas? <span class="note" style="margin:0;display:inline">(nos ayuda mucho a mejorar)</span></legend>' + MOTIVOS.map(function (m) { return '<label><input type="radio" name="bmot" value="' + m + '"> ' + m + '</label>'; }).join("") +
       '<textarea id="bdet" rows="2" maxlength="600" placeholder="Cuéntanos más, nos ayuda a mejorar"></textarea></fieldset>' +
       '<label class="bajaok"><span>Para confirmar, escribe <b>ELIMINAR</b></span><input type="text" id="bconf" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>' +
       '<div class="msg" id="bmsg" hidden></div>' +
       '<div class="bajabtns"><button type="button" class="btn ghost" data-close>No, volver</button><button type="button" class="btn danger-f" id="bgo" disabled>Eliminar mi cuenta</button></div></div>';
     if (!d.open) d.showModal();
     var conf = d.querySelector("#bconf"), go = d.querySelector("#bgo");
-    conf.oninput = function () { go.disabled = conf.value.trim().toUpperCase() !== "ELIMINAR"; };
+    var chk = function () { go.disabled = conf.value.trim().toUpperCase() !== "ELIMINAR" || !d.querySelector("input[name=bmot]:checked"); go.title = d.querySelector("input[name=bmot]:checked") ? "" : "Elige por qué te vas"; };
+    conf.oninput = chk; d.querySelectorAll("input[name=bmot]").forEach(function (x) { x.onchange = chk; });
     go.onclick = async function () {
       busy(go, true); go.textContent = "Eliminando…";
       var m = d.querySelector("input[name=bmot]:checked"), em = d.querySelector("#bmsg");
+      try { await sb.rpc("enviar_opinion", { p_tipo: "baja_cuenta", p_motivo: m ? m.value : null, p_detalle: d.querySelector("#bdet").value.trim() || null, p_pagina: "app" }); } catch (e) {}
       try {
         var cfgd = window.DULCIA_CONFIG || {}, s = await sb.auth.getSession(), tk = s.data.session.access_token;
         try { await save(); } catch (e) {}
@@ -766,10 +768,56 @@
     tiendaCargar();
     var d = document.getElementById("syncst"); if (d) d.textContent = window.SYNC_TXT;
     installTip();
+    encuestaProgramar();
     var pk = pagarLeer(), cu = window.CUENTA || {};
     if (pk) { pagarBorrar(); if (cu.plan === "prueba" || cu.plan === "regalo") { planesOpen(); selPlan(document.getElementById("dlg"), pk); } }
     else if (REF_PAGO && (cu.plan === "prueba" || cu.plan === "regalo")) { planesOpen(); }  // llegó por el botón de un correo de campaña
   }
+  /* Encuesta breve dentro de la app: aparece una vez cada 60 días, después de 2 días de uso y 3 visitas, a los 2 minutos de estar usando la app */
+  function encuestaProgramar() {
+    try {
+      if (window.ES_DEMO || window.IS_ADMIN || window.__encProg) return; window.__encProg = 1;
+      var ls = localStorage, ahora = Date.now(), k = "dulcia_enc_" + (NEG || "");
+      var st = JSON.parse(ls.getItem(k) || "null") || { primero: ahora, visitas: 0, proxima: 0 };
+      st.visitas++; ls.setItem(k, JSON.stringify(st));
+      if (ahora - st.primero < 2 * 864e5 || st.visitas < 3 || ahora < st.proxima) return;
+      setTimeout(async function () {
+        try { var r = await sb.rpc("encuesta_respondida"); if (r.error || r.data === true) { if (!r.error) { st.proxima = Date.now() + 60 * 864e5; ls.setItem(k, JSON.stringify(st)); } return; } } catch (e) { return; }
+        if (document.hidden || document.getElementById("enc") || document.getElementById("itip") || (document.getElementById("dlg") || {}).open) return;
+        encuestaMostrar(function (resp) { st.proxima = Date.now() + (resp ? 60 : 7) * 864e5; ls.setItem(k, JSON.stringify(st)); });
+      }, 120000);
+    } catch (e) {}
+  }
+  function encuestaMostrar(fin) {
+    fin = fin || function () {};
+    var d = document.createElement("div"); d.id = "enc"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Encuesta");
+    d.style.cssText = "position:fixed;right:16px;bottom:96px;left:16px;max-width:400px;margin-left:auto;z-index:60;background:#fff;color:#2A1E2E;border-radius:18px;padding:16px 18px;box-shadow:0 18px 50px rgba(42,30,46,.28);font-size:.95rem;line-height:1.45";
+    var nums = ""; for (var i = 0; i <= 10; i++) nums += '<button type="button" data-n="' + i + '" style="flex:1;min-width:0;min-height:40px;border:1.5px solid #E9DFD0;background:#FBF6EE;border-radius:9px;font:600 .9rem Jost,system-ui;color:#2A1E2E;cursor:pointer;padding:0">' + i + "</button>";
+    d.innerHTML = '<button type="button" id="encx" aria-label="Cerrar" style="position:absolute;right:8px;top:6px;border:0;background:none;font-size:1.1rem;color:#6B5F70;cursor:pointer;padding:8px">✕</button>' +
+      '<b style="font-family:Cormorant Garamond,serif;font-size:1.3rem;display:block;padding-right:24px">¿Cómo te está yendo con Dulcia?</b>' +
+      '<div id="enc1"><p style="margin:6px 0 10px">Del 0 al 10, ¿qué tan probable es que se la recomiendes a otra pastelera?</p><div style="display:flex;gap:4px">' + nums + '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:.78rem;color:#6B5F70;margin-top:4px"><span>Nada probable</span><span>Muy probable</span></div></div>' +
+      '<div id="enc2" hidden><p id="encq" style="margin:6px 0 8px"></p><textarea id="enct" rows="3" maxlength="1000" style="width:100%;font:inherit;font-size:16px;border:1.5px solid #E9DFD0;border-radius:12px;padding:10px;background:#FBF6EE;color:#2A1E2E" placeholder="Escribe aquí (opcional)"></textarea>' +
+      '<button type="button" id="encok" style="margin-top:10px;background:#B3224F;color:#fff;border:0;border-radius:99px;padding:.6em 1.4em;font-weight:600;cursor:pointer">Enviar</button></div>' +
+      '<div id="enc3" hidden><p style="margin:8px 0 0">¡Gracias! Leemos cada respuesta para mejorar Dulcia.</p></div>';
+    document.body.appendChild(d);
+    var nota = null, cerrar = function (resp) { d.remove(); fin(resp); };
+    d.querySelector("#encx").onclick = function () { if (nota !== null) enviar(); else cerrar(false); };
+    d.querySelectorAll("[data-n]").forEach(function (b) { b.onclick = function () {
+      nota = +b.dataset.n; d.querySelector("#enc1").hidden = true; d.querySelector("#enc2").hidden = false;
+      d.querySelector("#encq").textContent = nota >= 9 ? "¡Qué bueno! ¿Qué es lo que más te sirve de Dulcia?" : nota >= 7 ? "¿Qué le falta a Dulcia para que le pongas un 10?" : "Lo sentimos. ¿Qué es lo que más te cuesta o qué le falta?";
+      d.querySelector("#enct").focus();
+    }; });
+    async function enviar() {
+      var t = d.querySelector("#enct").value.trim();
+      try { await sb.rpc("enviar_opinion", { p_tipo: "encuesta", p_nota: nota, p_detalle: t || null, p_pagina: (window.location.hash || "app").slice(0, 60) }); } catch (e) {}
+      if (window.dulciaEvent) dulciaEvent("encuesta", { nota: nota });
+      d.querySelector("#enc2").hidden = true; d.querySelector("#enc3").hidden = false; setTimeout(function () { cerrar(true); }, 2500);
+    }
+    d.querySelector("#encok").onclick = enviar;
+  }
+  window.encuestaMostrar = encuestaMostrar;
+
   /* Aviso para instalar la app en el celular (una vez por dispositivo) */
   function installTip() {
     try {

@@ -57,8 +57,8 @@
 
   async function load() {
     try {
-      var R = await Promise.all([rpc("admin_cuentas"), rpc("admin_sin_terminar"), rpc("admin_invitaciones"), rpc("admin_historial"), rpc("admin_codigos").catch(function () { return null; })]);
-      S.cuentas = R[0] || []; S.sin = R[1] || []; S.inv = R[2] || []; S.hist = R[3] || []; S.cod = R[4] || []; S.sinCod = R[4] === null;
+      var R = await Promise.all([rpc("admin_cuentas"), rpc("admin_sin_terminar"), rpc("admin_invitaciones"), rpc("admin_historial"), rpc("admin_codigos").catch(function () { return null; }), rpc("admin_opiniones").catch(function () { return null; })]);
+      S.cuentas = R[0] || []; S.sin = R[1] || []; S.inv = R[2] || []; S.hist = R[3] || []; S.cod = R[4] || []; S.sinCod = R[4] === null; S.opi = R[5] || []; S.sinOpi = R[5] === null;
       render();
       if (!S.revisado && S.sin.some(function (u) { return u.rescate_estado === "enviado"; })) {
         S.revisado = 1;
@@ -90,11 +90,30 @@
       kpi("Invitaciones", pend, "pendientes de usar") +
       kpi("Conversión", (cs.length ? Math.round(cs.filter(function (c) { return +c.total_pagado > 0; }).length / cs.length * 100) : 0) + "%", "cuentas que pagaron alguna vez") +
       '</div>' +
-      '<div class="tabs" role="tablist">' + [["cuentas", "Cuentas", cs.length], ["invitar", "Crear cuenta o regalar", pend], ["sin", "Registros sin terminar", S.sin.length], ["cod", "Códigos", S.cod.length], ["hist", "Historial", S.hist.length]].map(function (t) {
+      '<div class="tabs" role="tablist">' + [["cuentas", "Cuentas", cs.length], ["invitar", "Crear cuenta o regalar", pend], ["sin", "Registros sin terminar", S.sin.length], ["cod", "Códigos", S.cod.length], ["opi", "Opiniones", S.opi.length], ["hist", "Historial", S.hist.length]].map(function (t) {
         return '<button role="tab" aria-selected="' + (S.tab === t[0]) + '" data-tab="' + t[0] + '">' + t[1] + '<span class="cnt">' + t[2] + '</span></button>'; }).join("") + '</div>' +
-      ({ cuentas: vCuentas, invitar: vInvitar, sin: vSin, cod: vCod, hist: vHist })[S.tab]() + '</div>';
+      ({ cuentas: vCuentas, invitar: vInvitar, sin: vSin, cod: vCod, opi: vOpi, hist: vHist })[S.tab]() + '</div>';
     root.innerHTML = h;
     var q = $("#aq"); if (q && S._focus) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); S._focus = false; }
+  }
+  /* ---------- opiniones: encuesta de la app, bajas de correos y cuentas eliminadas ---------- */
+  function vOpi() {
+    if (S.sinOpi) return '<section class="card"><p class="errmsg">Falta ejecutar en Supabase el SQL de opiniones (opiniones.sql).</p></section>';
+    var en = S.opi.filter(function (o) { return o.tipo === "encuesta" && o.nota != null; });
+    var pro = en.filter(function (o) { return o.nota >= 9; }).length, det = en.filter(function (o) { return o.nota <= 6; }).length;
+    var nps = en.length ? Math.round((pro - det) / en.length * 100) : null, prom = en.length ? (en.reduce(function (a, o) { return a + o.nota; }, 0) / en.length).toFixed(1).replace(".", ",") : "—";
+    var mot = function (tipo) { var c = {}; S.opi.forEach(function (o) { if (o.tipo === tipo) { var m = o.motivo || "Sin motivo"; c[m] = (c[m] || 0) + 1; } });
+      var ks = Object.keys(c).sort(function (a, b) { return c[b] - c[a]; }); return ks.length ? ks.map(function (k) { return esc(k) + " <b>" + c[k] + "</b>"; }).join(" · ") : "Todavía no hay respuestas."; };
+    var TL = { encuesta: "Encuesta en la app", baja_correo: "Se dio de baja de los correos", baja_cuenta: "Eliminó su cuenta" };
+    return '<div class="akpis" style="margin-bottom:14px">' +
+      kpi("Respuestas de la encuesta", en.length, "nota promedio " + prom + " de 10") +
+      kpi("NPS", nps == null ? "—" : nps, pro + " recomendarían (9-10) · " + det + " no (0-6)") +
+      kpi("Bajas de correos", S.opi.filter(function (o) { return o.tipo === "baja_correo"; }).length, "dijeron por qué") +
+      kpi("Cuentas eliminadas", S.opi.filter(function (o) { return o.tipo === "baja_cuenta"; }).length, "con motivo") + '</div>' +
+      '<section class="card" style="margin-bottom:14px"><h2 style="font-size:1.4rem">Por qué se van</h2><p class="note" style="margin:6px 0 4px"><b>Cuentas eliminadas:</b> ' + mot("baja_cuenta") + '</p><p class="note" style="margin:0"><b>Bajas de correos:</b> ' + mot("baja_correo") + '</p></section>' +
+      '<section class="card">' + (S.opi.length ? '<div class="scroll"><table class="pg"><thead><tr><th>Fecha</th><th>Tipo</th><th class="r">Nota</th><th>Motivo</th><th>Comentario</th><th>Pastelería</th><th>Correo</th></tr></thead><tbody>' + S.opi.map(function (o) {
+        return '<tr><td>' + fd(o.creado_en, 1) + '</td><td>' + esc(TL[o.tipo] || o.tipo) + '</td><td class="r">' + (o.nota == null ? "" : '<b>' + o.nota + '</b>') + '</td><td>' + esc(o.motivo || "") + '</td><td style="max-width:340px;white-space:normal">' + esc(o.detalle || "") + '</td><td>' + esc(o.negocio || "") + '</td><td>' + (o.correo ? '<a href="mailto:' + esc(o.correo) + '">' + esc(o.correo) + '</a>' : '') + '</td></tr>'; }).join("") + '</tbody></table></div>'
+        : '<p class="note" style="margin:0">Todavía no hay opiniones. La encuesta aparece sola en la app a las clientas con al menos 2 días y 3 visitas; las bajas de correos y de cuentas se anotan aquí con su motivo.</p>') + '</section>';
   }
   function lista() {
     var q = S.q.trim();
