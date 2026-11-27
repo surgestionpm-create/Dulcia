@@ -356,7 +356,7 @@
     mode = mode || "in";
     show('<h1 style="margin:0">' + (window.DULCIA_LOGO || "Dulcia") + '<span style="position:absolute;left:-9999px">Dulcia</span></h1><p class="tag">La app que ordena tu pastelería.</p><p style="margin:-10px 0 16px;font-size:.92rem">Costeo de recetas, precios, pedidos e inventario en un solo lugar.</p>' +
       '<div class="tabs"><button data-mode="in" aria-pressed="' + (mode === "in") + '">Ingresar</button><button data-mode="up" aria-pressed="' + (mode === "up") + '">Crear cuenta</button></div>' +
-      (window.DULCIA_GOOGLE ? DULCIA_GOOGLE.boton("Ingresar con Google") + '<p class="gsep" data-google-sep hidden><span>o con tu correo</span></p>' : "") +
+      (window.DULCIA_GOOGLE ? DULCIA_GOOGLE.boton("Ingresar con Google", "signin_with") + '<p class="gsep" data-google-sep hidden><span>o con tu correo</span></p>' : "") +
       '<form id="af"><label>Correo<input type="email" id="ae" required autocomplete="email"></label>' +
       '<label>Clave<input type="password" id="ap" required minlength="6" autocomplete="' + (mode === "in" ? "current-password" : "new-password") + '"' + (mode === "in" ? "" : ' placeholder="Mínimo 6 caracteres"') + '></label>' +
       (mode === "up" ? refCampo("") : "") +
